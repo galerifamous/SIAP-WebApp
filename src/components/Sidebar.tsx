@@ -30,7 +30,8 @@ import {
   Coins,
   Database,
   CreditCard,
-  Download
+  Download,
+  TrendingUp
 } from 'lucide-react';
 import { Role } from '../types';
 
@@ -48,6 +49,7 @@ interface SidebarProps {
   semesters: ('Ganjil' | 'Genap')[];
   onYearChange: (year: string) => void;
   onSemesterChange: (semester: 'Ganjil' | 'Genap') => void;
+  teacherDutyType?: string;
 }
 
 export default function Sidebar({
@@ -63,7 +65,8 @@ export default function Sidebar({
   academicYears,
   semesters,
   onYearChange,
-  onSemesterChange
+  onSemesterChange,
+  teacherDutyType
 }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
@@ -105,7 +108,7 @@ export default function Sidebar({
             ) : (
               <School className="w-5 h-5 text-emerald-400" />
             )}
-            <span className="text-white font-bold text-sm tracking-tight">SIAP V2</span>
+            <span className="text-white font-bold text-sm tracking-tight">SIAP V1</span>
           </div>
         </div>
         <div className="text-[10px] text-slate-400 font-mono bg-slate-950/40 px-2.5 py-1 border border-slate-800 rounded-lg">
@@ -140,7 +143,7 @@ export default function Sidebar({
             </div>
             <div className="min-w-0">
               <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-1.5 leading-none">
-                SIAP <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono font-bold">V2</span>
+                SIAP <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono font-bold">V1</span>
               </h2>
               <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase tracking-wider truncate" title={schoolName}>
                 {schoolName}
@@ -231,6 +234,23 @@ export default function Sidebar({
                 <div className="flex items-center gap-3">
                   <Users className="w-4.5 h-4.5" />
                   <span>Data Siswa</span>
+                </div>
+              </button>
+            )}
+
+            {/* Kenaikan Kelas (Admin & Guru) */}
+            {role !== 'SISWA' && (
+              <button
+                onClick={() => handleMenuClick('naik-kelas')}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  menuActive('naik-kelas')
+                    ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-4.5 h-4.5" />
+                  <span>Kenaikan Kelas</span>
                 </div>
               </button>
             )}
@@ -532,7 +552,7 @@ export default function Sidebar({
             <div className="min-w-0">
               <p className="text-xs font-bold text-white truncate">{userName}</p>
               <p className="text-[10px] text-slate-400/80 font-bold uppercase tracking-wider">
-                {role === 'ADMIN' ? 'Administrator' : role === 'GURU' ? 'Tenaga Pendidik' : 'Siswa Aktif'}
+                {role === 'ADMIN' ? 'Administrator' : role === 'GURU' ? (teacherDutyType || 'Tenaga Pendidik') : 'Siswa Aktif'}
               </p>
             </div>
           </div>

@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import {
   Coins,
-  PiggyBank,
+  Wallet,
   Mail,
   Search,
   Filter,
@@ -191,7 +191,7 @@ export default function UangKasSec({
             <p className="text-[10px] text-slate-400">Penyimpanan kas sekolah</p>
           </div>
           <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
-            <PiggyBank className="w-5 h-5" />
+            <Wallet className="w-5 h-5" />
           </div>
         </div>
 

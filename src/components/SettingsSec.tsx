@@ -22,14 +22,16 @@ import {
   X,
   Lock
 } from 'lucide-react';
-import { AcademicSetting, SystemSetting, Teacher } from '../types';
+import { AcademicSetting, SystemSetting, Teacher, ClassStaff } from '../types';
 
 interface SettingsSecProps {
   academicSetting: AcademicSetting;
   systemSetting: SystemSetting;
   teachers: Teacher[];
+  classStaffs: ClassStaff[];
   onUpdateAcademic: (updated: AcademicSetting) => void;
   onUpdateSystem: (updated: SystemSetting) => void;
+  onUpdateClassStaffs: (updated: ClassStaff[]) => void;
   onAddTeacher: (teacher: Teacher) => void;
   onUpdateTeacher: (updated: Teacher) => void;
   onDeleteTeacher: (nuptk: string) => void;
@@ -41,8 +43,10 @@ export default function SettingsSec({
   academicSetting,
   systemSetting,
   teachers,
+  classStaffs = [],
   onUpdateAcademic,
   onUpdateSystem,
+  onUpdateClassStaffs,
   onAddTeacher,
   onUpdateTeacher,
   onDeleteTeacher,
@@ -74,6 +78,8 @@ export default function SettingsSec({
   const [guruEmail, setGuruEmail] = useState('');
   const [guruUsername, setGuruUsername] = useState('');
   const [guruPassword, setGuruPassword] = useState('guru');
+  const [guruDutyType, setGuruDutyType] = useState<'GURU_KELAS' | 'GURU_MAPEL'>('GURU_MAPEL');
+  const [guruAssignedClass, setGuruAssignedClass] = useState(academicSetting.classes[0] || '');
 
   // --- GURU PORTAL EDIT & RESET STATES ---
   const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
@@ -81,9 +87,39 @@ export default function SettingsSec({
   const [editSubject, setEditSubject] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editUsername, setEditUsername] = useState('');
+  const [editDutyType, setEditDutyType] = useState<'GURU_KELAS' | 'GURU_MAPEL'>('GURU_MAPEL');
+  const [editAssignedClass, setEditAssignedClass] = useState('');
 
   const [resettingTeacher, setResettingTeacher] = useState<Teacher | null>(null);
   const [newPassword, setNewPassword] = useState('');
+
+  // Handle staff configuration change (Wali Kelas & Guru Kelas)
+  const handleStaffChange = (classId: string, roleType: 'wali' | 'guru', nuptk: string) => {
+    const existing = classStaffs.find(cs => cs.classId === classId);
+    let updatedList: ClassStaff[] = [];
+    if (existing) {
+      updatedList = classStaffs.map(cs => {
+        if (cs.classId === classId) {
+          return {
+            ...cs,
+            waliKelasNuptk: roleType === 'wali' ? nuptk : cs.waliKelasNuptk,
+            guruKelasNuptk: roleType === 'guru' ? nuptk : cs.guruKelasNuptk
+          };
+        }
+        return cs;
+      });
+    } else {
+      updatedList = [
+        ...classStaffs,
+        {
+          classId,
+          waliKelasNuptk: roleType === 'wali' ? nuptk : '',
+          guruKelasNuptk: roleType === 'guru' ? nuptk : ''
+        }
+      ];
+    }
+    onUpdateClassStaffs(updatedList);
+  };
 
   // Save System Settings
   const handleSaveSystem = (e: React.FormEvent) => {
@@ -157,6 +193,105 @@ export default function SettingsSec({
     setNewClass('');
   };
 
+  // Delete Academic Year
+  const handleDeleteYear = (yearName: string) => {
+    if (academicSetting.years.length <= 1) {
+      alert('Harus ada minimal satu Tahun Pelajaran.');
+      return;
+    }
+    if (yearName === academicSetting.activeYear) {
+      alert('Tahun Pelajaran aktif tidak dapat dihapus.');
+      return;
+    }
+    if (confirm(`Apakah Anda yakin ingin menghapus Tahun Pelajaran ${yearName}?`)) {
+      onUpdateAcademic({
+        ...academicSetting,
+        years: academicSetting.years.filter(y => y !== yearName)
+      });
+    }
+  };
+
+  // Delete Subject
+  const handleDeleteSubject = (subjectName: string) => {
+    if (academicSetting.subjects.length <= 1) {
+      alert('Harus ada minimal satu Mata Pelajaran.');
+      return;
+    }
+    if (confirm(`Apakah Anda yakin ingin menghapus Mata Pelajaran ${subjectName}?`)) {
+      const updatedExclusions = (academicSetting.subjectExclusions || []).filter(ex => ex.subject !== subjectName);
+      onUpdateAcademic({
+        ...academicSetting,
+        subjects: academicSetting.subjects.filter(s => s !== subjectName),
+        subjectExclusions: updatedExclusions
+      });
+    }
+  };
+
+  // Delete Class (Rombel)
+  const handleDeleteClass = (className: string) => {
+    if (academicSetting.classes.length <= 1) {
+      alert('Harus ada minimal satu Rombel/Kelas.');
+      return;
+    }
+    if (confirm(`Apakah Anda yakin ingin menghapus Rombel/Kelas ${className}?`)) {
+      const updatedExclusions = (academicSetting.subjectExclusions || []).filter(ex => ex.className !== className);
+      onUpdateAcademic({
+        ...academicSetting,
+        classes: academicSetting.classes.filter(c => c !== className),
+        subjectExclusions: updatedExclusions
+      });
+    }
+  };
+
+  // --- SUBJECT EXCLUSIONS FOR CLASSES ---
+  const [exclusionClass, setExclusionClass] = useState(() => academicSetting.classes[0] || '');
+  const [exclusionSubject, setExclusionSubject] = useState(() => academicSetting.subjects[0] || '');
+
+  React.useEffect(() => {
+    if (academicSetting.classes.length > 0 && !exclusionClass) {
+      setExclusionClass(academicSetting.classes[0]);
+    }
+  }, [academicSetting.classes, exclusionClass]);
+
+  React.useEffect(() => {
+    if (academicSetting.subjects.length > 0 && !exclusionSubject) {
+      setExclusionSubject(academicSetting.subjects[0]);
+    }
+  }, [academicSetting.subjects, exclusionSubject]);
+
+  const handleAddExclusion = () => {
+    if (!exclusionClass || !exclusionSubject) {
+      alert('Silakan pilih kelas dan mata pelajaran.');
+      return;
+    }
+    const currentExclusions = academicSetting.subjectExclusions || [];
+    const isExist = currentExclusions.some(
+      ex => ex.className === exclusionClass && ex.subject === exclusionSubject
+    );
+    if (isExist) {
+      alert('Pengecualian mata pelajaran ini untuk kelas tersebut sudah didaftarkan.');
+      return;
+    }
+    const updatedExclusions = [...currentExclusions, { className: exclusionClass, subject: exclusionSubject }];
+    onUpdateAcademic({
+      ...academicSetting,
+      subjectExclusions: updatedExclusions
+    });
+  };
+
+  const handleDeleteExclusion = (className: string, subject: string) => {
+    if (confirm(`Apakah Anda yakin ingin menghapus pengecualian mapel ${subject} di kelas ${className}?`)) {
+      const currentExclusions = academicSetting.subjectExclusions || [];
+      const updatedExclusions = currentExclusions.filter(
+        ex => !(ex.className === className && ex.subject === subject)
+      );
+      onUpdateAcademic({
+        ...academicSetting,
+        subjectExclusions: updatedExclusions
+      });
+    }
+  };
+
   // Submit Guru Form
   const handleAddGuruSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,10 +307,12 @@ export default function SettingsSec({
     onAddTeacher({
       nuptk: guruNuptk,
       name: guruName,
-      subject: guruSubject,
+      subject: guruDutyType === 'GURU_KELAS' ? `Guru Kelas (${guruAssignedClass})` : guruSubject,
       email: guruEmail,
       username: guruUsername,
-      password: guruPassword
+      password: guruPassword,
+      dutyType: guruDutyType,
+      assignedClass: guruDutyType === 'GURU_KELAS' ? guruAssignedClass : undefined
     });
 
     // Reset
@@ -184,8 +321,10 @@ export default function SettingsSec({
     setGuruEmail('');
     setGuruUsername('');
     setGuruPassword('guru');
+    setGuruDutyType('GURU_MAPEL');
+    setGuruAssignedClass(academicSetting.classes[0] || '');
     setShowAddGuru(false);
-    alert('Tenaga Pendidik baru berhasil ditambahkan!');
+    alert('Guru baru berhasil ditambahkan!');
   };
 
   // Edit Guru Handlers
@@ -195,6 +334,8 @@ export default function SettingsSec({
     setEditSubject(teacher.subject);
     setEditEmail(teacher.email);
     setEditUsername(teacher.username);
+    setEditDutyType(teacher.dutyType || 'GURU_MAPEL');
+    setEditAssignedClass(teacher.assignedClass || academicSetting.classes[0] || '');
     setResettingTeacher(null); // Close reset password if open
     setShowAddGuru(false); // Close add form if open
   };
@@ -210,9 +351,11 @@ export default function SettingsSec({
     onUpdateTeacher({
       ...editingTeacher,
       name: editName,
-      subject: editSubject,
+      subject: editDutyType === 'GURU_KELAS' ? `Guru Kelas (${editAssignedClass})` : editSubject,
       email: editEmail,
-      username: editUsername
+      username: editUsername,
+      dutyType: editDutyType,
+      assignedClass: editDutyType === 'GURU_KELAS' ? editAssignedClass : undefined
     });
 
     setEditingTeacher(null);
@@ -299,7 +442,7 @@ export default function SettingsSec({
             {/* 1. Add Academic Years */}
             <div className="p-5 bg-slate-950/20 border border-slate-800 rounded-2xl space-y-3">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">Tahun Pelajaran</h3>
-              <div className="flex gap-1.5">
+              <form onSubmit={(e) => { e.preventDefault(); handleAddYear(); }} className="flex gap-1.5">
                 <input
                   type="text"
                   placeholder="Contoh: 2027/2028"
@@ -308,19 +451,29 @@ export default function SettingsSec({
                   className="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500"
                 />
                 <button
-                  onClick={handleAddYear}
-                  className="p-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg font-bold"
+                  type="submit"
+                  className="p-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg font-bold shrink-0"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
-              </div>
+              </form>
               <div className="max-h-36 overflow-y-auto space-y-1 pr-1 border border-slate-800 rounded-lg p-2 bg-slate-950/40">
                 {academicSetting.years.map(y => (
                   <div key={y} className="flex justify-between items-center p-1.5 text-[11px] text-slate-300 bg-slate-900 rounded border border-slate-800/40">
                     <span className="font-semibold">{y}</span>
-                    {academicSetting.activeYear === y && (
-                      <span className="text-[9px] bg-emerald-500/10 text-emerald-400 font-bold px-1 rounded">Aktif</span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {academicSetting.activeYear === y && (
+                        <span className="text-[9px] bg-emerald-500/10 text-emerald-400 font-bold px-1 rounded">Aktif</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteYear(y)}
+                        className="text-slate-500 hover:text-red-400 p-1 rounded transition-colors"
+                        title="Hapus Tahun Pelajaran"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -329,7 +482,7 @@ export default function SettingsSec({
             {/* 2. Add Subjects */}
             <div className="p-5 bg-slate-950/20 border border-slate-800 rounded-2xl space-y-3">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">Mata Pelajaran</h3>
-              <div className="flex gap-1.5">
+              <form onSubmit={(e) => { e.preventDefault(); handleAddSubject(); }} className="flex gap-1.5">
                 <input
                   type="text"
                   placeholder="Nama Mapel Baru..."
@@ -338,16 +491,24 @@ export default function SettingsSec({
                   className="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500"
                 />
                 <button
-                  onClick={handleAddSubject}
-                  className="p-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg font-bold"
+                  type="submit"
+                  className="p-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg font-bold shrink-0"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
-              </div>
+              </form>
               <div className="max-h-36 overflow-y-auto space-y-1 pr-1 border border-slate-800 rounded-lg p-2 bg-slate-950/40">
                 {academicSetting.subjects.map(s => (
-                  <div key={s} className="p-1.5 text-[11px] text-slate-300 bg-slate-900 rounded border border-slate-800/40 font-semibold">
-                    {s}
+                  <div key={s} className="flex justify-between items-center p-1.5 text-[11px] text-slate-300 bg-slate-900 rounded border border-slate-800/40">
+                    <span className="font-semibold">{s}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSubject(s)}
+                      className="text-slate-500 hover:text-red-400 p-1 rounded transition-colors"
+                      title="Hapus Mata Pelajaran"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -356,7 +517,7 @@ export default function SettingsSec({
             {/* 3. Add Classes */}
             <div className="p-5 bg-slate-950/20 border border-slate-800 rounded-2xl space-y-3">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider">Rombel / Kelas</h3>
-              <div className="flex gap-1.5">
+              <form onSubmit={(e) => { e.preventDefault(); handleAddClass(); }} className="flex gap-1.5">
                 <input
                   type="text"
                   placeholder="Contoh: VII-C"
@@ -365,20 +526,191 @@ export default function SettingsSec({
                   className="flex-1 bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500"
                 />
                 <button
-                  onClick={handleAddClass}
-                  className="p-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg font-bold"
+                  type="submit"
+                  className="p-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg font-bold shrink-0"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
-              </div>
+              </form>
               <div className="max-h-36 overflow-y-auto space-y-1 pr-1 border border-slate-800 rounded-lg p-2 bg-slate-950/40">
                 {academicSetting.classes.map(c => (
-                  <div key={c} className="p-1.5 text-[11px] text-slate-300 bg-slate-900 rounded border border-slate-800/40 font-bold text-teal-400">
-                    {c}
+                  <div key={c} className="flex justify-between items-center p-1.5 text-[11px] text-slate-300 bg-slate-900 rounded border border-slate-800/40">
+                    <span className="font-bold text-teal-400">{c}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteClass(c)}
+                      className="text-slate-500 hover:text-red-400 p-1 rounded transition-colors"
+                      title="Hapus Rombel/Kelas"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* 4. Subject Exclusions per Class */}
+          <div className="p-5 bg-slate-950/40 border border-slate-800 rounded-2xl shadow-xl space-y-4">
+            <div className="border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-emerald-400" /> Pengecualian Mata Pelajaran per Rombel / Kelas
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Gunakan fitur ini untuk mengecualikan mata pelajaran tertentu pada rombel khusus, sehingga Guru Kelas rombel tersebut tidak perlu menginput nilai untuk mata pelajaran yang tidak diajarkan di rombel tersebut.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end bg-slate-950/20 p-4 border border-slate-800/60 rounded-xl">
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1.5 text-[11px]">Pilih Rombel / Kelas</label>
+                <select
+                  value={exclusionClass}
+                  onChange={(e) => setExclusionClass(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-slate-200 font-bold focus:outline-none focus:border-emerald-500 text-xs"
+                >
+                  {academicSetting.classes.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1.5 text-[11px]">Pilih Mata Pelajaran Dikecualikan</label>
+                <select
+                  value={exclusionSubject}
+                  onChange={(e) => setExclusionSubject(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-slate-200 font-bold focus:outline-none focus:border-emerald-500 text-xs"
+                >
+                  {academicSetting.subjects.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={handleAddExclusion}
+                  className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors text-xs"
+                >
+                  <Plus className="w-4 h-4 font-black" /> Tambah Pengecualian
+                </button>
+              </div>
+            </div>
+
+            {/* List of active exclusions */}
+            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/20">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-900 text-slate-400 uppercase text-[9px] font-black tracking-widest border-b border-slate-800">
+                    <th className="p-3">Rombel / Kelas</th>
+                    <th className="p-3">Mata Pelajaran Dikecualikan</th>
+                    <th className="p-3 text-center w-24">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/40">
+                  {!(academicSetting.subjectExclusions && academicSetting.subjectExclusions.length > 0) ? (
+                    <tr>
+                      <td colSpan={3} className="p-4 text-center text-slate-500 italic text-[11px]">
+                        Tidak ada data pengecualian mata pelajaran aktif.
+                      </td>
+                    </tr>
+                  ) : (
+                    academicSetting.subjectExclusions.map((ex, idx) => (
+                      <tr key={idx} className="hover:bg-slate-900/40 text-slate-300">
+                        <td className="p-3 font-bold text-teal-400">{ex.className}</td>
+                        <td className="p-3 font-medium">{ex.subject}</td>
+                        <td className="p-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteExclusion(ex.className, ex.subject)}
+                            className="p-1.5 text-slate-400 hover:text-red-400 rounded-lg hover:bg-red-500/5 transition-colors"
+                            title="Hapus pengecualian"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Wali Kelas & Guru Kelas Assignment Card */}
+          <div className="p-5 bg-slate-950/40 border border-slate-800 rounded-2xl shadow-xl space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-emerald-400" /> Penyetelan Wali Kelas & Guru Kelas
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-1">Assign wali kelas (homeroom) dan guru kelas masing-masing rombongan belajar (rombel).</p>
+              </div>
+              <span className="text-[9px] bg-teal-500/10 text-teal-400 font-extrabold px-2 py-1 rounded-lg border border-teal-500/10 shrink-0 self-start sm:self-center">
+                ADMIN PRIVILEGES ACTIVE
+              </span>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-950/20">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-900 text-slate-400 uppercase text-[9px] font-black tracking-widest border-b border-slate-800">
+                    <th className="p-3">Rombel / Kelas</th>
+                    <th className="p-3">Wali Kelas (Homeroom)</th>
+                    <th className="p-3">Guru Kelas (Class Teacher)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50">
+                  {academicSetting.classes.map(cls => {
+                    const currentStaff = classStaffs.find(cs => cs.classId === cls);
+                    const selectedWali = currentStaff?.waliKelasNuptk || '';
+                    const selectedGuru = currentStaff?.guruKelasNuptk || '';
+
+                    return (
+                      <tr key={cls} className="hover:bg-slate-850/20 transition-all duration-150">
+                        <td className="p-3 font-black text-emerald-400 uppercase font-mono text-sm">
+                          Kelas {cls}
+                        </td>
+                        <td className="p-3">
+                          <select
+                            value={selectedWali}
+                            onChange={(e) => handleStaffChange(cls, 'wali', e.target.value)}
+                            className="bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-300 focus:outline-none focus:border-emerald-500 text-xs w-full max-w-xs font-medium"
+                          >
+                            <option value="">-- Pilih Wali Kelas --</option>
+                            {teachers.map(t => (
+                              <option key={t.nuptk} value={t.nuptk}>
+                                {t.name} ({t.subject})
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="p-3">
+                          <select
+                            value={selectedGuru}
+                            onChange={(e) => handleStaffChange(cls, 'guru', e.target.value)}
+                            className="bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-300 focus:outline-none focus:border-emerald-500 text-xs w-full max-w-xs font-medium"
+                          >
+                            <option value="">-- Pilih Guru Kelas --</option>
+                            {teachers.map(t => (
+                              <option key={t.nuptk} value={t.nuptk}>
+                                {t.name} ({t.subject})
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            
+            <p className="text-[10px] text-slate-500 italic mt-1 leading-normal">
+              * Guru kelas di atas terdaftar sebagai penanggung jawab utama pembelajaran umum kelas selain dari guru mata pelajaran spesifik yang telah ditentukan. Perubahan disimpan otomatis ke penyimpanan lokal sistem.
+            </p>
           </div>
         </div>
       )}
@@ -537,7 +869,7 @@ export default function SettingsSec({
           {showAddGuru && (
             <form onSubmit={handleAddGuruSubmit} className="p-5 bg-slate-950/40 border border-slate-800 rounded-2xl space-y-4 animate-slideDown text-xs">
               <h4 className="font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-2 flex items-center gap-1.5">
-                <Briefcase className="w-4 h-4 text-emerald-400" /> Daftarkan Tenaga Pendidik Baru
+                <Briefcase className="w-4 h-4 text-emerald-400" /> Daftarkan Guru Baru (Kelas / Mapel)
               </h4>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -566,17 +898,44 @@ export default function SettingsSec({
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Mata Pelajaran Diampu</label>
+                  <label className="block text-slate-400 font-semibold mb-1">Status Tugas Guru *</label>
                   <select
-                    value={guruSubject}
-                    onChange={(e) => setGuruSubject(e.target.value)}
+                    value={guruDutyType}
+                    onChange={(e) => setGuruDutyType(e.target.value as 'GURU_KELAS' | 'GURU_MAPEL')}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold text-xs"
                   >
-                    {availableSubjects.map(sub => (
-                      <option key={sub} value={sub}>{sub}</option>
-                    ))}
+                    <option value="GURU_MAPEL">Guru Mata Pelajaran (Guru Mapel)</option>
+                    <option value="GURU_KELAS">Guru Kelas</option>
                   </select>
                 </div>
+
+                {guruDutyType === 'GURU_MAPEL' ? (
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Mata Pelajaran Diampu *</label>
+                    <select
+                      value={guruSubject}
+                      onChange={(e) => setGuruSubject(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold text-xs"
+                    >
+                      {availableSubjects.map(sub => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Kelas / Rombel Diampu *</label>
+                    <select
+                      value={guruAssignedClass}
+                      onChange={(e) => setGuruAssignedClass(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold text-xs"
+                    >
+                      {academicSetting.classes.map(cls => (
+                        <option key={cls} value={cls}>Kelas {cls}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-slate-400 font-semibold mb-1">Email Guru (Wajib) *</label>
@@ -664,17 +1023,44 @@ export default function SettingsSec({
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Mata Pelajaran Diampu</label>
+                  <label className="block text-slate-400 font-semibold mb-1">Status Tugas Guru *</label>
                   <select
-                    value={editSubject}
-                    onChange={(e) => setEditSubject(e.target.value)}
+                    value={editDutyType}
+                    onChange={(e) => setEditDutyType(e.target.value as 'GURU_KELAS' | 'GURU_MAPEL')}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold text-xs"
                   >
-                    {availableSubjects.map(sub => (
-                      <option key={sub} value={sub}>{sub}</option>
-                    ))}
+                    <option value="GURU_MAPEL">Guru Mata Pelajaran (Guru Mapel)</option>
+                    <option value="GURU_KELAS">Guru Kelas</option>
                   </select>
                 </div>
+
+                {editDutyType === 'GURU_MAPEL' ? (
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Mata Pelajaran Diampu *</label>
+                    <select
+                      value={editSubject}
+                      onChange={(e) => setEditSubject(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold text-xs"
+                    >
+                      {availableSubjects.map(sub => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-slate-400 font-semibold mb-1">Kelas / Rombel Diampu *</label>
+                    <select
+                      value={editAssignedClass}
+                      onChange={(e) => setEditAssignedClass(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold text-xs"
+                    >
+                      {academicSetting.classes.map(cls => (
+                        <option key={cls} value={cls}>Kelas {cls}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-slate-400 font-semibold mb-1">Email Guru (Wajib) *</label>
@@ -769,7 +1155,8 @@ export default function SettingsSec({
                   <th className="p-4 w-12 text-center">No</th>
                   <th className="p-4">NUPTK Guru</th>
                   <th className="p-4">Nama Lengkap & Gelar</th>
-                  <th className="p-4">Mapel Diampu</th>
+                  <th className="p-4">Status Tugas</th>
+                  <th className="p-4">Mapel / Kelas Diampu</th>
                   <th className="p-4">Alamat Email Guru</th>
                   <th className="p-4">Username Login</th>
                   <th className="p-4">Kata Sandi</th>
@@ -779,7 +1166,7 @@ export default function SettingsSec({
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
                 {teachers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-10 text-center text-slate-500 italic">
+                    <td colSpan={9} className="p-10 text-center text-slate-500 italic">
                       Belum ada guru terdaftar di direktori.
                     </td>
                   </tr>
@@ -790,8 +1177,17 @@ export default function SettingsSec({
                       <td className="p-4 font-mono font-bold text-slate-400">{t.nuptk}</td>
                       <td className="p-4 font-bold text-white text-sm">{t.name}</td>
                       <td className="p-4">
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
+                          t.dutyType === 'GURU_KELAS'
+                            ? 'text-teal-400 bg-teal-500/10 border-teal-500/10'
+                            : 'text-amber-400 bg-amber-500/10 border-amber-500/10'
+                        }`}>
+                          {t.dutyType === 'GURU_KELAS' ? 'Guru Kelas' : 'Guru Mapel'}
+                        </span>
+                      </td>
+                      <td className="p-4">
                         <span className="px-2 py-0.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 rounded border border-emerald-500/10">
-                          {t.subject}
+                          {t.dutyType === 'GURU_KELAS' ? `Kelas ${t.assignedClass || '-'}` : t.subject}
                         </span>
                       </td>
                       <td className="p-4 text-slate-400 font-mono">{t.email}</td>

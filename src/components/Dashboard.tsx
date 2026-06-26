@@ -416,7 +416,10 @@ export default function Dashboard({
                             <span className="text-[9px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-medium">{log.role}</span>
                           </div>
                           <p className="text-slate-400 font-medium truncate mt-1">{log.subject}</p>
-                          <p className="text-[10px] text-slate-500 font-mono mt-1 flex items-center gap-1">
+                          <p className="text-[10px] text-emerald-400 mt-1 font-mono font-medium">
+                            Dari: <span className="underline">{log.senderName || 'Admin'} ({log.sender || 'system'})</span>
+                          </p>
+                          <p className="text-[10px] text-slate-500 font-mono mt-0.5 flex items-center gap-1">
                             <Clock className="w-3 h-3 text-slate-500" />
                             {new Date(log.timestamp).toLocaleTimeString('id-ID')} - {log.type}
                           </p>
@@ -555,6 +558,9 @@ export default function Dashboard({
                         </div>
                         <h4 className="font-bold text-xs text-white truncate">{log.subject}</h4>
                         <p className="text-[11px] text-slate-400 mt-1 leading-normal">{log.content}</p>
+                        <p className="text-[10px] text-emerald-400 mt-1 font-mono font-medium">
+                          Dikirim oleh: {log.senderName || 'Admin'} ({log.sender || 'system'})
+                        </p>
                         <div className="mt-2 flex justify-between items-center text-[10px] text-slate-500">
                           <span className="truncate max-w-[150px]">{log.recipient}</span>
                           <span className="text-emerald-400 font-semibold flex items-center gap-1">

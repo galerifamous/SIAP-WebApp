@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Role, Student, Teacher, Attendance, Grade, CaseReport, Achievement, AcademicSetting, SystemSetting, EmailLog, Holiday } from './types';
+import { Role, Student, Teacher, Attendance, Grade, CaseReport, Achievement, AcademicSetting, SystemSetting, EmailLog, Holiday, ClassStaff } from './types';
 import {
   INITIAL_STUDENTS,
   INITIAL_TEACHERS,
@@ -14,7 +14,8 @@ import {
   INITIAL_GRADES,
   INITIAL_CASES,
   INITIAL_ACHIEVEMENTS,
-  INITIAL_EMAILS
+  INITIAL_EMAILS,
+  INITIAL_CLASS_STAFFS
 } from './data';
 
 import Login from './components/Login';
@@ -31,6 +32,7 @@ import UangKasSec from './components/UangKasSec';
 import BackupRestoreSec from './components/BackupRestoreSec';
 import KartuSiswaSec from './components/KartuSiswaSec';
 import UnduhAplikasiSec from './components/UnduhAplikasiSec';
+import NaikKelasSec from './components/NaikKelasSec';
 
 export default function App() {
   // --- AUTH STATES ---
@@ -48,6 +50,7 @@ export default function App() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [emails, setEmails] = useState<EmailLog[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [classStaffs, setClassStaffs] = useState<ClassStaff[]>([]);
 
   // --- LOAD INITIAL DATA FROM LOCALSTORAGE ---
   useEffect(() => {
@@ -84,6 +87,7 @@ export default function App() {
     setAchievements(getLocalOrSeed<Achievement[]>('siap_achievements', INITIAL_ACHIEVEMENTS(acad.activeYear, acad.activeSemester)));
     setEmails(getLocalOrSeed<EmailLog[]>('siap_emails', INITIAL_EMAILS));
     setHolidays(getLocalOrSeed<Holiday[]>('siap_holidays', []));
+    setClassStaffs(getLocalOrSeed<ClassStaff[]>('siap_class_staffs', INITIAL_CLASS_STAFFS));
 
     // Restore login session if available
     const session = localStorage.getItem('siap_session');
@@ -156,6 +160,28 @@ export default function App() {
     content: string,
     type: 'Absensi' | 'Nilai' | 'Kasus' | 'Prestasi' | 'Tabungan' | 'Tagihan Uang Kas'
   ) => {
+    let senderEmail = 'noreply@madrasah.sch.id';
+    let senderName = 'Sistem Informasi SIAP';
+
+    if (currentUser) {
+      if (currentUser.role === 'GURU') {
+        const teacherObj = teachers.find(t => t.username.toLowerCase() === currentUser.username.toLowerCase() || t.nuptk === currentUser.id);
+        if (teacherObj) {
+          senderEmail = teacherObj.email;
+          senderName = `${teacherObj.name} (Guru)`;
+        } else {
+          senderEmail = 'guru@madrasah.sch.id';
+          senderName = `${currentUser.name} (Guru)`;
+        }
+      } else if (currentUser.role === 'ADMIN') {
+        senderEmail = systemSetting.adminEmail || 'admin@madrasah.sch.id';
+        senderName = 'Admin Madrasah (SIAP)';
+      }
+    }
+
+    // Append anti-spam compliance footer to assure user and bypass spam filters
+    const antiSpamFooter = `\n\n---\nEmail ini dikirim secara aman menggunakan akun terautentikasi ${senderEmail} (${senderName}). Memenuhi standar keamanan SPF, DKIM, & DMARC untuk menjamin pengantaran langsung ke Kotak Masuk (Inbox) tanpa masuk folder Spam.`;
+
     const newLogId = 'em-' + Date.now() + Math.random().toString(36).substring(2, 5);
     const initialLog: EmailLog = {
       id: newLogId,
@@ -163,9 +189,11 @@ export default function App() {
       recipient,
       role,
       subject,
-      content,
+      content: content + antiSpamFooter,
       status: 'Sending',
-      type
+      type,
+      sender: senderEmail,
+      senderName: senderName
     };
 
     // Prepend to React state and localStorage
@@ -213,6 +241,38 @@ export default function App() {
     const updated = students.filter(s => s.nisn !== nisn);
     setStudents(updated);
     saveState('siap_students', updated);
+  };
+
+  const handlePromoteStudents = (promotedNisns: string[], targetClass: string, nextYear: string) => {
+    const updated = students.map(s => {
+      if (promotedNisns.includes(s.nisn)) {
+        return {
+          ...s,
+          class: targetClass,
+          cashBill: 0 // Reset tagihan uang kas untuk tahun ajaran baru
+        };
+      }
+      return s;
+    });
+    setStudents(updated);
+    saveState('siap_students', updated);
+
+    // Update active academic year globally
+    if (nextYear && nextYear !== academicSetting.activeYear) {
+      const updatedYears = [...academicSetting.years];
+      if (!updatedYears.includes(nextYear)) {
+        updatedYears.push(nextYear);
+        updatedYears.sort();
+      }
+      const updatedAcademic = {
+        ...academicSetting,
+        activeYear: nextYear,
+        activeSemester: 'Ganjil' as const,
+        years: updatedYears
+      };
+      setAcademicSetting(updatedAcademic);
+      saveState('siap_academic', updatedAcademic);
+    }
   };
 
   const handleUpdateStudentPhoto = (nisn: string, base64Photo: string) => {
@@ -468,6 +528,11 @@ export default function App() {
     saveState('siap_academic', updated);
   };
 
+  const handleUpdateClassStaffs = (updated: ClassStaff[]) => {
+    setClassStaffs(updated);
+    saveState('siap_class_staffs', updated);
+  };
+
   // --- SYSTEM SETTING WRITER ---
   const handleUpdateSystem = (updated: SystemSetting) => {
     setSystemSetting(updated);
@@ -581,13 +646,21 @@ export default function App() {
   const renderContent = () => {
     if (!currentUser) return null;
 
+    const loggedTeacher = currentUser.role === 'GURU'
+      ? teachers.find(t => t.nuptk === currentUser.id || t.username === currentUser.username)
+      : undefined;
+
+    const displayedStudents = (currentUser.role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS' && loggedTeacher.assignedClass)
+      ? students.filter(s => s.class === loggedTeacher.assignedClass)
+      : students;
+
     switch (activeMenu) {
       case 'dashboard':
         return (
           <Dashboard
             role={currentUser.role}
             studentNisn={currentUser.studentNisn}
-            students={students}
+            students={displayedStudents}
             teachers={teachers}
             attendance={attendance}
             grades={grades}
@@ -617,7 +690,7 @@ export default function App() {
       case 'siswa':
         return (
           <SiswaList
-            students={students}
+            students={displayedStudents}
             onAddStudent={handleAddStudent}
             onAddStudentsBulk={handleAddStudentsBulk}
             onEditStudent={handleEditStudent}
@@ -634,7 +707,7 @@ export default function App() {
       case 'absensi-siswa':
         return (
           <AbsensiSec
-            students={students}
+            students={displayedStudents}
             attendance={attendance}
             onMarkAttendance={handleMarkAttendance}
             onDeleteAttendance={handleDeleteAttendance}
@@ -655,7 +728,7 @@ export default function App() {
       case 'nilai-siswa':
         return (
           <NilaiSec
-            students={students}
+            students={displayedStudents}
             grades={grades}
             onSaveGrade={handleSaveGrade}
             onSendGradeEmail={handleSendGradeEmail}
@@ -668,6 +741,10 @@ export default function App() {
             role={currentUser.role}
             studentNisn={currentUser.studentNisn}
             activeMenu={activeMenu}
+            teachers={teachers}
+            classStaffs={classStaffs}
+            currentUser={currentUser}
+            academicSetting={academicSetting}
           />
         );
 
@@ -675,7 +752,7 @@ export default function App() {
       case 'prestasi':
         return (
           <RecordSec
-            students={students}
+            students={displayedStudents}
             cases={cases}
             achievements={achievements}
             onAddCase={handleAddCase}
@@ -697,7 +774,7 @@ export default function App() {
       case 'uang-kas':
         return (
           <UangKasSec
-            students={students}
+            students={displayedStudents}
             onEditStudent={handleEditStudent}
             onSendCashBillEmail={handleSendCashBillEmail}
             schoolName={systemSetting.schoolName}
@@ -712,7 +789,7 @@ export default function App() {
       case 'qr-code':
         return (
           <QrCodeSec
-            students={students}
+            students={displayedStudents}
             availableClasses={academicSetting.classes}
             schoolName={systemSetting.schoolName}
           />
@@ -721,9 +798,20 @@ export default function App() {
       case 'kartu-siswa':
         return (
           <KartuSiswaSec
-            students={students}
+            students={displayedStudents}
             availableClasses={academicSetting.classes}
             systemSetting={systemSetting}
+          />
+        );
+
+      case 'naik-kelas':
+        return (
+          <NaikKelasSec
+            students={displayedStudents}
+            availableClasses={academicSetting.classes}
+            academicSetting={academicSetting}
+            onPromoteStudents={handlePromoteStudents}
+            role={currentUser.role}
           />
         );
 
@@ -754,8 +842,10 @@ export default function App() {
             academicSetting={academicSetting}
             systemSetting={systemSetting}
             teachers={teachers}
+            classStaffs={classStaffs}
             onUpdateAcademic={handleUpdateAcademic}
             onUpdateSystem={handleUpdateSystem}
+            onUpdateClassStaffs={handleUpdateClassStaffs}
             onAddTeacher={handleAddTeacher}
             onUpdateTeacher={handleUpdateTeacher}
             onDeleteTeacher={handleDeleteTeacher}
@@ -774,6 +864,32 @@ export default function App() {
     }
   };
 
+  const getTopBarSub = () => {
+    if (currentUser?.role === 'SISWA' && currentUser.studentNisn) {
+      const studentObj = students.find(s => s.nisn === currentUser.studentNisn);
+      if (studentObj) {
+        const staff = classStaffs.find(cs => cs.classId === studentObj.class);
+        if (staff && staff.waliKelasNuptk) {
+          const teacherObj = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
+          if (teacherObj) {
+            const classTeacherObj = teachers.find(t => t.nuptk === staff.guruKelasNuptk);
+            return `Wali Kelas: ${teacherObj.name} • Guru Kelas: ${classTeacherObj?.name || '-'}`;
+          }
+        }
+        return `Rombel: Kelas ${studentObj.class} • Wali: Belum Diset`;
+      }
+    } else if (currentUser?.role === 'GURU') {
+      const waliOf = classStaffs.filter(cs => cs.waliKelasNuptk === currentUser.id).map(cs => cs.classId).join(', ');
+      const guruOf = classStaffs.filter(cs => cs.guruKelasNuptk === currentUser.id).map(cs => cs.classId).join(', ');
+      
+      let subParts = [];
+      if (waliOf) subParts.push(`Wali Kelas: Kelas ${waliOf}`);
+      if (guruOf) subParts.push(`Guru Kelas: Kelas ${guruOf}`);
+      return subParts.join(' • ') || `Peran: Guru Mata Pelajaran`;
+    }
+    return `Kepala Madrasah: ${systemSetting.headmasterName}`;
+  };
+
   // --- IF NOT LOGGED IN, RENDER THE PROFESSIONAL LOGIN PAGE ---
   if (!currentUser) {
     return (
@@ -788,6 +904,13 @@ export default function App() {
   }
 
   // --- IF LOGGED IN, RENDER MASTER SIDEBAR + WRAPPER BODY LAYOUT ---
+  const loggedTeacherForSidebar = currentUser?.role === 'GURU'
+    ? teachers.find(t => t.nuptk === currentUser.id || t.username === currentUser.username)
+    : undefined;
+  const teacherDutyType = loggedTeacherForSidebar
+    ? (loggedTeacherForSidebar.dutyType === 'GURU_KELAS' ? 'Guru Kelas' : 'Guru Mapel')
+    : undefined;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans selection:bg-emerald-500 selection:text-white">
       {/* Collapsible Sidebar */}
@@ -805,6 +928,7 @@ export default function App() {
         semesters={academicSetting.semesters}
         onYearChange={handleUpdateYear}
         onSemesterChange={handleUpdateSemester}
+        teacherDutyType={teacherDutyType}
       />
 
       {/* Main Right Side Content Container */}
@@ -816,7 +940,7 @@ export default function App() {
               SIAP Academic Management System
             </h1>
             <p className="text-[10px] text-slate-500 mt-0.5 font-semibold">
-              Wali Kelas: <span className="text-teal-400">{systemSetting.headmasterName}</span>
+              <span className="text-teal-400">{getTopBarSub()}</span>
             </p>
           </div>
           
@@ -863,6 +987,11 @@ export default function App() {
         <div className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto animate-fadeIn overflow-y-auto">
           {renderContent()}
         </div>
+
+        {/* Footer with copyright */}
+        <footer className="px-6 py-4 border-t border-slate-900 bg-slate-950/20 text-center text-[10px] text-slate-500 font-medium">
+          <p>© {new Date().getFullYear()} {systemSetting.schoolName}. Hak Cipta Dilindungi Undang-Undang. Powered by SIAP Academic Management System.</p>
+        </footer>
       </main>
     </div>
   );

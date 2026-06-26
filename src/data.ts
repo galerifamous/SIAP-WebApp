@@ -3,7 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Student, Teacher, Attendance, Grade, CaseReport, Achievement, AcademicSetting, SystemSetting, EmailLog } from './types';
+import { Student, Teacher, Attendance, Grade, CaseReport, Achievement, AcademicSetting, SystemSetting, EmailLog, ClassStaff } from './types';
+
+export const INITIAL_CLASS_STAFFS: ClassStaff[] = [
+  { classId: 'VII-A', waliKelasNuptk: '197605122003121002', guruKelasNuptk: '198504022010012005' },
+  { classId: 'VII-B', waliKelasNuptk: '198504022010012005', guruKelasNuptk: '199008152015031003' },
+  { classId: 'VIII-A', waliKelasNuptk: '199008152015031003', guruKelasNuptk: '197605122003121002' },
+  { classId: 'VIII-B', waliKelasNuptk: '197605122003121002', guruKelasNuptk: '198504022010012005' },
+  { classId: 'IX-A', waliKelasNuptk: '198504022010012005', guruKelasNuptk: '199008152015031003' },
+  { classId: 'IX-B', waliKelasNuptk: '199008152015031003', guruKelasNuptk: '197605122003121002' }
+];
 
 export const INITIAL_STUDENTS: Student[] = [
   {
@@ -85,15 +94,18 @@ export const INITIAL_TEACHERS: Teacher[] = [
     subject: 'Matematika',
     email: 'mulyono.guru@gmail.com',
     username: 'mulyono',
-    password: 'guru'
+    password: 'guru',
+    dutyType: 'GURU_MAPEL'
   },
   {
     nuptk: '198504022010012005',
     name: 'Siti Nurjanah, S.Pd.',
-    subject: 'Bahasa Indonesia',
+    subject: 'Guru Kelas (VII-A)',
     email: 'sitinurjanah.guru@gmail.com',
     username: 'sitinurjanah',
-    password: 'guru'
+    password: 'guru',
+    dutyType: 'GURU_KELAS',
+    assignedClass: 'VII-A'
   },
   {
     nuptk: '199008152015031003',
@@ -101,7 +113,8 @@ export const INITIAL_TEACHERS: Teacher[] = [
     subject: 'IPA',
     email: 'andiwijaya.guru@gmail.com',
     username: 'andiwijaya',
-    password: 'guru'
+    password: 'guru',
+    dutyType: 'GURU_MAPEL'
   }
 ];
 

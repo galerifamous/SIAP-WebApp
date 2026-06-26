@@ -37,6 +37,8 @@ export interface Teacher {
   email: string;
   username: string;
   password?: string;
+  dutyType?: 'GURU_KELAS' | 'GURU_MAPEL';
+  assignedClass?: string;
 }
 
 export interface Attendance {
@@ -99,6 +101,7 @@ export interface AcademicSetting {
   semesters: ('Ganjil' | 'Genap')[];
   subjects: string[];
   classes: string[];
+  subjectExclusions?: { className: string; subject: string }[];
 }
 
 export interface SystemSetting {
@@ -120,10 +123,18 @@ export interface EmailLog {
   content: string;
   status: 'Sending' | 'Success' | 'Failed';
   type: 'Absensi' | 'Nilai' | 'Kasus' | 'Prestasi' | 'Tabungan' | 'Tagihan Uang Kas';
+  sender?: string;
+  senderName?: string;
 }
 
 export interface Holiday {
   id: string;
   date: string; // YYYY-MM-DD
   description: string;
+}
+
+export interface ClassStaff {
+  classId: string; // e.g. "VII-A"
+  waliKelasNuptk: string; // nuptk of homeroom teacher
+  guruKelasNuptk: string; // nuptk of class teacher
 }

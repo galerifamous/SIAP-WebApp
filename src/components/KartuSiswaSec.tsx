@@ -41,7 +41,33 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
   const [customSchoolAddress, setCustomSchoolAddress] = useState(systemSetting.schoolAddress || 'Jl. Pendidikan No. 45, Jakarta, Indonesia');
   const [customHeadmasterName, setCustomHeadmasterName] = useState(systemSetting.headmasterName || 'H. Mulyono, S.Pd., M.Pd.');
   const [customHeadmasterNip, setCustomHeadmasterNip] = useState('197812052005011002');
-  const [customStampText, setCustomStampText] = useState('SIAP V2\nOFFICIAL\nSEAL');
+  const [customStampText, setCustomStampText] = useState('SIAP V1\nOFFICIAL\nSEAL');
+  
+  // Custom Signature & Stamp Image States
+  const [customHeadmasterSignatureImg, setCustomHeadmasterSignatureImg] = useState(() => {
+    return localStorage.getItem('siap_card_signature_img') || '';
+  });
+  const [customStampImg, setCustomStampImg] = useState(() => {
+    return localStorage.getItem('siap_card_stamp_img') || '';
+  });
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'sig' | 'stamp') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      if (type === 'sig') {
+        setCustomHeadmasterSignatureImg(result);
+        localStorage.setItem('siap_card_signature_img', result);
+      } else {
+        setCustomStampImg(result);
+        localStorage.setItem('siap_card_stamp_img', result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
   
   const [showAddress, setShowAddress] = useState(true);
   const [showTtl, setShowTtl] = useState(true);
@@ -513,47 +539,76 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
             .signature-box {
               text-align: center;
-              width: 130px;
+              width: 110px;
               position: relative;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
             }
             .sig-date {
-              font-size: 7.5px;
-              color: #64748b;
-              margin-bottom: 26px;
+              font-size: 6.5px;
+              color: #475569;
+              margin-bottom: 34px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .sig-image {
+              position: absolute;
+              top: 10px;
+              height: 32px;
+              width: auto;
+              object-fit: contain;
+              z-index: 10;
+              pointer-events: none;
+            }
+            .stamp-seal-img {
+              position: absolute;
+              top: 4px;
+              left: -12px;
+              width: 38px;
+              height: 38px;
+              object-fit: contain;
+              z-index: 5;
+              opacity: 0.8;
+              pointer-events: none;
             }
             .sig-name {
-              font-size: 8.5px;
+              font-size: 7.5px;
               font-weight: 800;
               color: #0f172a;
-              border-bottom: 1px solid #1e293b;
-              padding-bottom: 1.5px;
+              border-bottom: 0.8px solid #1e293b;
+              padding-bottom: 1px;
               margin: 0;
               text-transform: uppercase;
+              width: 100%;
+              white-space: nowrap;
             }
-            .sig-nip {
-              font-size: 7px;
+            .sig-nip, .sig-title {
+              font-size: 6px;
               color: #64748b;
               margin-top: 1.5px;
               font-family: monospace;
+              white-space: nowrap;
             }
 
             /* Stamp Effect */
             .stamp-seal {
               position: absolute;
-              bottom: 4px;
-              left: -15px;
-              width: 44px;
-              height: 44px;
-              border: 1.5px dashed rgba(225, 29, 72, 0.4);
+              top: 4px;
+              left: -12px;
+              width: 38px;
+              height: 38px;
+              border: 1px dashed rgba(225, 29, 72, 0.4);
               border-radius: 50%;
               display: flex;
               align-items: center;
               justify-content: center;
-              transform: rotate(-15deg);
+              transform: rotate(-12deg);
               pointer-events: none;
+              z-index: 5;
             }
             .stamp-text {
-              font-size: 5px;
+              font-size: 4px;
               font-weight: 800;
               color: rgba(225, 29, 72, 0.5);
               text-transform: uppercase;
@@ -682,9 +737,19 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                     ${showSignature ? `
                     <div class="signature-box">
                       <div class="sig-date">Kepala Madrasah,</div>
-                      <div class="stamp-seal">
-                        <div class="stamp-text">${customStampText}</div>
-                      </div>
+                      
+                      ${customStampImg ? `
+                        <img src="${customStampImg}" class="stamp-seal-img" />
+                      ` : `
+                        <div class="stamp-seal">
+                          <div class="stamp-text">${customStampText.replace(/\n/g, '<br/>')}</div>
+                        </div>
+                      `}
+
+                      ${customHeadmasterSignatureImg ? `
+                        <img src="${customHeadmasterSignatureImg}" class="sig-image" />
+                      ` : ''}
+
                       <h5 class="sig-name">${customHeadmasterName}</h5>
                       <span class="sig-title">NIP. ${customHeadmasterNip}</span>
                     </div>
@@ -695,7 +760,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
               <div class="card-back-footer">
                 <span>Diterbit oleh ${customSchoolName}</span>
-                <span style="font-family: monospace;">SIAP-V2</span>
+                <span style="font-family: monospace;">SIAP-V1</span>
               </div>
             </div>
           </div>
@@ -843,6 +908,64 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                   onChange={(e) => setCustomHeadmasterNip(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500 text-[10px] font-mono"
                 />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">Upload Gambar TTD Kepala</label>
+                <div className="flex gap-1.5 items-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'sig')}
+                    className="block w-full text-[9px] text-slate-500
+                      file:mr-2 file:py-1 file:px-2
+                      file:rounded-md file:border-0
+                      file:text-[9px] file:font-semibold
+                      file:bg-slate-800 file:text-slate-300
+                      hover:file:bg-slate-700 cursor-pointer"
+                  />
+                  {customHeadmasterSignatureImg && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomHeadmasterSignatureImg('');
+                        localStorage.removeItem('siap_card_signature_img');
+                      }}
+                      className="text-rose-500 hover:text-rose-400 font-bold text-[9px] px-2 py-1 bg-rose-500/10 rounded border border-rose-500/20 shrink-0"
+                    >
+                      Hapus
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1">Upload Gambar Stempel</label>
+                <div className="flex gap-1.5 items-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleFileUpload(e, 'stamp')}
+                    className="block w-full text-[9px] text-slate-500
+                      file:mr-2 file:py-1 file:px-2
+                      file:rounded-md file:border-0
+                      file:text-[9px] file:font-semibold
+                      file:bg-slate-800 file:text-slate-300
+                      hover:file:bg-slate-700 cursor-pointer"
+                  />
+                  {customStampImg && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomStampImg('');
+                        localStorage.removeItem('siap_card_stamp_img');
+                      }}
+                      className="text-rose-500 hover:text-rose-400 font-bold text-[9px] px-2 py-1 bg-rose-500/10 rounded border border-rose-500/20 shrink-0"
+                    >
+                      Hapus
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -1138,20 +1261,39 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
                       {/* Headmaster signature mockups at the bottom */}
                       {showSignature ? (
-                        <div className="self-end text-center w-28 relative mt-1">
-                          <span className="block text-[6.5px] text-slate-500 mb-5 leading-none">Kepala Madrasah,</span>
+                        <div className="self-end text-center w-28 relative mt-1 flex flex-col items-center">
+                          <span className="block text-[6px] text-slate-500 mb-8 leading-none">Kepala Madrasah,</span>
                           
-                          {/* Official stamp */}
-                          <div className="absolute top-1 -left-4.5 w-9 h-9 border border-dashed border-rose-500/20 rounded-full flex items-center justify-center rotate-12 pointer-events-none">
-                            <span className="text-[4.5px] text-rose-500/20 font-black tracking-tight leading-none text-center uppercase">
-                              {customStampText.replace(/\n/g, ' ')}
-                            </span>
-                          </div>
+                          {/* Signature image or fallback space */}
+                          {customHeadmasterSignatureImg ? (
+                            <img 
+                              src={customHeadmasterSignatureImg} 
+                              alt="TTD" 
+                              className="absolute top-[8px] left-1/2 -translate-x-1/2 h-7 object-contain z-10 pointer-events-none" 
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : null}
 
-                          <span className="block text-[8px] font-black text-white uppercase border-b border-slate-800 pb-0.5 leading-none">
+                          {/* Official stamp */}
+                          {customStampImg ? (
+                            <img 
+                              src={customStampImg} 
+                              alt="Stempel" 
+                              className="absolute top-[1px] -left-3.5 w-9 h-9 object-contain z-5 opacity-80 rotate-12 pointer-events-none" 
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="absolute top-1 -left-3.5 w-9 h-9 border border-dashed border-rose-500/20 rounded-full flex items-center justify-center rotate-12 pointer-events-none z-5">
+                              <span className="text-[3.5px] text-rose-500/20 font-black tracking-tight leading-none text-center uppercase">
+                                {customStampText.replace(/\n/g, ' ')}
+                              </span>
+                            </div>
+                          )}
+
+                          <span className="block text-[7.5px] font-black text-white uppercase border-b border-slate-800 pb-0.5 leading-none w-full">
                             {customHeadmasterName}
                           </span>
-                          <span className="block text-[6px] text-slate-500 font-mono mt-0.5 leading-none">
+                          <span className="block text-[5.5px] text-slate-500 font-mono mt-0.5 leading-none">
                             NIP. {customHeadmasterNip}
                           </span>
                         </div>
@@ -1162,7 +1304,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                     {/* Back card footer */}
                     <div className="border-t border-slate-900 bg-slate-950 px-4 py-2 flex justify-between items-center text-[6.5px] text-slate-500 font-bold">
                       <span>Diterbit oleh {customSchoolName}</span>
-                      <span className="font-mono">SIAP V2</span>
+                      <span className="font-mono">SIAP V1</span>
                     </div>
 
                   </div>

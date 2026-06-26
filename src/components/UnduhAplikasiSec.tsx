@@ -79,7 +79,7 @@ export default function UnduhAplikasiSec({ schoolName }: UnduhAplikasiSecProps) 
       <html>
       <head>
         <meta charset="utf-8">
-        <title>SIAP v2 - ${schoolName}</title>
+        <title>SIAP v1 - ${schoolName}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.5">
         <style>
           body {
@@ -156,7 +156,7 @@ export default function UnduhAplikasiSec({ schoolName }: UnduhAplikasiSecProps) 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-5 mb-6">
         <div>
           <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-            <Download className="w-5 h-5 text-emerald-400" /> Unduh & Pasang Aplikasi SIAP v2
+            <Download className="w-5 h-5 text-emerald-400" /> Unduh & Pasang Aplikasi SIAP v1
           </h2>
           <p className="text-slate-400 text-xs mt-1">Unduh dan pasang aplikasi sistem informasi akademik di HP Android, iPhone, Tablet, maupun Laptop Anda secara instan dan jalankan normal secara mandiri</p>
         </div>
@@ -209,7 +209,7 @@ export default function UnduhAplikasiSec({ schoolName }: UnduhAplikasiSecProps) 
               <div className="mt-4 p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl flex items-start gap-2 text-[10px] text-emerald-300">
                 <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-bold">Launcher Berhasil Diunduh!</span> Simpan file ini di desktop komputer Anda. Kapanpun Anda membuka file ini, portal SIAP v2 akan terbuka otomatis di browser Anda dalam ukuran penuh yang lancar.
+                  <span className="font-bold">Launcher Berhasil Diunduh!</span> Simpan file ini di desktop komputer Anda. Kapanpun Anda membuka file ini, portal SIAP v1 akan terbuka otomatis di browser Anda dalam ukuran penuh yang lancar.
                 </div>
               </div>
             )}
@@ -260,13 +260,13 @@ export default function UnduhAplikasiSec({ schoolName }: UnduhAplikasiSecProps) 
                 <div className="space-y-3 pl-1 text-[11px] text-slate-400 leading-relaxed">
                   <div className="flex gap-3">
                     <span className="w-5 h-5 bg-slate-800 text-slate-200 font-bold rounded-full flex items-center justify-center text-[10px]">1</span>
-                    <p>Buka portal aplikasi SIAP v2 di browser utama laptop Anda.</p>
+                    <p>Buka portal aplikasi SIAP v1 di browser utama laptop Anda.</p>
                   </div>
                   <div className="flex gap-3">
                     <span className="w-5 h-5 bg-slate-800 text-slate-200 font-bold rounded-full flex items-center justify-center text-[10px]">2</span>
                     <div>
                       <p>Perhatikan bagian <strong className="text-slate-200">Address Bar (kolom URL)</strong> di bagian atas browser Anda.</p>
-                      <p className="text-[10px] text-slate-500 mt-1">Akan muncul tombol bergambar laptop dengan tanda panah ke bawah (Install SIAP v2) atau ikon plus (+).</p>
+                      <p className="text-[10px] text-slate-500 mt-1">Akan muncul tombol bergambar laptop dengan tanda panah ke bawah (Install SIAP v1) atau ikon plus (+).</p>
                     </div>
                   </div>
                   <div className="flex gap-3">

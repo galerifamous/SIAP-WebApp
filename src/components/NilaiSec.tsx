@@ -17,7 +17,7 @@ import {
   TrendingUp,
   Award
 } from 'lucide-react';
-import { Student, Grade } from '../types';
+import { Student, Grade, Teacher, ClassStaff, AcademicSetting } from '../types';
 import { downloadFile, convertToCSV, printToPDF } from '../utils/export';
 
 interface NilaiSecProps {
@@ -34,6 +34,10 @@ interface NilaiSecProps {
   role: 'ADMIN' | 'GURU' | 'SISWA';
   studentNisn?: string;
   activeMenu?: string;
+  teachers?: Teacher[];
+  classStaffs?: ClassStaff[];
+  currentUser?: { id: string; name: string; username: string; role: string };
+  academicSetting?: AcademicSetting;
 }
 
 export default function NilaiSec({
@@ -49,14 +53,71 @@ export default function NilaiSec({
   availableSubjects,
   role,
   studentNisn,
-  activeMenu
+  activeMenu,
+  teachers,
+  classStaffs,
+  currentUser,
+  academicSetting
 }: NilaiSecProps) {
   // Navigation tabs driven by sidebar menu selection
   const activeTab = activeMenu ? (activeMenu === 'nilai-input' ? 'input' : 'list') : (role === 'SISWA' ? 'list' : 'input');
 
-  // Input States
-  const [inputClass, setInputClass] = useState(availableClasses[0] || 'IX-A');
-  const [inputSubject, setInputSubject] = useState(availableSubjects[0] || 'Matematika');
+  // Determine logged in teacher role and restrictions
+  const loggedTeacher = (role === 'GURU' && teachers)
+    ? teachers.find(t => t.nuptk === currentUser?.id || t.username === currentUser?.username)
+    : undefined;
+
+  const allowedClasses = loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS' && loggedTeacher.assignedClass
+    ? [loggedTeacher.assignedClass]
+    : availableClasses;
+
+  // Input States - defined before allowedSubjects calculation to handle dependency
+  const [inputClass, setInputClass] = useState(() => allowedClasses[0] || 'IX-A');
+
+  const getSubjectsForInput = (targetClass: string) => {
+    let baseSubjects = availableSubjects;
+
+    // Filter by teacher's specialty/role
+    if (loggedTeacher) {
+      if (loggedTeacher.dutyType === 'GURU_MAPEL') {
+        baseSubjects = [loggedTeacher.subject].filter(Boolean);
+      } else if (loggedTeacher.dutyType === 'GURU_KELAS') {
+        // Guru Kelas can enter all subjects except those that have dedicated GURU_MAPEL
+        const assignedMapelSubjects = teachers
+          ? teachers.filter(t => t.dutyType === 'GURU_MAPEL').map(t => t.subject)
+          : [];
+        baseSubjects = availableSubjects.filter(sub => !assignedMapelSubjects.includes(sub));
+      }
+    }
+
+    // Exclude class-specific subject exclusions set by Admin
+    if (academicSetting?.subjectExclusions) {
+      const exclusionsForClass = academicSetting.subjectExclusions
+        .filter(ex => ex.className === targetClass)
+        .map(ex => ex.subject);
+      baseSubjects = baseSubjects.filter(sub => !exclusionsForClass.includes(sub));
+    }
+
+    return baseSubjects;
+  };
+
+  const allowedSubjects = getSubjectsForInput(inputClass);
+
+  const [inputSubject, setInputSubject] = useState(() => allowedSubjects[0] || 'Matematika');
+
+  // Synchronize state when allowed options change
+  React.useEffect(() => {
+    if (allowedClasses.length > 0 && !allowedClasses.includes(inputClass)) {
+      setInputClass(allowedClasses[0]);
+    }
+  }, [allowedClasses, inputClass]);
+
+  React.useEffect(() => {
+    if (allowedSubjects.length > 0 && !allowedSubjects.includes(inputSubject)) {
+      setInputSubject(allowedSubjects[0]);
+    }
+  }, [allowedSubjects, inputSubject]);
+
   const [selectedStudentNisn, setSelectedStudentNisn] = useState('');
   const [sumatifList, setSumatifList] = useState<number[]>([]);
   const [currentSumatif, setCurrentSumatif] = useState<number | ''>('');
@@ -154,6 +215,15 @@ export default function NilaiSec({
       return g.nisn === studentNisn;
     }
 
+    // Role GURU constraints
+    if (role === 'GURU' && loggedTeacher) {
+      if (loggedTeacher.dutyType === 'GURU_KELAS') {
+        if (g.class !== loggedTeacher.assignedClass) return false;
+      } else if (loggedTeacher.dutyType === 'GURU_MAPEL') {
+        if (g.subject !== loggedTeacher.subject) return false;
+      }
+    }
+
     const matchesSearch = g.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || g.nisn.includes(searchQuery);
     const matchesClass = classFilter ? g.class === classFilter : true;
     const matchesSubject = subjectFilter ? g.subject === subjectFilter : true;
@@ -244,7 +314,7 @@ export default function NilaiSec({
                     }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold text-xs"
                   >
-                    {availableClasses.map(c => (
+                    {allowedClasses.map(c => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
@@ -262,7 +332,7 @@ export default function NilaiSec({
                     }}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold text-xs"
                   >
-                    {availableSubjects.map(sub => (
+                    {allowedSubjects.map(sub => (
                       <option key={sub} value={sub}>{sub}</option>
                     ))}
                   </select>
@@ -458,7 +528,7 @@ export default function NilaiSec({
                     className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-emerald-500 font-semibold"
                   >
                     <option value="">Semua Kelas</option>
-                    {availableClasses.map(c => (
+                    {allowedClasses.map(c => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
@@ -471,7 +541,7 @@ export default function NilaiSec({
                   className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-emerald-500 font-semibold"
                 >
                   <option value="">Semua Mata Pelajaran</option>
-                  {availableSubjects.map(sub => (
+                  {allowedSubjects.map(sub => (
                     <option key={sub} value={sub}>{sub}</option>
                   ))}
                 </select>
