@@ -1,0 +1,6 @@
+{
+  "name": "SIAP - Sistem Informasi Akademik Pelajar",
+  "description": "Sistem Informasi Akademik Pelajar profesional dengan Dashboard, Data Siswa, Absensi QR Code/Barcode, Input Nilai, Catatan Kasus, Prestasi, dan integrasi Notifikasi Email otomatis.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
