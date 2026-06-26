@@ -123,7 +123,12 @@ export default function SiswaList({
       ['1112223334', 'Ahmad Dani', 'IX-A', 'Bandung', '2011-05-12', 'Laki-laki', 'Dani Hamdan', 'danihamdan@gmail.com', 'Jl. Sukajadi No. 12'],
       ['4445556667', 'Siti Rahma', 'IX-A', 'Jakarta', '2011-10-22', 'Perempuan', 'Rahmat Sutrisno', 'rahmat@gmail.com', 'Jl. Kemang Raya No. 4, Jakarta Selatan']
     ];
-    const csvContent = [headers.join(','), ...templateRows.map(row => row.map(v => `"${v.replace(/"/g, '""')}"`).join(','))].join('\n');
+    const delimiter = ';';
+    const csvContent = [
+      "sep=;",
+      headers.join(delimiter),
+      ...templateRows.map(row => row.map(v => `"${v.replace(/"/g, '""')}"`).join(delimiter))
+    ].join('\n');
     downloadFile(csvContent, 'Template_Import_Siswa.csv', 'text/csv;charset=utf-8;');
   };
 
@@ -139,8 +144,23 @@ export default function SiswaList({
         const lines = text.split(/\r?\n/);
         const importedStudents: Student[] = [];
 
-        // Robust CSV line parser supporting quoted values with commas
-        const parseCSVLine = (line: string): string[] => {
+        // Dynamic delimiter detection
+        let startIdx = 1; // Default to skip header at line 0
+        let delimiter = ',';
+        const firstLine = lines[0]?.trim() || '';
+
+        if (firstLine.startsWith('sep=')) {
+          delimiter = firstLine.split('=')[1] || ';';
+          startIdx = 2; // Skip both sep= line (line 0) and header (line 1)
+        } else {
+          // If first line contains semicolon, assume semicolon delimiter
+          if (firstLine.includes(';')) {
+            delimiter = ';';
+          }
+        }
+
+        // Robust CSV line parser supporting quoted values with custom delimiter
+        const parseCSVLine = (line: string, delim: string): string[] => {
           const result: string[] = [];
           let current = '';
           let inQuotes = false;
@@ -148,7 +168,7 @@ export default function SiswaList({
             const char = line[i];
             if (char === '"') {
               inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
+            } else if (char === delim && !inQuotes) {
               result.push(current.trim());
               current = '';
             } else {
@@ -159,12 +179,12 @@ export default function SiswaList({
           return result;
         };
 
-        // Skip headers (line 0)
-        for (let i = 1; i < lines.length; i++) {
+        // Parse students starting from startIdx
+        for (let i = startIdx; i < lines.length; i++) {
           const line = lines[i].trim();
           if (!line) continue;
 
-          const cells = parseCSVLine(line);
+          const cells = parseCSVLine(line, delimiter);
 
           if (cells.length >= 3) { // Minimum requirement: NISN, Nama, Kelas
             importedStudents.push({

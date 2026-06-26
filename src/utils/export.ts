@@ -18,14 +18,15 @@ export function downloadFile(content: string, filename: string, mimeType: string
 
 // Convert JSON array to CSV string with official signature footer at the bottom
 export function convertToCSV<T extends Record<string, any>>(data: T[], headers: string[], keys: (keyof T)[]): string {
-  const headerLine = headers.join(',');
+  const delimiter = ';';
+  const headerLine = headers.join(delimiter);
   const rows = data.map(item => {
     return keys.map(key => {
       const val = item[key];
       if (val === undefined || val === null) return '""';
       const strVal = String(val).replace(/"/g, '""');
       return `"${strVal}"`;
-    }).join(',');
+    }).join(delimiter);
   });
 
   // Dynamic system signature footer retrieved from local storage
@@ -62,7 +63,7 @@ export function convertToCSV<T extends Record<string, any>>(data: T[], headers: 
     const cells = Array(colCount).fill('""');
     const targetCol = Math.max(0, colCount - 2);
     cells[targetCol] = `"${text}"`;
-    return cells.join(',');
+    return cells.join(delimiter);
   };
 
   const footerRows = [
@@ -78,7 +79,7 @@ export function convertToCSV<T extends Record<string, any>>(data: T[], headers: 
     makeFooterRow("NIP. 197812052005011002")
   ];
 
-  return [headerLine, ...rows, ...footerRows].join('\n');
+  return ["sep=;", headerLine, ...rows, ...footerRows].join('\n');
 }
 
 // Custom printer helper with elegant official letter headmaster signature and A4 layout
