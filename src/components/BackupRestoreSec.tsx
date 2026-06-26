@@ -55,6 +55,296 @@ interface BackupRestoreSecProps {
   schoolName: string;
 }
 
+const GOOGLE_APPS_SCRIPT_CODE = `// ==========================================
+// GOOGLE APPS SCRIPT DATABASE INTEGRATION FOR SIAP
+// ==========================================
+// Panduan & Langkah Penyebaran (Deployment):
+// 1. Buat Google Spreadsheet baru atau buka yang sudah ada.
+// 2. Klik menu Ekstensi (Extensions) > Apps Script.
+// 3. Hapus semua kode bawaan di editor, lalu tempelkan (paste) seluruh kode ini.
+// 4. Ubah nilai FOLDER_ID di bawah jika ingin mencadangkan file JSON secara otomatis ke Google Drive.
+// 5. Klik ikon Simpan (kertas) di atas editor.
+// 6. Klik tombol "Deploy" (Penerapan) > "Deployment baru".
+// 7. Pilih jenis "Aplikasi web" (Web App).
+// 8. Isi deskripsi (misal: "SIAP Cloud Database v2").
+// 9. Jalankan sebagai: "Saya (email Anda)" (Execute as: "Me").
+// 10. Siapa yang memiliki akses: "Siapa saja" (Who has access: "Anyone").
+// 11. Klik "Deploy", lalu jika muncul verifikasi izin, pilih "Setujui Akses" (pilih Akun Anda > Advanced > Go to Untitled project > Allow).
+// 12. Salin "URL Aplikasi Web" (Web app URL) yang diakhiri dengan "/exec".
+// 13. Tempelkan URL tersebut ke kolom "URL Web App" di aplikasi SIAP Anda untuk memulai sinkronisasi.
+
+const FOLDER_ID = "YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE"; // Ganti dengan ID folder Google Drive jika diinginkan (opsional)
+
+function doPost(e) {
+  try {
+    const payload = JSON.parse(e.postData.contents);
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. Penanganan Kirim Email Langsung dari SIAP dengan fitur Reply-To (Redirect Balasan ke Guru)
+    if (payload.action === "send_email") {
+      try {
+        let emailOptions = {
+          to: payload.recipient,
+          subject: payload.subject,
+          body: payload.content,
+          name: payload.senderName || "Sistem Informasi SIAP"
+        };
+        
+        // Jika dikirim oleh Guru, atur replyTo agar balasan orang tua langsung terkirim ke email guru yang bersangkutan
+        if (payload.senderEmail) {
+          emailOptions.replyTo = payload.senderEmail;
+        }
+        
+        MailApp.sendEmail(emailOptions);
+        
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: "Email berhasil terkirim via Google MailApp dengan reply-to dialihkan ke: " + (payload.senderEmail || "default")
+        })).setMimeType(ContentService.MimeType.JSON);
+      } catch (mailErr) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          message: "Gagal mengirim email: " + mailErr.toString()
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    
+    // 2. Sync Siswa
+    if (payload.siap_students) {
+      writeToSheet(ss, "Siswa", [
+        "NISN", "Nama", "Kelas", "Tempat Lahir", "Tanggal Lahir", "Gender", 
+        "Nama Orang Tua", "Email Orang Tua", "Alamat", "Saldo Tabungan", "Tagihan Kas"
+      ], payload.siap_students.map(item => [
+        item.nisn, item.name, item.class, item.pob, item.dob, item.gender,
+        item.parentName, item.parentEmail, item.address, item.savings, item.cashBill
+      ]));
+    }
+    
+    // 3. Sync Guru
+    if (payload.siap_teachers) {
+      writeToSheet(ss, "Guru", [
+        "NUPTK", "Nama", "Mata Pelajaran", "Email", "Username", "Tipe Tugas", "Kelas Ditugaskan"
+      ], payload.siap_teachers.map(item => [
+        item.nuptk, item.name, item.subject || "", item.email, item.username, item.dutyType || "", item.assignedClass || ""
+      ]));
+    }
+    
+    // 4. Sync Kehadiran
+    if (payload.siap_attendance) {
+      writeToSheet(ss, "Kehadiran", [
+        "ID", "NISN", "Nama Siswa", "Kelas", "Tanggal", "Status", "Tahun Ajaran", "Semester", "Waktu Input"
+      ], payload.siap_attendance.map(item => [
+        item.id, item.nisn, item.studentName, item.class, item.date, item.status, item.academicYear, item.semester, item.timestamp
+      ]));
+    }
+    
+    // 5. Sync Nilai Rapor
+    if (payload.siap_grades) {
+      writeToSheet(ss, "Nilai_Rapor", [
+        "ID", "NISN", "Nama Siswa", "Kelas", "Mata Pelajaran", "Tahun Ajaran", "Semester", "Sumatif 1", "Sumatif 2", "Sumatif 3", "Sumatif 4", "STS", "SAS", "Nilai Akhir", "Waktu Input"
+      ], payload.siap_grades.map(item => [
+        item.id, item.nisn, item.studentName, item.class, item.subject, item.academicYear, item.semester,
+        item.sumatif && item.sumatif[0] !== undefined ? item.sumatif[0] : "",
+        item.sumatif && item.sumatif[1] !== undefined ? item.sumatif[1] : "",
+        item.sumatif && item.sumatif[2] !== undefined ? item.sumatif[2] : "",
+        item.sumatif && item.sumatif[3] !== undefined ? item.sumatif[3] : "",
+        item.sts !== undefined ? item.sts : "",
+        item.sas !== undefined ? item.sas : "",
+        item.finalScore !== undefined ? item.finalScore : "",
+        item.timestamp
+      ]));
+    }
+    
+    // 6. Sync Kasus Siswa
+    if (payload.siap_cases) {
+      writeToSheet(ss, "Kasus_Pelanggaran", [
+        "ID", "NISN", "Nama Siswa", "Kelas", "Tanggal", "Nama Kasus", "Kategori", "Tindak Lanjut", "Tahun Ajaran", "Semester"
+      ], payload.siap_cases.map(item => [
+        item.id, item.nisn, item.studentName, item.class, item.date, item.caseName, item.category, item.resolution, item.academicYear, item.semester
+      ]));
+    }
+    
+    // 7. Sync Prestasi
+    if (payload.siap_achievements) {
+      writeToSheet(ss, "Prestasi", [
+        "ID", "NISN", "Nama Siswa", "Kelas", "Tanggal", "Nama Prestasi", "Tingkat", "Keterangan", "Tahun Ajaran", "Semester"
+      ], payload.siap_achievements.map(item => [
+        item.id, item.nisn, item.studentName, item.class, item.date, item.achievementName, item.level, item.description, item.academicYear, item.semester
+      ]));
+    }
+
+    // 8. Sync Email Log
+    if (payload.siap_emails) {
+      writeToSheet(ss, "Log_Email", [
+        "ID", "Waktu Kirim", "Penerima", "Peran", "Subjek", "Konten", "Status", "Jenis Notifikasi", "Pengirim"
+      ], payload.siap_emails.map(item => [
+        item.id, item.timestamp, item.recipient, item.role, item.subject, item.content, item.status, item.type, item.senderName || item.sender || ""
+      ]));
+    }
+    
+    // Simpan file backup JSON ke folder Google Drive jika ID Folder dikonfigurasi
+    if (FOLDER_ID && FOLDER_ID !== "YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE") {
+      try {
+        const folder = DriveApp.getFolderById(FOLDER_ID);
+        const fileName = "SIAP_BACKUP_CLOUD_" + new Date().toISOString().slice(0,10) + "_" + new Date().getTime() + ".json";
+        folder.createFile(fileName, JSON.stringify(payload, null, 2), MimeType.PLAIN_TEXT);
+      } catch (driveErr) {
+        console.log("Drive Backup Error: " + driveErr.toString());
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: "Sinkronisasi berhasil! Google Sheets & Google Drive telah diperbarui."
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: "Gagal memproses data: " + err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const payload = {};
+    
+    // Read Siswa
+    payload.siap_students = readFromSheet(ss, "Siswa", [
+      "nisn", "name", "class", "pob", "dob", "gender", 
+      "parentName", "parentEmail", "address", "savings", "cashBill"
+    ], [
+      "string", "string", "string", "string", "string", "string",
+      "string", "string", "string", "number", "number"
+    ]);
+    
+    // Read Guru
+    payload.siap_teachers = readFromSheet(ss, "Guru", [
+      "nuptk", "name", "subject", "email", "username", "dutyType", "assignedClass"
+    ], [
+      "string", "string", "string", "string", "string", "string", "string"
+    ]);
+    
+    // Read Kehadiran
+    payload.siap_attendance = readFromSheet(ss, "Kehadiran", [
+      "id", "nisn", "studentName", "class", "date", "status", "academicYear", "semester", "timestamp"
+    ], [
+      "string", "string", "string", "string", "string", "string", "string", "string", "string"
+    ]);
+    
+    // Read Nilai
+    const rawGrades = readFromSheet(ss, "Nilai_Rapor", [
+      "id", "nisn", "studentName", "class", "subject", "academicYear", "semester",
+      "sumatif1", "sumatif2", "sumatif3", "sumatif4", "sts", "sas", "finalScore", "timestamp"
+    ], [
+      "string", "string", "string", "string", "string", "string", "string",
+      "number", "number", "number", "number", "number", "number", "number", "string"
+    ]);
+    if (rawGrades) {
+      payload.siap_grades = rawGrades.map(g => {
+        const sumatif = [];
+        if (g.sumatif1 !== null && g.sumatif1 !== "") sumatif.push(Number(g.sumatif1));
+        if (g.sumatif2 !== null && g.sumatif2 !== "") sumatif.push(Number(g.sumatif2));
+        if (g.sumatif3 !== null && g.sumatif3 !== "") sumatif.push(Number(g.sumatif3));
+        if (g.sumatif4 !== null && g.sumatif4 !== "") sumatif.push(Number(g.sumatif4));
+        return {
+          id: g.id,
+          nisn: g.nisn,
+          studentName: g.studentName,
+          class: g.class,
+          subject: g.subject,
+          academicYear: g.academicYear,
+          semester: g.semester,
+          sumatif: sumatif,
+          sts: Number(g.sts || 0),
+          sas: Number(g.sas || 0),
+          finalScore: Number(g.finalScore || 0),
+          timestamp: g.timestamp
+        };
+      });
+    }
+    
+    // Read Kasus
+    payload.siap_cases = readFromSheet(ss, "Kasus_Pelanggaran", [
+      "id", "nisn", "studentName", "class", "date", "caseName", "category", "resolution", "academicYear", "semester"
+    ], [
+      "string", "string", "string", "string", "string", "string", "string", "string", "string", "string"
+    ]);
+    
+    // Read Prestasi
+    payload.siap_achievements = readFromSheet(ss, "Prestasi", [
+      "id", "nisn", "studentName", "class", "date", "achievementName", "level", "description", "academicYear", "semester"
+    ], [
+      "string", "string", "string", "string", "string", "string", "string", "string", "string", "string"
+    ]);
+
+    // Read Emails
+    payload.siap_emails = readFromSheet(ss, "Log_Email", [
+      "id", "timestamp", "recipient", "role", "subject", "content", "status", "type", "senderName"
+    ], [
+      "string", "string", "string", "string", "string", "string", "string", "string", "string"
+    ]);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      data: payload
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      message: "Gagal membaca data dari cloud: " + err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function writeToSheet(ss, sheetName, headers, rows) {
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  } else {
+    sheet.clear();
+  }
+  
+  sheet.appendRow(headers);
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+  }
+}
+
+function readFromSheet(ss, sheetName, keys, types) {
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return [];
+  
+  const lastRow = sheet.getLastRow();
+  const lastCol = sheet.getLastColumn();
+  if (lastRow <= 1) return [];
+  
+  const values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  const list = [];
+  
+  for (let i = 0; i < values.length; i++) {
+    const row = values[i];
+    const obj = {};
+    for (let j = 0; j < keys.length; j++) {
+      let val = row[j];
+      if (val === undefined || val === null) {
+        val = "";
+      }
+      if (types[j] === "number") {
+        obj[keys[j]] = val !== "" ? Number(val) : 0;
+      } else {
+        obj[keys[j]] = String(val);
+      }
+    }
+    list.push(obj);
+  }
+  
+  return list;
+}`;
+
 export default function BackupRestoreSec({
   students,
   teachers,
@@ -430,251 +720,7 @@ export default function BackupRestoreSec({
               <div className="absolute top-2 right-2 z-10">
                 <button
                   onClick={() => {
-                    navigator.clipboard.writeText(`// GOOGLE APPS SCRIPT DATABASE INTEGRATION FOR SIAP
-const FOLDER_ID = "YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE"; // Ganti dengan ID folder Google Drive jika diinginkan
-
-function doPost(e) {
-  try {
-    const payload = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // 1. Sync Siswa
-    if (payload.siap_students) {
-      writeToSheet(ss, "Siswa", [
-        "NISN", "Nama", "Kelas", "Tempat Lahir", "Tanggal Lahir", "Gender", 
-        "Nama Orang Tua", "Email Orang Tua", "Alamat", "Saldo Tabungan", "Tagihan Kas"
-      ], payload.siap_students.map(item => [
-        item.nisn, item.name, item.class, item.pob, item.dob, item.gender,
-        item.parentName, item.parentEmail, item.address, item.savings, item.cashBill
-      ]));
-    }
-    
-    // 2. Sync Guru
-    if (payload.siap_teachers) {
-      writeToSheet(ss, "Guru", [
-        "NUPTK", "Nama", "Mata Pelajaran", "Email", "Username", "Tipe Tugas", "Kelas Ditugaskan"
-      ], payload.siap_teachers.map(item => [
-        item.nuptk, item.name, item.subject || "", item.email, item.username, item.dutyType || "", item.assignedClass || ""
-      ]));
-    }
-    
-    // 3. Sync Kehadiran
-    if (payload.siap_attendance) {
-      writeToSheet(ss, "Kehadiran", [
-        "ID", "NISN", "Nama Siswa", "Kelas", "Tanggal", "Status", "Tahun Ajaran", "Semester", "Waktu Input"
-      ], payload.siap_attendance.map(item => [
-        item.id, item.nisn, item.studentName, item.class, item.date, item.status, item.academicYear, item.semester, item.timestamp
-      ]));
-    }
-    
-    // 4. Sync Nilai Rapor
-    if (payload.siap_grades) {
-      writeToSheet(ss, "Nilai_Rapor", [
-        "ID", "NISN", "Nama Siswa", "Kelas", "Mata Pelajaran", "Tahun Ajaran", "Semester", "Sumatif 1", "Sumatif 2", "Sumatif 3", "Sumatif 4", "STS", "SAS", "Nilai Akhir", "Waktu Input"
-      ], payload.siap_grades.map(item => [
-        item.id, item.nisn, item.studentName, item.class, item.subject, item.academicYear, item.semester,
-        item.sumatif && item.sumatif[0] !== undefined ? item.sumatif[0] : "",
-        item.sumatif && item.sumatif[1] !== undefined ? item.sumatif[1] : "",
-        item.sumatif && item.sumatif[2] !== undefined ? item.sumatif[2] : "",
-        item.sumatif && item.sumatif[3] !== undefined ? item.sumatif[3] : "",
-        item.sts !== undefined ? item.sts : "",
-        item.sas !== undefined ? item.sas : "",
-        item.finalScore !== undefined ? item.finalScore : "",
-        item.timestamp
-      ]));
-    }
-    
-    // 5. Sync Kasus Siswa
-    if (payload.siap_cases) {
-      writeToSheet(ss, "Kasus_Pelanggaran", [
-        "ID", "NISN", "Nama Siswa", "Kelas", "Tanggal", "Nama Kasus", "Kategori", "Tindak Lanjut", "Tahun Ajaran", "Semester"
-      ], payload.siap_cases.map(item => [
-        item.id, item.nisn, item.studentName, item.class, item.date, item.caseName, item.category, item.resolution, item.academicYear, item.semester
-      ]));
-    }
-    
-    // 6. Sync Prestasi
-    if (payload.siap_achievements) {
-      writeToSheet(ss, "Prestasi", [
-        "ID", "NISN", "Nama Siswa", "Kelas", "Tanggal", "Nama Prestasi", "Tingkat", "Keterangan", "Tahun Ajaran", "Semester"
-      ], payload.siap_achievements.map(item => [
-        item.id, item.nisn, item.studentName, item.class, item.date, item.achievementName, item.level, item.description, item.academicYear, item.semester
-      ]));
-    }
-
-    // 7. Sync Email Log
-    if (payload.siap_emails) {
-      writeToSheet(ss, "Log_Email", [
-        "ID", "Waktu Kirim", "Penerima", "Peran", "Subjek", "Konten", "Status", "Jenis Notifikasi", "Pengirim"
-      ], payload.siap_emails.map(item => [
-        item.id, item.timestamp, item.recipient, item.role, item.subject, item.content, item.status, item.type, item.senderName || item.sender || ""
-      ]));
-    }
-    
-    // Simpan file JSON ke folder Google Drive
-    if (FOLDER_ID && FOLDER_ID !== "YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE") {
-      try {
-        const folder = DriveApp.getFolderById(FOLDER_ID);
-        const fileName = "SIAP_BACKUP_CLOUD_" + new Date().toISOString().slice(0,10) + "_" + new Date().getTime() + ".json";
-        folder.createFile(fileName, JSON.stringify(payload, null, 2), MimeType.PLAIN_TEXT);
-      } catch (driveErr) {
-        console.log("Drive Backup Error: " + driveErr.toString());
-      }
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({
-      success: true,
-      message: "Sinkronisasi berhasil! Google Sheets & Google Drive telah diperbarui."
-    })).setMimeType(ContentService.MimeType.JSON);
-    
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      message: "Gagal memproses data: " + err.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-function doGet(e) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const payload = {};
-    
-    // Read Siswa
-    payload.siap_students = readFromSheet(ss, "Siswa", [
-      "nisn", "name", "class", "pob", "dob", "gender", 
-      "parentName", "parentEmail", "address", "savings", "cashBill"
-    ], [
-      "string", "string", "string", "string", "string", "string",
-      "string", "string", "string", "number", "number"
-    ]);
-    
-    // Read Guru
-    payload.siap_teachers = readFromSheet(ss, "Guru", [
-      "nuptk", "name", "subject", "email", "username", "dutyType", "assignedClass"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string"
-    ]);
-    
-    // Read Kehadiran
-    payload.siap_attendance = readFromSheet(ss, "Kehadiran", [
-      "id", "nisn", "studentName", "class", "date", "status", "academicYear", "semester", "timestamp"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string", "string", "string"
-    ]);
-    
-    // Read Nilai
-    const rawGrades = readFromSheet(ss, "Nilai_Rapor", [
-      "id", "nisn", "studentName", "class", "subject", "academicYear", "semester",
-      "sumatif1", "sumatif2", "sumatif3", "sumatif4", "sts", "sas", "finalScore", "timestamp"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string",
-      "number", "number", "number", "number", "number", "number", "number", "string"
-    ]);
-    if (rawGrades) {
-      payload.siap_grades = rawGrades.map(g => {
-        const sumatif = [];
-        if (g.sumatif1 !== null && g.sumatif1 !== "") sumatif.push(Number(g.sumatif1));
-        if (g.sumatif2 !== null && g.sumatif2 !== "") sumatif.push(Number(g.sumatif2));
-        if (g.sumatif3 !== null && g.sumatif3 !== "") sumatif.push(Number(g.sumatif3));
-        if (g.sumatif4 !== null && g.sumatif4 !== "") sumatif.push(Number(g.sumatif4));
-        return {
-          id: g.id,
-          nisn: g.nisn,
-          studentName: g.studentName,
-          class: g.class,
-          subject: g.subject,
-          academicYear: g.academicYear,
-          semester: g.semester,
-          sumatif: sumatif,
-          sts: Number(g.sts || 0),
-          sas: Number(g.sas || 0),
-          finalScore: Number(g.finalScore || 0),
-          timestamp: g.timestamp
-        };
-      });
-    }
-    
-    // Read Kasus
-    payload.siap_cases = readFromSheet(ss, "Kasus_Pelanggaran", [
-      "id", "nisn", "studentName", "class", "date", "caseName", "category", "resolution", "academicYear", "semester"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string", "string", "string", "string"
-    ]);
-    
-    // Read Prestasi
-    payload.siap_achievements = readFromSheet(ss, "Prestasi", [
-      "id", "nisn", "studentName", "class", "date", "achievementName", "level", "description", "academicYear", "semester"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string", "string", "string", "string"
-    ]);
-
-    // Read Emails
-    payload.siap_emails = readFromSheet(ss, "Log_Email", [
-      "id", "timestamp", "recipient", "role", "subject", "content", "status", "type", "senderName"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string", "string", "string"
-    ]);
-    
-    return ContentService.createTextOutput(JSON.stringify({
-      success: true,
-      data: payload
-    })).setMimeType(ContentService.MimeType.JSON);
-    
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      message: "Gagal membaca data dari cloud: " + err.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-// Helper write
-function writeToSheet(ss, sheetName, headers, rows) {
-  let sheet = ss.getSheetByName(sheetName);
-  if (!sheet) {
-    sheet = ss.insertSheet(sheetName);
-  } else {
-    sheet.clear();
-  }
-  
-  sheet.appendRow(headers);
-  if (rows.length > 0) {
-    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
-  }
-}
-
-// Helper read
-function readFromSheet(ss, sheetName, keys, types) {
-  const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return null;
-  
-  const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
-  if (lastRow <= 1) return [];
-  
-  const values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-  const list = [];
-  
-  for (let i = 0; i < values.length; i++) {
-    const row = values[i];
-    const obj = {};
-    for (let j = 0; j < keys.length; j++) {
-      let val = row[j];
-      if (val === undefined || val === null) {
-        val = "";
-      }
-      if (types[j] === "number") {
-        obj[keys[j]] = val !== "" ? Number(val) : 0;
-      } else {
-        obj[keys[j]] = String(val);
-      }
-    }
-    list.push(obj);
-  }
-  
-  return list;
-}`);
+                    navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
                     alert("Kode Google Apps Script berhasil disalin ke clipboard!");
                   }}
                   className="px-2.5 py-1 bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 rounded transition text-[10px]"
@@ -683,251 +729,7 @@ function readFromSheet(ss, sheetName, keys, types) {
                 </button>
               </div>
               <pre className="p-3 bg-slate-900 border border-slate-800 rounded-lg overflow-x-auto text-[10px] text-slate-300 font-mono max-h-[220px]">
-{`// GOOGLE APPS SCRIPT DATABASE INTEGRATION FOR SIAP
-const FOLDER_ID = "YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE"; // Ganti dengan ID folder Google Drive jika diinginkan
-
-function doPost(e) {
-  try {
-    const payload = JSON.parse(e.postData.contents);
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
-    // 1. Sync Siswa
-    if (payload.siap_students) {
-      writeToSheet(ss, "Siswa", [
-        "NISN", "Nama", "Kelas", "Tempat Lahir", "Tanggal Lahir", "Gender", 
-        "Nama Orang Tua", "Email Orang Tua", "Alamat", "Saldo Tabungan", "Tagihan Kas"
-      ], payload.siap_students.map(item => [
-        item.nisn, item.name, item.class, item.pob, item.dob, item.gender,
-        item.parentName, item.parentEmail, item.address, item.savings, item.cashBill
-      ]));
-    }
-    
-    // 2. Sync Guru
-    if (payload.siap_teachers) {
-      writeToSheet(ss, "Guru", [
-        "NUPTK", "Nama", "Mata Pelajaran", "Email", "Username", "Tipe Tugas", "Kelas Ditugaskan"
-      ], payload.siap_teachers.map(item => [
-        item.nuptk, item.name, item.subject || "", item.email, item.username, item.dutyType || "", item.assignedClass || ""
-      ]));
-    }
-    
-    // 3. Sync Kehadiran
-    if (payload.siap_attendance) {
-      writeToSheet(ss, "Kehadiran", [
-        "ID", "NISN", "Nama Siswa", "Kelas", "Tanggal", "Status", "Tahun Ajaran", "Semester", "Waktu Input"
-      ], payload.siap_attendance.map(item => [
-        item.id, item.nisn, item.studentName, item.class, item.date, item.status, item.academicYear, item.semester, item.timestamp
-      ]));
-    }
-    
-    // 4. Sync Nilai Rapor
-    if (payload.siap_grades) {
-      writeToSheet(ss, "Nilai_Rapor", [
-        "ID", "NISN", "Nama Siswa", "Kelas", "Mata Pelajaran", "Tahun Ajaran", "Semester", "Sumatif 1", "Sumatif 2", "Sumatif 3", "Sumatif 4", "STS", "SAS", "Nilai Akhir", "Waktu Input"
-      ], payload.siap_grades.map(item => [
-        item.id, item.nisn, item.studentName, item.class, item.subject, item.academicYear, item.semester,
-        item.sumatif && item.sumatif[0] !== undefined ? item.sumatif[0] : "",
-        item.sumatif && item.sumatif[1] !== undefined ? item.sumatif[1] : "",
-        item.sumatif && item.sumatif[2] !== undefined ? item.sumatif[2] : "",
-        item.sumatif && item.sumatif[3] !== undefined ? item.sumatif[3] : "",
-        item.sts !== undefined ? item.sts : "",
-        item.sas !== undefined ? item.sas : "",
-        item.finalScore !== undefined ? item.finalScore : "",
-        item.timestamp
-      ]));
-    }
-    
-    // 5. Sync Kasus Siswa
-    if (payload.siap_cases) {
-      writeToSheet(ss, "Kasus_Pelanggaran", [
-        "ID", "NISN", "Nama Siswa", "Kelas", "Tanggal", "Nama Kasus", "Kategori", "Tindak Lanjut", "Tahun Ajaran", "Semester"
-      ], payload.siap_cases.map(item => [
-        item.id, item.nisn, item.studentName, item.class, item.date, item.caseName, item.category, item.resolution, item.academicYear, item.semester
-      ]));
-    }
-    
-    // 6. Sync Prestasi
-    if (payload.siap_achievements) {
-      writeToSheet(ss, "Prestasi", [
-        "ID", "NISN", "Nama Siswa", "Kelas", "Tanggal", "Nama Prestasi", "Tingkat", "Keterangan", "Tahun Ajaran", "Semester"
-      ], payload.siap_achievements.map(item => [
-        item.id, item.nisn, item.studentName, item.class, item.date, item.achievementName, item.level, item.description, item.academicYear, item.semester
-      ]));
-    }
-
-    // 7. Sync Email Log
-    if (payload.siap_emails) {
-      writeToSheet(ss, "Log_Email", [
-        "ID", "Waktu Kirim", "Penerima", "Peran", "Subjek", "Konten", "Status", "Jenis Notifikasi", "Pengirim"
-      ], payload.siap_emails.map(item => [
-        item.id, item.timestamp, item.recipient, item.role, item.subject, item.content, item.status, item.type, item.senderName || item.sender || ""
-      ]));
-    }
-    
-    // Simpan file JSON ke folder Google Drive
-    if (FOLDER_ID && FOLDER_ID !== "YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE") {
-      try {
-        const folder = DriveApp.getFolderById(FOLDER_ID);
-        const fileName = "SIAP_BACKUP_CLOUD_" + new Date().toISOString().slice(0,10) + "_" + new Date().getTime() + ".json";
-        folder.createFile(fileName, JSON.stringify(payload, null, 2), MimeType.PLAIN_TEXT);
-      } catch (driveErr) {
-        console.log("Drive Backup Error: " + driveErr.toString());
-      }
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({
-      success: true,
-      message: "Sinkronisasi berhasil! Google Sheets & Google Drive telah diperbarui."
-    })).setMimeType(ContentService.MimeType.JSON);
-    
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      message: "Gagal memproses data: " + err.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-function doGet(e) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const payload = {};
-    
-    // Read Siswa
-    payload.siap_students = readFromSheet(ss, "Siswa", [
-      "nisn", "name", "class", "pob", "dob", "gender", 
-      "parentName", "parentEmail", "address", "savings", "cashBill"
-    ], [
-      "string", "string", "string", "string", "string", "string",
-      "string", "string", "string", "number", "number"
-    ]);
-    
-    // Read Guru
-    payload.siap_teachers = readFromSheet(ss, "Guru", [
-      "nuptk", "name", "subject", "email", "username", "dutyType", "assignedClass"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string"
-    ]);
-    
-    // Read Kehadiran
-    payload.siap_attendance = readFromSheet(ss, "Kehadiran", [
-      "id", "nisn", "studentName", "class", "date", "status", "academicYear", "semester", "timestamp"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string", "string", "string"
-    ]);
-    
-    // Read Nilai
-    const rawGrades = readFromSheet(ss, "Nilai_Rapor", [
-      "id", "nisn", "studentName", "class", "subject", "academicYear", "semester",
-      "sumatif1", "sumatif2", "sumatif3", "sumatif4", "sts", "sas", "finalScore", "timestamp"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string",
-      "number", "number", "number", "number", "number", "number", "number", "string"
-    ]);
-    if (rawGrades) {
-      payload.siap_grades = rawGrades.map(g => {
-        const sumatif = [];
-        if (g.sumatif1 !== null && g.sumatif1 !== "") sumatif.push(Number(g.sumatif1));
-        if (g.sumatif2 !== null && g.sumatif2 !== "") sumatif.push(Number(g.sumatif2));
-        if (g.sumatif3 !== null && g.sumatif3 !== "") sumatif.push(Number(g.sumatif3));
-        if (g.sumatif4 !== null && g.sumatif4 !== "") sumatif.push(Number(g.sumatif4));
-        return {
-          id: g.id,
-          nisn: g.nisn,
-          studentName: g.studentName,
-          class: g.class,
-          subject: g.subject,
-          academicYear: g.academicYear,
-          semester: g.semester,
-          sumatif: sumatif,
-          sts: Number(g.sts || 0),
-          sas: Number(g.sas || 0),
-          finalScore: Number(g.finalScore || 0),
-          timestamp: g.timestamp
-        };
-      });
-    }
-    
-    // Read Kasus
-    payload.siap_cases = readFromSheet(ss, "Kasus_Pelanggaran", [
-      "id", "nisn", "studentName", "class", "date", "caseName", "category", "resolution", "academicYear", "semester"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string", "string", "string", "string"
-    ]);
-    
-    // Read Prestasi
-    payload.siap_achievements = readFromSheet(ss, "Prestasi", [
-      "id", "nisn", "studentName", "class", "date", "achievementName", "level", "description", "academicYear", "semester"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string", "string", "string", "string"
-    ]);
-
-    // Read Emails
-    payload.siap_emails = readFromSheet(ss, "Log_Email", [
-      "id", "timestamp", "recipient", "role", "subject", "content", "status", "type", "senderName"
-    ], [
-      "string", "string", "string", "string", "string", "string", "string", "string", "string"
-    ]);
-    
-    return ContentService.createTextOutput(JSON.stringify({
-      success: true,
-      data: payload
-    })).setMimeType(ContentService.MimeType.JSON);
-    
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({
-      success: false,
-      message: "Gagal membaca data dari cloud: " + err.toString()
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-// Helper write
-function writeToSheet(ss, sheetName, headers, rows) {
-  let sheet = ss.getSheetByName(sheetName);
-  if (!sheet) {
-    sheet = ss.insertSheet(sheetName);
-  } else {
-    sheet.clear();
-  }
-  
-  sheet.appendRow(headers);
-  if (rows.length > 0) {
-    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
-  }
-}
-
-// Helper read
-function readFromSheet(ss, sheetName, keys, types) {
-  const sheet = ss.getSheetByName(sheetName);
-  if (!sheet) return null;
-  
-  const lastRow = sheet.getLastRow();
-  const lastCol = sheet.getLastColumn();
-  if (lastRow <= 1) return [];
-  
-  const values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-  const list = [];
-  
-  for (let i = 0; i < values.length; i++) {
-    const row = values[i];
-    const obj = {};
-    for (let j = 0; j < keys.length; j++) {
-      let val = row[j];
-      if (val === undefined || val === null) {
-        val = "";
-      }
-      if (types[j] === "number") {
-        obj[keys[j]] = val !== "" ? Number(val) : 0;
-      } else {
-        obj[keys[j]] = String(val);
-      }
-    }
-    list.push(obj);
-  }
-  
-  return list;
-}`}
+{GOOGLE_APPS_SCRIPT_CODE}
               </pre>
             </div>
           </div>

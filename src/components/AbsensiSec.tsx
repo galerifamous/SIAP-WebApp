@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 import {
   QrCode,
   ClipboardList,
@@ -70,35 +71,117 @@ export default function AbsensiSec({
   const [scanInput, setScanInput] = useState('');
   const [scanSuccess, setScanSuccess] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [scanStatus, setScanStatus] = useState<'Hadir' | 'Sakit' | 'Izin' | 'Alpa'>('Hadir');
 
   // Real Camera States
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const [hasCamera, setHasCamera] = useState(false);
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const lastScannedRef = React.useRef<{ nisn: string; time: number } | null>(null);
+  const scanStatusRef = React.useRef(scanStatus);
 
   React.useEffect(() => {
-    let activeStream: MediaStream | null = null;
-    if (activeTab === 'scan' && role !== 'SISWA') {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-        .then(s => {
-          setHasCamera(true);
-          setCameraStream(s);
-          activeStream = s;
-          if (videoRef.current) {
-            videoRef.current.srcObject = s;
-          }
-        })
-        .catch(err => {
-          console.log("Camera access not granted or unavailable, showing high-fidelity simulator:", err);
-          setHasCamera(false);
-        });
+    scanStatusRef.current = scanStatus;
+  }, [scanStatus]);
+
+  // Handle scan with custom status
+  const handleScanWithStatus = (nisn: string, status: 'Hadir' | 'Sakit' | 'Izin' | 'Alpa') => {
+    setScanSuccess(null);
+    setScanError(null);
+
+    const student = students.find(s => s.nisn === nisn);
+    if (!student) {
+      setScanError(`NISN "${nisn}" tidak terdaftar di database.`);
+      return;
     }
 
-    return () => {
-      if (activeStream) {
-        activeStream.getTracks().forEach(track => track.stop());
-      }
+    onMarkAttendance(nisn, status);
+    playBeep();
+
+    const statusMap: Record<string, string> = {
+      Hadir: 'HADIR 🟢',
+      Sakit: 'SAKIT 🟡',
+      Izin: 'IZIN 🔵',
+      Alpa: 'ALPA 🔴'
     };
+    const statusText = statusMap[status] || status.toUpperCase();
+    setScanSuccess(`Absensi BERHASIL! Siswa: ${student.name} (${student.class}) tercatat ${statusText}. Notifikasi email otomatis dikirim ke Orangtua, Guru, dan Admin.`);
+
+    // Clear success after 6 seconds
+    setTimeout(() => {
+      setScanSuccess(null);
+    }, 6000);
+  };
+
+  const handleBarcodeScanned = (decodedText: string) => {
+    const cleanNisn = decodedText.trim();
+    if (!cleanNisn) return;
+
+    const now = Date.now();
+    if (lastScannedRef.current && lastScannedRef.current.nisn === cleanNisn && (now - lastScannedRef.current.time) < 3000) {
+      return; // prevent rapid double scan
+    }
+    lastScannedRef.current = { nisn: cleanNisn, time: now };
+
+    handleScanWithStatus(cleanNisn, scanStatusRef.current);
+  };
+
+  React.useEffect(() => {
+    let html5QrCode: any = null;
+    let isMounted = true;
+
+    if (activeTab === 'scan' && role !== 'SISWA') {
+      const timer = setTimeout(() => {
+        if (!isMounted) return;
+        try {
+          const readerEl = document.getElementById("real-camera-reader");
+          if (!readerEl) return;
+
+          html5QrCode = new Html5Qrcode("real-camera-reader");
+          html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 220, height: 220 }
+            },
+            (decodedText: string) => {
+              handleBarcodeScanned(decodedText);
+            },
+            (errorMessage: string) => {
+              // Parse error, silent
+            }
+          ).then(() => {
+            if (isMounted) setHasCamera(true);
+          }).catch((err: any) => {
+            console.log("Kamera tidak diijinkan atau tidak ditemukan, memakai simulator:", err);
+            if (isMounted) setHasCamera(false);
+          });
+        } catch (e) {
+          console.error("Scanner instantiation failed:", e);
+          if (isMounted) setHasCamera(false);
+        }
+      }, 150);
+
+      return () => {
+        isMounted = false;
+        clearTimeout(timer);
+        if (html5QrCode) {
+          try {
+            if (html5QrCode.isScanning) {
+              html5QrCode.stop().then(() => {
+                try {
+                  html5QrCode.clear();
+                } catch (e) {
+                  // Ignore
+                }
+              }).catch((err: any) => {
+                console.log("Error stopping scanner:", err);
+              });
+            }
+          } catch (err) {
+            console.log("Error checking scanner status:", err);
+          }
+        }
+      };
+    }
   }, [activeTab, role]);
 
   // List States
@@ -288,46 +371,14 @@ export default function AbsensiSec({
   // Handle simulated scan submission
   const handleScanSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setScanSuccess(null);
-    setScanError(null);
-
     const cleanNisn = scanInput.trim();
     if (!cleanNisn) return;
-
-    const student = students.find(s => s.nisn === cleanNisn);
-    if (!student) {
-      setScanError(`NISN "${cleanNisn}" tidak terdaftar di database.`);
-      setScanInput('');
-      return;
-    }
-
-    // Trigger Attendance
-    onMarkAttendance(cleanNisn, 'Hadir');
-    playBeep();
-
-    setScanSuccess(`Absensi BERHASIL! Siswa: ${student.name} (${student.class}) tercatat HADIR. Notifikasi email otomatis dikirim ke Orangtua, Guru, dan Admin.`);
+    handleScanWithStatus(cleanNisn, scanStatus);
     setScanInput('');
-
-    // Clear success after 6 seconds
-    setTimeout(() => {
-      setScanSuccess(null);
-    }, 6000);
   };
 
-  const handleQuickScan = (nisn: string) => {
-    setScanSuccess(null);
-    setScanError(null);
-    const student = students.find(s => s.nisn === nisn);
-    if (!student) return;
-
-    onMarkAttendance(nisn, 'Hadir');
-    playBeep();
-
-    setScanSuccess(`Absensi BERHASIL! Siswa: ${student.name} (${student.class}) tercatat HADIR. Notifikasi email otomatis dikirim ke Orangtua, Guru, dan Admin.`);
-
-    setTimeout(() => {
-      setScanSuccess(null);
-    }, 6000);
+  const handleQuickScan = (nisn: string, status: 'Hadir' | 'Sakit' | 'Izin' | 'Alpa' = 'Hadir') => {
+    handleScanWithStatus(nisn, status);
   };
 
   // Filter Attendance Logs
@@ -392,42 +443,77 @@ export default function AbsensiSec({
           <div className="lg:col-span-2 p-6 bg-slate-950/40 border border-slate-800 rounded-2xl flex flex-col justify-between">
             <div className="text-center">
               <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full font-bold uppercase tracking-widest">
-                Kamera Scanner Aktif
+                Kamera Scanner Otomatis Aktif
               </span>
               
               {/* Animated Scan Stage */}
-              <div className="relative my-8 mx-auto w-full max-w-[320px] aspect-square rounded-2xl border border-slate-700/60 overflow-hidden bg-slate-900 shadow-2xl flex flex-col items-center justify-center p-4">
-                {hasCamera && (
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    className="absolute inset-0 w-full h-full object-cover rounded-2xl"
-                  />
-                )}
+              <div className="relative my-8 mx-auto w-full max-w-[320px] aspect-square rounded-2xl border border-slate-700/60 overflow-hidden bg-slate-900 shadow-2xl flex flex-col items-center justify-center">
+                {/* Real HTML5 QR Scanner Container */}
+                <div 
+                  id="real-camera-reader" 
+                  className="absolute inset-0 w-full h-full rounded-2xl overflow-hidden [&>video]:w-full [&>video]:h-full [&>video]:object-cover"
+                />
 
                 {/* Laser line animation */}
                 <div className="absolute top-0 inset-x-0 h-0.5 bg-emerald-500 shadow-[0_0_10px_#10b981] animate-scanLaser pointer-events-none z-20" />
 
                 {/* Grid guidelines */}
-                <div className="absolute inset-8 border border-slate-600/40 border-dashed rounded-lg flex items-center justify-center z-10">
+                <div className="absolute inset-8 border border-slate-600/40 border-dashed rounded-lg flex items-center justify-center z-10 pointer-events-none">
                   <Scan className="w-16 h-16 text-emerald-500/20 animate-pulse" />
                 </div>
 
                 {!hasCamera && (
-                  <div className="relative text-center z-10">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">Simulasi Scan QR / Barcode</p>
+                  <div className="relative text-center z-10 p-4">
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">Mengaktifkan Scanner Kamera...</p>
                     <p className="text-[11px] text-slate-400 max-w-[200px] mx-auto leading-relaxed">
-                      Tempelkan QR Code Absensi Siswa ke hadapan kamera, atau gunakan input NISN di bawah.
+                      Dekatkan QR Code/Barcode Kartu Siswa ke kamera, atau gunakan input NISN manual di bawah.
                     </p>
                   </div>
                 )}
               </div>
 
+              {/* Active Scanner Status Selector */}
+              <div className="mb-6 max-w-md mx-auto bg-slate-900/60 border border-slate-800/80 p-3.5 rounded-2xl">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2.5 text-center">
+                  Status Kehadiran Hasil Scan Barcode/QR
+                </p>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {(['Hadir', 'Sakit', 'Izin', 'Alpa'] as const).map((status) => {
+                    const colors: Record<string, string> = {
+                      Hadir: 'hover:text-emerald-400 active:bg-emerald-500 active:text-slate-950',
+                      Sakit: 'hover:text-amber-400 active:bg-amber-500 active:text-slate-950',
+                      Izin: 'hover:text-sky-400 active:bg-sky-500 active:text-slate-950',
+                      Alpa: 'hover:text-rose-400 active:bg-rose-500 active:text-slate-950'
+                    };
+                    const selectedColors: Record<string, string> = {
+                      Hadir: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.1)]',
+                      Sakit: 'bg-amber-500/15 text-amber-400 border-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.1)]',
+                      Izin: 'bg-sky-500/15 text-sky-400 border-sky-500/30 shadow-[0_0_8px_rgba(14,165,233,0.1)]',
+                      Alpa: 'bg-rose-500/15 text-rose-400 border-rose-500/30 shadow-[0_0_8px_rgba(244,63,94,0.1)]'
+                    };
+                    const inactiveColors = 'bg-slate-950/40 text-slate-400 border-slate-800/80';
+                    const label = status === 'Hadir' ? 'Hadir (H)' : status === 'Sakit' ? 'Sakit (S)' : status === 'Izin' ? 'Izin (I)' : 'Alpa (A)';
+
+                    return (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => setScanStatus(status)}
+                        className={`py-1.5 px-1 rounded-xl text-[10px] font-bold border transition-all text-center ${
+                          scanStatus === status ? selectedColors[status] : `${inactiveColors} ${colors[status]}`
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Form Input for manual simulation */}
               <form onSubmit={handleScanSubmit} className="max-w-md mx-auto">
                 <label className="block text-left text-slate-400 text-[11px] font-bold uppercase tracking-wider mb-2">
-                  Input NISN Siswa (Simulasi Scan manual)
+                  Input NISN Siswa (Manual Scan)
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -442,7 +528,7 @@ export default function AbsensiSec({
                     type="submit"
                     className="px-5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl shadow-lg shadow-emerald-500/15 flex items-center gap-1.5 text-xs uppercase"
                   >
-                    <span>Scan</span>
+                    <span>Input</span>
                     <Volume2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -476,44 +562,79 @@ export default function AbsensiSec({
             </div>
           </div>
 
-          {/* Quick Attendance Selector (For easy demo clicks) */}
+          {/* Quick Attendance Selector */}
           <div className="p-5 bg-slate-950/20 border border-slate-800 rounded-2xl flex flex-col justify-between">
             <div>
               <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-1">Daftar Pintasan Absen</h3>
-              <p className="text-[10px] text-slate-500 mb-4">Klik tombol "Hadir" di samping siswa untuk mensimulasikan scan barcode instan</p>
+              <p className="text-[10px] text-slate-500 mb-4">Klik tombol H, S, I, atau A untuk mencatat status siswa secara manual</p>
 
-              <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
+              <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
                 {students.map((student) => {
-                  const alreadyAbsen = attendance.some(
+                  const existingAtt = attendance.find(
                     att => att.nisn === student.nisn && att.date === new Date().toISOString().split('T')[0] && att.academicYear === academicYear && att.semester === semester
                   );
+                  const currentStatus = existingAtt ? existingAtt.status : null;
 
                   return (
                     <div
                       key={student.nisn}
-                      className="p-2.5 bg-slate-900 border border-slate-800/60 rounded-xl flex items-center justify-between gap-2.5 text-xs"
+                      className="p-2.5 bg-slate-900 border border-slate-800/60 rounded-xl flex items-center justify-between gap-2 text-xs"
                     >
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="font-bold text-slate-200 truncate">{student.name}</p>
-                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">NISN: {student.nisn} ({student.class})</p>
+                        <p className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">NISN: {student.nisn} ({student.class})</p>
                       </div>
-                      <button
-                        onClick={() => handleQuickScan(student.nisn)}
-                        disabled={alreadyAbsen}
-                        className={`flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 transition ${
-                          alreadyAbsen
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-not-allowed'
-                            : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60'
-                        }`}
-                      >
-                        {alreadyAbsen ? (
-                          <>
-                            <Check className="w-3.5 h-3.5" /> Hadir
-                          </>
-                        ) : (
-                          'Hadir'
-                        )}
-                      </button>
+
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleQuickScan(student.nisn, 'Hadir')}
+                          className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border ${
+                            currentStatus === 'Hadir'
+                              ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-md shadow-emerald-500/10 scale-105'
+                              : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-emerald-400 hover:border-emerald-500/30'
+                          }`}
+                          title="Hadir"
+                        >
+                          H
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickScan(student.nisn, 'Sakit')}
+                          className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border ${
+                            currentStatus === 'Sakit'
+                              ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-md shadow-amber-500/10 scale-105'
+                              : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-amber-400 hover:border-amber-500/30'
+                          }`}
+                          title="Sakit"
+                        >
+                          S
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickScan(student.nisn, 'Izin')}
+                          className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border ${
+                            currentStatus === 'Izin'
+                              ? 'bg-sky-500 text-slate-950 border-sky-500 shadow-md shadow-sky-500/10 scale-105'
+                              : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-sky-400 hover:border-sky-500/30'
+                          }`}
+                          title="Izin"
+                        >
+                          I
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleQuickScan(student.nisn, 'Alpa')}
+                          className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border ${
+                            currentStatus === 'Alpa'
+                              ? 'bg-rose-500 text-slate-950 border-rose-500 shadow-md shadow-rose-500/10 scale-105'
+                              : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-rose-400 hover:border-rose-500/30'
+                          }`}
+                          title="Alpa"
+                        >
+                          A
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -521,7 +642,7 @@ export default function AbsensiSec({
             </div>
 
             <p className="text-[10px] text-slate-500 mt-4 leading-normal italic text-center">
-              *Setelah diklik, data absensi langsung terhubung ke tabel log dan memicu pengiriman email.
+              *Setelah diklik, data absensi langsung terhubung ke tabel log dan memicu pengiriman email otomatis.
             </p>
           </div>
         </div>
