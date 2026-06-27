@@ -17,7 +17,16 @@ import {
   Activity,
   ChevronRight,
   TrendingUp,
-  FileText
+  FileText,
+  QrCode,
+  ClipboardList,
+  PenTool,
+  CreditCard,
+  Database,
+  Settings,
+  User,
+  Download,
+  Trash2
 } from 'lucide-react';
 import {
   BarChart,
@@ -48,6 +57,8 @@ interface DashboardProps {
   emails: EmailLog[];
   academicYear: string;
   semester: string;
+  onNavigate?: (menuId: string) => void;
+  onClearEmails?: () => void;
 }
 
 export default function Dashboard({
@@ -61,7 +72,9 @@ export default function Dashboard({
   achievements,
   emails,
   academicYear,
-  semester
+  semester,
+  onNavigate,
+  onClearEmails
 }: DashboardProps) {
 
   // --- FILTERED ACADEMIC DATA ---
@@ -210,61 +223,88 @@ export default function Dashboard({
         // --- ADMIN & GURU PORTAL VIEW ---
         <>
           {/* Key Metric Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Siswa Card */}
-            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-5 rounded-2xl transition duration-200">
-              <div className="flex justify-between items-start">
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Siswa Aktif</p>
-                <div className="p-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 rounded-xl">
+            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-4 sm:p-5 rounded-2xl transition duration-200 flex flex-col justify-between h-full">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider leading-tight">Total Siswa Aktif</p>
+                <div className="p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 rounded-xl shrink-0">
                   <Users className="w-5 h-5" />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-white mt-3 font-mono">{totalStudents}</h3>
-              <p className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-1">
-                Terdistribusi dalam <span className="text-emerald-400 font-bold font-mono">6</span> rombongan belajar (Kelas)
-              </p>
-            </div>
-
-            {/* Rata-rata Nilai Card */}
-            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-5 rounded-2xl transition duration-200">
-              <div className="flex justify-between items-start">
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Rata-rata Nilai Siswa</p>
-                <div className="p-2.5 bg-blue-500/10 text-blue-400 border border-blue-500/15 rounded-xl">
-                  <GraduationCap className="w-5 h-5" />
-                </div>
+              <div className="mt-4">
+                <h3 className="text-2xl sm:text-3xl font-bold text-white font-mono leading-none">{totalStudents}</h3>
+                <p className="text-xs text-slate-500 mt-2 leading-snug">
+                  Terdistribusi dalam <span className="text-emerald-400 font-bold font-mono">6</span> rombel (Kelas)
+                </p>
               </div>
-              <h3 className="text-2xl font-bold text-white mt-3 font-mono">{avgGrade}</h3>
-              <p className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-1">
-                <TrendingUp className="w-3 h-3 text-emerald-400" /> Kriteria Ketuntasan Minimal (KKM): <span className="text-blue-400 font-bold font-mono">75</span>
-              </p>
             </div>
 
             {/* Kehadiran Card */}
-            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-5 rounded-2xl transition duration-200">
-              <div className="flex justify-between items-start">
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Kehadiran Hari Ini</p>
-                <div className="p-2.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/15 rounded-xl">
+            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-4 sm:p-5 rounded-2xl transition duration-200 flex flex-col justify-between h-full">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider leading-tight">Kehadiran Hari Ini</p>
+                <div className="p-2 bg-cyan-500/10 text-cyan-400 border border-cyan-500/15 rounded-xl shrink-0">
                   <CalendarCheck className="w-5 h-5" />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-white mt-3 font-mono">{attendancePercentage}%</h3>
-              <p className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-1">
-                Total tercatat hari ini: <span className="text-cyan-400 font-bold font-mono">{todayAttendance.length || totalStudents}</span> siswa
-              </p>
+              <div className="mt-4">
+                <h3 className="text-2xl sm:text-3xl font-bold text-white font-mono leading-none">{attendancePercentage}%</h3>
+                <p className="text-xs text-slate-500 mt-2 leading-snug">
+                  Tercatat hari ini: <span className="text-cyan-400 font-bold font-mono">{todayAttendance.length || totalStudents}</span> siswa
+                </p>
+              </div>
             </div>
 
             {/* Kasus Aktif Card */}
-            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-5 rounded-2xl transition duration-200">
-              <div className="flex justify-between items-start">
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Laporan Kasus Siswa</p>
-                <div className="p-2.5 bg-rose-500/10 text-rose-400 border border-rose-500/15 rounded-xl">
+            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-4 sm:p-5 rounded-2xl transition duration-200 flex flex-col justify-between h-full">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider leading-tight">Laporan Kasus Siswa</p>
+                <div className="p-2 bg-rose-500/10 text-rose-400 border border-rose-500/15 rounded-xl shrink-0">
                   <AlertTriangle className="w-5 h-5" />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-white mt-3 font-mono">{pendingCases}</h3>
-              <p className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-1">
-                Butuh bimbingan atau koordinasi wali murid
-              </p>
+              <div className="mt-4">
+                <h3 className="text-2xl sm:text-3xl font-bold text-white font-mono leading-none">{pendingCases}</h3>
+                <p className="text-xs text-slate-500 mt-2 leading-snug">
+                  Butuh bimbingan wali / BK
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Access Menu Container */}
+          <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1.5 h-3.5 bg-emerald-500 rounded-full" />
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Akses Cepat Menu Layanan</h4>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-1.5 sm:gap-3">
+              {[
+                { label: 'Data Siswa', icon: Users, menu: 'siswa', color: 'text-emerald-400 bg-emerald-500/10' },
+                { label: 'Absensi Scan', icon: QrCode, menu: 'absensi-scan', color: 'text-cyan-400 bg-cyan-500/10' },
+                { label: 'Absensi Siswa', icon: ClipboardList, menu: 'absensi-siswa', color: 'text-sky-400 bg-sky-500/10' },
+                { label: 'Input Nilai', icon: PenTool, menu: 'nilai-input', color: 'text-amber-400 bg-amber-500/10' },
+                { label: 'Nilai Siswa', icon: GraduationCap, menu: 'nilai-siswa', color: 'text-blue-400 bg-blue-500/10' },
+                { label: 'Kasus Siswa', icon: AlertTriangle, menu: 'kasus', color: 'text-rose-400 bg-rose-500/10' },
+                { label: 'Prestasi Siswa', icon: Trophy, menu: 'prestasi', color: 'text-yellow-400 bg-yellow-500/10' },
+                { label: 'Uang Kas & Tabungan', icon: CreditCard, menu: 'uang-kas', color: 'text-indigo-400 bg-indigo-500/10' },
+                { label: 'Cetak Kartu', icon: FileText, menu: 'kartu-siswa', color: 'text-teal-400 bg-teal-500/10' },
+                { label: 'Manajemen Data', icon: Settings, menu: 'set-akademik', color: 'text-purple-400 bg-purple-500/10' },
+              ].map((item, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => onNavigate && onNavigate(item.menu)}
+                  className="flex flex-col items-center justify-center p-2.5 sm:p-3 md:p-4 bg-slate-950/40 border border-slate-800/80 hover:border-emerald-500/40 hover:bg-slate-800/40 rounded-xl transition duration-150 group text-center cursor-pointer min-h-[75px] sm:min-h-[90px]"
+                >
+                  <div className={`p-1.5 sm:p-2 rounded-lg ${item.color} group-hover:scale-110 transition duration-200`}>
+                    <item.icon className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                  </div>
+                  <span className="text-[8px] sm:text-[10px] md:text-xs text-slate-300 font-bold group-hover:text-emerald-400 mt-1.5 sm:mt-2 leading-tight line-clamp-2">
+                    {item.label}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -372,10 +412,20 @@ export default function Dashboard({
                     <h3 className="text-sm font-bold text-white uppercase tracking-wider">Pemantau Notifikasi Email Real-Time</h3>
                     <p className="text-[10px] text-slate-400 mt-0.5">Pantau status penyampaian pesan akademik ke wali murid</p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 font-semibold">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> {emailSuccessRate}% Berhasil
                     </span>
+                    {role === 'ADMIN' && onClearEmails && (
+                      <button
+                        onClick={onClearEmails}
+                        className="p-1.5 bg-slate-950/40 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-slate-800 hover:border-rose-500/30 rounded-lg transition duration-150 flex items-center gap-1 text-[10px] font-bold cursor-pointer"
+                        title="Hapus Semua Riwayat Email"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Hapus Riwayat</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -454,61 +504,85 @@ export default function Dashboard({
         // --- SISWA PORTAL VIEW ---
         <>
           {/* Key Metric Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Kehadiran Card */}
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-              <div className="flex justify-between items-start">
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Persentase Kehadiran</p>
-                <div className="p-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 rounded-xl">
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex flex-col justify-between h-full hover:border-slate-700/80 transition duration-200">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider leading-tight">Persentase Kehadiran</p>
+                <div className="p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 rounded-xl shrink-0">
                   <CalendarCheck className="w-5 h-5" />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-white mt-3 font-mono">{myAttendanceRate}%</h3>
-              <p className="text-[10px] text-slate-500 mt-1.5">
-                Total kehadiran tercatat: <span className="text-emerald-400 font-bold font-mono">{myPresent}</span> dari <span className="text-slate-400 font-bold font-mono">{myAttendance.length}</span> hari
-              </p>
-            </div>
-
-            {/* Rata-rata Nilai Card */}
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-              <div className="flex justify-between items-start">
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Rata-rata Nilai Rapor</p>
-                <div className="p-2.5 bg-blue-500/10 text-blue-400 border border-blue-500/15 rounded-xl">
-                  <GraduationCap className="w-5 h-5" />
-                </div>
+              <div className="mt-4">
+                <h3 className="text-2xl sm:text-3xl font-bold text-white font-mono leading-none">{myAttendanceRate}%</h3>
+                <p className="text-xs text-slate-500 mt-2 leading-snug">
+                  Hadir: <span className="text-emerald-400 font-bold font-mono">{myPresent}</span> dari <span className="text-slate-400 font-bold font-mono">{myAttendance.length}</span> hari
+                </p>
               </div>
-              <h3 className="text-2xl font-bold text-white mt-3 font-mono">{myAvgGrade || '-'}</h3>
-              <p className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-1">
-                Kategori akademik: <span className="text-blue-400 font-bold">{myAvgGrade >= 90 ? 'A (Sangat Baik)' : myAvgGrade >= 80 ? 'B (Baik)' : myAvgGrade >= 75 ? 'C (Cukup)' : 'Butuh Perbaikan'}</span>
-              </p>
             </div>
 
             {/* Prestasi Card */}
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-              <div className="flex justify-between items-start">
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Prestasi Anda</p>
-                <div className="p-2.5 bg-amber-500/10 text-amber-400 border border-amber-500/15 rounded-xl">
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex flex-col justify-between h-full hover:border-slate-700/80 transition duration-200">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider leading-tight">Prestasi Anda</p>
+                <div className="p-2 bg-amber-500/10 text-amber-400 border border-amber-500/15 rounded-xl shrink-0">
                   <Trophy className="w-5 h-5" />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-white mt-3 font-mono">{myAchievements.length}</h3>
-              <p className="text-[10px] text-slate-500 mt-1.5">
-                Penghargaan atau predikat kehormatan aktif
-              </p>
+              <div className="mt-4">
+                <h3 className="text-2xl sm:text-3xl font-bold text-white font-mono leading-none">{myAchievements.length}</h3>
+                <p className="text-xs text-slate-500 mt-2 leading-snug">
+                  Penghargaan aktif
+                </p>
+              </div>
             </div>
 
             {/* Catatan Kasus Card */}
-            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl">
-              <div className="flex justify-between items-start">
-                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Catatan Kasus / Pelanggaran</p>
-                <div className="p-2.5 bg-rose-500/10 text-rose-400 border border-rose-500/15 rounded-xl">
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-2xl flex flex-col justify-between h-full hover:border-slate-700/80 transition duration-200">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider leading-tight">Catatan Pelanggaran</p>
+                <div className="p-2 bg-rose-500/10 text-rose-400 border border-rose-500/15 rounded-xl shrink-0">
                   <AlertTriangle className="w-5 h-5" />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-white mt-3 font-mono">{myCases.length}</h3>
-              <p className="text-[10px] text-slate-500 mt-1.5 flex items-center gap-1">
-                {myCases.length > 0 ? 'Segera temui guru BK / Wali Kelas' : 'Pertahankan perilaku baik Anda!'}
-              </p>
+              <div className="mt-4">
+                <h3 className="text-2xl sm:text-3xl font-bold text-white font-mono leading-none">{myCases.length}</h3>
+                <p className="text-xs text-slate-500 mt-2 leading-snug">
+                  {myCases.length > 0 ? 'Perlu BK' : 'Perilaku sangat baik!'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Access Menu Container */}
+          <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1.5 h-3.5 bg-emerald-500 rounded-full" />
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Akses Cepat Menu Siswa</h4>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-7 gap-1.5 sm:gap-3">
+              {[
+                { label: 'Profil Saya', icon: User, menu: 'profil', color: 'text-emerald-400 bg-emerald-500/10' },
+                { label: 'Kehadiran Saya', icon: CalendarCheck, menu: 'absensi-siswa', color: 'text-cyan-400 bg-cyan-500/10' },
+                { label: 'Nilai & Rapor', icon: GraduationCap, menu: 'nilai-siswa', color: 'text-blue-400 bg-blue-500/10' },
+                { label: 'Catatan Perilaku', icon: AlertTriangle, menu: 'kasus', color: 'text-rose-400 bg-rose-500/10' },
+                { label: 'Prestasi Saya', icon: Trophy, menu: 'prestasi', color: 'text-yellow-400 bg-yellow-500/10' },
+                { label: 'Uang Kas & Tabungan', icon: CreditCard, menu: 'uang-kas', color: 'text-indigo-400 bg-indigo-500/10' },
+                { label: 'Unduh Aplikasi', icon: Download, menu: 'unduh-aplikasi', color: 'text-teal-400 bg-teal-500/10' },
+              ].map((item, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => onNavigate && onNavigate(item.menu)}
+                  className="flex flex-col items-center justify-center p-2.5 sm:p-3 md:p-4 bg-slate-950/40 border border-slate-800/80 hover:border-emerald-500/40 hover:bg-slate-800/40 rounded-xl transition duration-150 group text-center cursor-pointer min-h-[75px] sm:min-h-[90px]"
+                >
+                  <div className={`p-1.5 sm:p-2 rounded-lg ${item.color} group-hover:scale-110 transition duration-200`}>
+                    <item.icon className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                  </div>
+                  <span className="text-[8px] sm:text-[10px] md:text-xs text-slate-300 font-bold group-hover:text-emerald-400 mt-1.5 sm:mt-2 leading-tight line-clamp-2">
+                    {item.label}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
 

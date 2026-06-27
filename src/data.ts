@@ -28,6 +28,7 @@ export const INITIAL_STUDENTS: Student[] = [
     photoUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=150',
     savings: 1500000,
     cashBill: 50000,
+    academicYear: '2025/2026'
   },
   {
     nisn: '0987654321',
@@ -42,6 +43,7 @@ export const INITIAL_STUDENTS: Student[] = [
     photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=150',
     savings: 750000,
     cashBill: 20000,
+    academicYear: '2025/2026'
   },
   {
     nisn: '1122334455',
@@ -56,6 +58,7 @@ export const INITIAL_STUDENTS: Student[] = [
     photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=150',
     savings: 1200000,
     cashBill: 0,
+    academicYear: '2025/2026'
   },
   {
     nisn: '5544332211',
@@ -70,6 +73,7 @@ export const INITIAL_STUDENTS: Student[] = [
     photoUrl: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=150',
     savings: 500000,
     cashBill: 100000,
+    academicYear: '2025/2026'
   },
   {
     nisn: '9988776655',
@@ -84,6 +88,7 @@ export const INITIAL_STUDENTS: Student[] = [
     photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150',
     savings: 2100000,
     cashBill: 15000,
+    academicYear: '2025/2026'
   }
 ];
 
@@ -322,35 +327,4 @@ export const INITIAL_ACHIEVEMENTS = (academicYear: string, semester: string): Ac
   }
 ];
 
-export const INITIAL_EMAILS: EmailLog[] = [
-  {
-    id: 'em-1',
-    timestamp: '2026-06-25T07:15:30',
-    recipient: 'hendrasubarjo@gmail.com',
-    role: 'Orangtua Ahmad Subarjo',
-    subject: 'SIAP Notifikasi: Absensi Ahmad Subarjo tanggal 2026-06-25',
-    content: 'Pemberitahuan bahwa siswa Ahmad Subarjo tercatat HADIR pada tanggal 2026-06-25 pukul 07:15:23 WIB.',
-    status: 'Success',
-    type: 'Absensi'
-  },
-  {
-    id: 'em-2',
-    timestamp: '2026-06-25T07:18:45',
-    recipient: 'rahmatkartolo@gmail.com',
-    role: 'Orangtua Siti Aminah',
-    subject: 'SIAP Notifikasi: Absensi Siti Aminah tanggal 2026-06-25',
-    content: 'Pemberitahuan bahwa siswa Siti Aminah tercatat HADIR pada tanggal 2026-06-25 pukul 07:18:41 WIB.',
-    status: 'Success',
-    type: 'Absensi'
-  },
-  {
-    id: 'em-3',
-    timestamp: '2026-06-24T16:00:00',
-    recipient: 'rahmatkartolo@gmail.com',
-    role: 'Orangtua Siti Aminah',
-    subject: 'SIAP Notifikasi: Nilai Akademik Siti Aminah',
-    content: 'Laporan nilai siswa Siti Aminah untuk Mata Pelajaran Matematika (Semester Ganjil): Tugas: 95, UTS: 92, UAS: 96. Rata-rata: 94.6.',
-    status: 'Success',
-    type: 'Nilai'
-  }
-];
+export const INITIAL_EMAILS: EmailLog[] = [];

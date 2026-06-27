@@ -28,6 +28,7 @@ export interface Student {
   photoUrl: string; // Base64 or URL
   savings: number; // Tabungan
   cashBill: number; // Tagihan uang kas
+  academicYear?: string; // Scopes student records to a specific academic year
 }
 
 export interface Teacher {
@@ -53,6 +54,11 @@ export interface Attendance {
   timestamp: string;
 }
 
+export interface SumatifDetail {
+  name: string; // e.g. "Sumatif 1"
+  harian: number[]; // e.g. [80, 85, 90]
+}
+
 export interface Grade {
   id: string;
   nisn: string;
@@ -61,7 +67,8 @@ export interface Grade {
   subject: string;
   academicYear: string;
   semester: string;
-  sumatif: number[];
+  sumatif: number[]; // Array of averages of daily scores
+  sumatifDetails?: SumatifDetail[]; // Detailed daily scores for each sumatif
   sts: number;
   sas: number;
   finalScore?: number;

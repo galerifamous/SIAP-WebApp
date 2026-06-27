@@ -32,12 +32,52 @@ import UangKasSec from './components/UangKasSec';
 import BackupRestoreSec from './components/BackupRestoreSec';
 import KartuSiswaSec from './components/KartuSiswaSec';
 import UnduhAplikasiSec from './components/UnduhAplikasiSec';
+import { ArrowLeft } from 'lucide-react';
 import NaikKelasSec from './components/NaikKelasSec';
 
 export default function App() {
   // --- AUTH STATES ---
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; username: string; role: Role; studentNisn?: string } | null>(null);
-  const [activeMenu, setActiveMenu] = useState<string>('dashboard');
+  
+  const [activeMenu, setActiveMenuState] = useState<string>(() => localStorage.getItem('siap_active_menu') || 'dashboard');
+  const [navHistory, setNavHistory] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('siap_nav_history');
+      return stored ? JSON.parse(stored) : ['dashboard'];
+    } catch {
+      return ['dashboard'];
+    }
+  });
+
+  const setActiveMenu = (menu: string) => {
+    setActiveMenuState(menu);
+    localStorage.setItem('siap_active_menu', menu);
+    
+    setNavHistory(prev => {
+      if (prev[prev.length - 1] === menu) return prev;
+      const updated = [...prev, menu];
+      localStorage.setItem('siap_nav_history', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleGoBack = () => {
+    if (navHistory.length > 1) {
+      const updatedHistory = [...navHistory];
+      updatedHistory.pop(); // Remove current menu
+      const prevMenu = updatedHistory[updatedHistory.length - 1];
+      
+      setActiveMenuState(prevMenu);
+      localStorage.setItem('siap_active_menu', prevMenu);
+      setNavHistory(updatedHistory);
+      localStorage.setItem('siap_nav_history', JSON.stringify(updatedHistory));
+    } else {
+      setActiveMenuState('dashboard');
+      localStorage.setItem('siap_active_menu', 'dashboard');
+      setNavHistory(['dashboard']);
+      localStorage.setItem('siap_nav_history', JSON.stringify(['dashboard']));
+    }
+  };
 
   // --- DATABASE STATES ---
   const [students, setStudents] = useState<Student[]>([]);
@@ -329,40 +369,80 @@ export default function App() {
 
   // --- DATA SISWA WRITERS ---
   const handleAddStudent = (student: Student) => {
-    const updated = [student, ...students];
+    const studentWithYear = {
+      ...student,
+      academicYear: student.academicYear || academicSetting.activeYear
+    };
+    const updated = [studentWithYear, ...students];
     setStudents(updated);
     saveState('siap_students', updated);
   };
 
   const handleAddStudentsBulk = (bulk: Student[]) => {
-    const updated = [...bulk, ...students];
+    const bulkWithYear = bulk.map(s => ({
+      ...s,
+      academicYear: s.academicYear || academicSetting.activeYear
+    }));
+    const updated = [...bulkWithYear, ...students];
     setStudents(updated);
     saveState('siap_students', updated);
   };
 
   const handleEditStudent = (nisn: string, updatedStudent: Student) => {
-    const updated = students.map(s => s.nisn === nisn ? updatedStudent : s);
+    const activeY = academicSetting.activeYear;
+    const updated = students.map(s => {
+      const year = s.academicYear || '2025/2026';
+      if (s.nisn === nisn && year === activeY) {
+        return {
+          ...updatedStudent,
+          academicYear: activeY // preserve key
+        };
+      }
+      return s;
+    });
     setStudents(updated);
     saveState('siap_students', updated);
   };
 
   const handleDeleteStudent = (nisn: string) => {
-    const updated = students.filter(s => s.nisn !== nisn);
+    const activeY = academicSetting.activeYear;
+    const updated = students.filter(s => {
+      const year = s.academicYear || '2025/2026';
+      return !(s.nisn === nisn && year === activeY);
+    });
     setStudents(updated);
     saveState('siap_students', updated);
   };
 
-  const handlePromoteStudents = (promotedNisns: string[], targetClass: string, nextYear: string) => {
-    const updated = students.map(s => {
-      if (promotedNisns.includes(s.nisn)) {
-        return {
-          ...s,
+  const handlePromoteStudents = (
+    promotedNisns: string[],
+    targetClass: string,
+    nextYear: string,
+    carryOverSavings: boolean,
+    carryOverCash: boolean
+  ) => {
+    const newStudentsToInsert: Student[] = [];
+    
+    promotedNisns.forEach(nisn => {
+      // Find the student's record in the current year, or most recent record
+      const sourceStudent = students.find(s => s.nisn === nisn && (s.academicYear || '2025/2026') === academicSetting.activeYear)
+                         || students.find(s => s.nisn === nisn);
+      
+      if (sourceStudent) {
+        newStudentsToInsert.push({
+          ...sourceStudent,
           class: targetClass,
-          cashBill: 0 // Reset tagihan uang kas untuk tahun ajaran baru
-        };
+          academicYear: nextYear,
+          savings: carryOverSavings ? sourceStudent.savings : 0,
+          cashBill: carryOverCash ? sourceStudent.cashBill : 0
+        });
       }
-      return s;
     });
+
+    // Remove any existing records for these NISNs in the nextYear to prevent duplicates
+    const filteredStudents = students.filter(s => !(promotedNisns.includes(s.nisn) && (s.academicYear || '2025/2026') === nextYear));
+
+    const updated = [...newStudentsToInsert, ...filteredStudents];
     setStudents(updated);
     saveState('siap_students', updated);
 
@@ -780,6 +860,11 @@ export default function App() {
     setEmails(INITIAL_EMAILS);
   };
 
+  const handleClearEmails = () => {
+    setEmails([]);
+    saveState('siap_emails', []);
+  };
+
   // --- CONDITIONAL PORTAL MENU NAVIGATION ROUTING ---
   const renderContent = () => {
     if (!currentUser) return null;
@@ -807,6 +892,8 @@ export default function App() {
             emails={emails}
             academicYear={academicSetting.activeYear}
             semester={academicSetting.activeSemester}
+            onNavigate={(menuId) => setActiveMenu(menuId)}
+            onClearEmails={handleClearEmails}
           />
         );
       case 'profil':
@@ -1050,7 +1137,7 @@ export default function App() {
     : undefined;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans selection:bg-emerald-500 selection:text-white max-w-full overflow-hidden">
       {/* Collapsible Sidebar */}
       <Sidebar
         role={currentUser.role}
@@ -1070,16 +1157,28 @@ export default function App() {
       />
 
       {/* Main Right Side Content Container */}
-      <main className="flex-1 lg:pl-64 min-h-screen flex flex-col pt-16 lg:pt-0">
+      <main className="flex-1 lg:pl-64 min-h-screen flex flex-col pt-16 lg:pt-0 min-w-0 max-w-full overflow-x-hidden">
         {/* Top Header Bar */}
         <header className="px-6 py-4 border-b border-slate-900 bg-slate-900/40 backdrop-blur-md flex flex-col sm:flex-row justify-between sm:items-center gap-4 z-10">
-          <div>
-            <h1 className="text-sm font-bold text-white tracking-tight uppercase">
-              SIAP Academic Management System
-            </h1>
-            <p className="text-[10px] text-slate-500 mt-0.5 font-semibold">
-              <span className="text-teal-400">{getTopBarSub()}</span>
-            </p>
+          <div className="flex items-center gap-3">
+            {navHistory.length > 1 && (
+              <button
+                onClick={handleGoBack}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-black uppercase transition border border-slate-700 active:scale-95 shrink-0 cursor-pointer"
+                title="Kembali ke halaman sebelumnya"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Kembali</span>
+              </button>
+            )}
+            <div>
+              <h1 className="text-sm font-bold text-white tracking-tight uppercase">
+                SIAP Academic Management System
+              </h1>
+              <p className="text-[10px] text-slate-500 mt-0.5 font-semibold">
+                <span className="text-teal-400">{getTopBarSub()}</span>
+              </p>
+            </div>
           </div>
           
           <div className="flex flex-wrap items-center gap-4 justify-between sm:justify-end">
@@ -1122,7 +1221,7 @@ export default function App() {
         </header>
 
         {/* Inner Content Area */}
-        <div className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto animate-fadeIn overflow-y-auto">
+        <div className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto animate-fadeIn overflow-y-auto min-w-0 overflow-x-hidden">
           {renderContent()}
         </div>
 

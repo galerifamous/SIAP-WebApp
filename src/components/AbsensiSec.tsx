@@ -26,7 +26,8 @@ import {
   FileText,
   AlertTriangle,
   User,
-  Undo
+  Undo,
+  SwitchCamera
 } from 'lucide-react';
 import { Student, Attendance, Holiday } from '../types';
 import { downloadFile, convertToCSV, printToPDF } from '../utils/export';
@@ -75,6 +76,7 @@ export default function AbsensiSec({
 
   // Real Camera States
   const [hasCamera, setHasCamera] = useState(false);
+  const [cameraMode, setCameraMode] = useState<'environment' | 'user'>('environment');
   const lastScannedRef = React.useRef<{ nisn: string; time: number } | null>(null);
   const scanStatusRef = React.useRef(scanStatus);
 
@@ -153,7 +155,7 @@ export default function AbsensiSec({
 
           html5QrCode = new Html5Qrcode("real-camera-reader");
           html5QrCode.start(
-            { facingMode: "environment" },
+            { facingMode: cameraMode },
             {
               fps: 10,
               qrbox: { width: 220, height: 220 }
@@ -198,7 +200,7 @@ export default function AbsensiSec({
         }
       };
     }
-  }, [activeTab, role]);
+  }, [activeTab, role, cameraMode]);
 
   // List States
   const [searchQuery, setSearchQuery] = useState('');
@@ -472,9 +474,20 @@ export default function AbsensiSec({
           {/* Virtual Scanner Box */}
           <div className="lg:col-span-2 p-6 bg-slate-950/40 border border-slate-800 rounded-2xl flex flex-col justify-between">
             <div className="text-center">
-              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full font-bold uppercase tracking-widest">
-                Kamera Scanner Otomatis Aktif
-              </span>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-1 mb-2">
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full font-bold uppercase tracking-widest">
+                  Kamera Scanner Otomatis Aktif
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCameraMode(prev => prev === 'environment' ? 'user' : 'environment')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg text-[10px] font-bold uppercase border border-slate-750 transition cursor-pointer active:scale-95"
+                  title="Balik kamera (Kamera Depan / Belakang)"
+                >
+                  <SwitchCamera className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                  <span>Kamera: {cameraMode === 'environment' ? 'Belakang (Utama)' : 'Depan (Selfie)'}</span>
+                </button>
+              </div>
               
               {/* Animated Scan Stage */}
               <div className="relative my-8 mx-auto w-full max-w-[320px] aspect-square rounded-2xl border border-slate-700/60 overflow-hidden bg-slate-900 shadow-2xl flex flex-col items-center justify-center">

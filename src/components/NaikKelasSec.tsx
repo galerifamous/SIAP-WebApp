@@ -25,7 +25,13 @@ interface NaikKelasSecProps {
   students: Student[];
   availableClasses: string[];
   academicSetting: AcademicSetting;
-  onPromoteStudents: (promotedNisns: string[], targetClass: string, nextYear: string) => void;
+  onPromoteStudents: (
+    promotedNisns: string[],
+    targetClass: string,
+    nextYear: string,
+    carryOverSavings: boolean,
+    carryOverCash: boolean
+  ) => void;
   role: 'ADMIN' | 'GURU' | 'SISWA';
 }
 
@@ -36,10 +42,13 @@ export default function NaikKelasSec({
   onPromoteStudents,
   role
 }: NaikKelasSecProps) {
+  const [sourceYear, setSourceYear] = useState<string>(academicSetting.activeYear);
   const [selectedClass, setSelectedClass] = useState<string>(availableClasses[0] || '');
   const [targetClass, setTargetClass] = useState<string>('');
   const [targetYear, setTargetYear] = useState<string>('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  const [carryOverSavings, setCarryOverSavings] = useState<boolean>(true);
+  const [carryOverCash, setCarryOverCash] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [promoSummary, setPromoSummary] = useState<{
     count: number;
@@ -80,19 +89,25 @@ export default function NaikKelasSec({
     return '';
   };
 
-  // Filter students in the selected source class
-  const classStudents = students.filter(s => s.class === selectedClass);
+  // Filter students in the selected source class and source year
+  const classStudents = students.filter(
+    s => (s.academicYear || '2025/2026') === sourceYear && s.class === selectedClass
+  );
 
-  // Update suggestions when source class changes
+  // Update suggestions when source class or year changes
   useEffect(() => {
     if (selectedClass) {
       const suggested = getSuggestedClass(selectedClass, availableClasses);
       setTargetClass(suggested || 'LULUS (ALUMNI)');
-      setTargetYear(getNextAcademicYear(academicSetting.activeYear));
-      // Pre-select all students in this class for promotion
-      setSelectedStudents(students.filter(s => s.class === selectedClass).map(s => s.nisn));
+      setTargetYear(getNextAcademicYear(sourceYear));
+      
+      // Pre-select all students in this class and year for promotion
+      const matchingNisns = students
+        .filter(s => (s.academicYear || '2025/2026') === sourceYear && s.class === selectedClass)
+        .map(s => s.nisn);
+      setSelectedStudents(matchingNisns);
     }
-  }, [selectedClass, academicSetting.activeYear, students]);
+  }, [selectedClass, sourceYear, students]);
 
   // Toggle single student selection
   const handleToggleStudent = (nisn: string) => {
@@ -123,8 +138,8 @@ export default function NaikKelasSec({
       newYear: targetYear
     });
 
-    // Execute callback
-    onPromoteStudents(selectedStudents, targetClass, targetYear);
+    // Execute callback with carryover values
+    onPromoteStudents(selectedStudents, targetClass, targetYear, carryOverSavings, carryOverCash);
     setIsSuccess(true);
   };
 
@@ -212,6 +227,21 @@ export default function NaikKelasSec({
                 <Sparkles className="w-4 h-4 text-emerald-400" /> Pengaturan Kenaikan Rombel
               </h3>
 
+              {/* Source Year */}
+              <div className="space-y-1">
+                <label className="block text-slate-400 font-semibold text-[10px] uppercase">Tahun Pelajaran Asal</label>
+                <select
+                  value={sourceYear}
+                  onChange={(e) => setSourceYear(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 text-xs font-mono"
+                >
+                  {academicSetting.years.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500">Pilih tahun pelajaran asal dari data siswa.</p>
+              </div>
+
               {/* Source Class */}
               <div className="space-y-1">
                 <label className="block text-slate-400 font-semibold text-[10px] uppercase">Rombel Asal (Sekarang)</label>
@@ -264,16 +294,41 @@ export default function NaikKelasSec({
                 <p className="text-[10px] text-slate-500">Sistem otomatis memindahkan siswa dan memajukan tahun ajaran aktif sistem ke tahun ini.</p>
               </div>
 
+              {/* Financial Carry-over options */}
+              <div className="bg-slate-950/40 p-3 rounded-xl border border-slate-800 space-y-2.5">
+                <label className="block text-slate-400 font-bold text-[9px] uppercase tracking-wider">Opsi Saldo & Keuangan:</label>
+                
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={carryOverSavings}
+                    onChange={(e) => setCarryOverSavings(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded border-slate-800 text-emerald-500 focus:ring-0 focus:ring-offset-0 bg-slate-950 cursor-pointer"
+                  />
+                  <span className="text-slate-300 text-xs font-medium">Bawa Saldo Tabungan Siswa</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={carryOverCash}
+                    onChange={(e) => setCarryOverCash(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded border-slate-800 text-emerald-500 focus:ring-0 focus:ring-offset-0 bg-slate-950 cursor-pointer"
+                  />
+                  <span className="text-slate-300 text-xs font-medium">Bawa Sisa Tagihan Uang Kas</span>
+                </label>
+              </div>
+
               {/* Policy/Business rule warnings */}
               <div className="bg-slate-950/60 rounded-xl border border-slate-800 p-3 space-y-2">
                 <p className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1">
                   <Info className="w-3.5 h-3.5 text-amber-500" /> Aturan Bisnis Kenaikan Kelas:
                 </p>
                 <ul className="list-disc list-outside pl-4 text-[9px] text-slate-400 space-y-1.5 leading-relaxed">
-                  <li>Tagihan uang kas kelas lama otomatis di-<b>reset ke Rp 0</b> demi tahun ajaran baru.</li>
-                  <li>Dana <b>Tabungan siswa tetap aman</b> dan berpindah utuh bersama siswa.</li>
-                  <li>Kenaikan kelas akan memperbarui kelas siswa langsung dalam database.</li>
-                  <li>Tahun ajaran aktif sistem akan bergeser ke <b className="text-emerald-400">{targetYear || 'Tahun Baru'}</b> (Semester Ganjil).</li>
+                  <li>Laporan tabungan {carryOverSavings ? <span className="text-emerald-400 font-bold">dilanjutkan</span> : <span className="text-rose-400">di-reset ke Rp 0</span>} ke tahun ajaran baru.</li>
+                  <li>Tagihan uang kas {carryOverCash ? <span className="text-emerald-400 font-bold">dilanjutkan</span> : <span className="text-rose-400">di-reset ke Rp 0</span>} ke tahun ajaran baru.</li>
+                  <li>Kenaikan kelas akan menduplikasi profil siswa ke tahun ajaran baru <b className="text-emerald-400">{targetYear || 'Tahun Baru'}</b> (Ganjil).</li>
+                  <li>Tahun ajaran aktif sistem akan bergeser secara otomatis setelah proses selesai.</li>
                 </ul>
               </div>
 
