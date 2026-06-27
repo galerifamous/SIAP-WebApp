@@ -179,6 +179,8 @@ export default function SiswaList({
           return result;
         };
 
+        const cleanCell = (c: string) => c ? c.trim().replace(/\r/g, '').replace(/^"|"$/g, '') : '';
+
         // Parse students starting from startIdx
         for (let i = startIdx; i < lines.length; i++) {
           const line = lines[i].trim();
@@ -188,15 +190,15 @@ export default function SiswaList({
 
           if (cells.length >= 3) { // Minimum requirement: NISN, Nama, Kelas
             importedStudents.push({
-              nisn: cells[0],
-              name: cells[1],
-              class: cells[2] || 'IX-A',
-              pob: cells[3] || 'Jakarta',
-              dob: cells[4] || '2011-01-01',
-              gender: (cells[5] === 'Perempuan' ? 'Perempuan' : 'Laki-laki'),
-              parentName: cells[6] || 'Nama Orangtua',
-              parentEmail: cells[7] || 'ortu@gmail.com',
-              address: cells[8] || 'Alamat',
+              nisn: cleanCell(cells[0]),
+              name: cleanCell(cells[1]),
+              class: cleanCell(cells[2]) || 'IX-A',
+              pob: cleanCell(cells[3]) || 'Jakarta',
+              dob: cleanCell(cells[4]) || '2011-01-01',
+              gender: (cleanCell(cells[5]) === 'Perempuan' ? 'Perempuan' : 'Laki-laki'),
+              parentName: cleanCell(cells[6]) || 'Nama Orangtua',
+              parentEmail: cleanCell(cells[7]) || 'ortu@gmail.com',
+              address: cleanCell(cells[8]) || 'Alamat',
               photoUrl: '', // Initial empty photo
               savings: 0,
               cashBill: 0,

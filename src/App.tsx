@@ -98,7 +98,51 @@ export default function App() {
         localStorage.removeItem('siap_session');
       }
     }
+    
+    setTimeout(() => {
+      isLoadedRef.current = true;
+    }, 500);
   }, []);
+
+  const isLoadedRef = React.useRef(false);
+
+  // --- AUTOMATIC CLOUD DATABASE SYNC ON STATE CHANGE ---
+  useEffect(() => {
+    if (!isLoadedRef.current) return;
+
+    const gasUrl = localStorage.getItem('siap_gas_url');
+    if (!gasUrl) return;
+
+    const timer = setTimeout(() => {
+      const backupObj = {
+        siap_students: students,
+        siap_teachers: teachers,
+        siap_attendance: attendance,
+        siap_grades: grades,
+        siap_cases: cases,
+        siap_achievements: achievements,
+        siap_emails: emails,
+        siap_academic: academicSetting,
+        siap_system: systemSetting
+      };
+
+      fetch(gasUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8'
+        },
+        body: JSON.stringify(backupObj)
+      })
+      .then(() => {
+        console.log('Sinkronisasi cloud otomatis berhasil!');
+      })
+      .catch((err) => {
+        console.warn('Gagal sinkronisasi cloud otomatis (CORS/jaringan):', err);
+      });
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [students, teachers, attendance, grades, cases, achievements, emails, academicSetting, systemSetting]);
 
   // --- LOCAL PERSISTENCE WRITERS ---
   const saveState = (key: string, data: any) => {
@@ -358,40 +402,41 @@ export default function App() {
 
     const dateStr = customDate || new Date().toISOString().split('T')[0];
     
-    // Check if attendance already exists for this student on this date, academic year, and semester
-    const existingIndex = attendance.findIndex(
-      a => a.nisn === nisn && 
-           a.date === dateStr && 
-           a.academicYear === academicSetting.activeYear && 
-           a.semester === academicSetting.activeSemester
-    );
+    setAttendance(prevAttendance => {
+      // Check if attendance already exists for this student on this date, academic year, and semester
+      const existingIndex = prevAttendance.findIndex(
+        a => a.nisn === nisn && 
+             a.date === dateStr && 
+             a.academicYear === academicSetting.activeYear && 
+             a.semester === academicSetting.activeSemester
+      );
 
-    let updated: Attendance[];
-    if (existingIndex > -1) {
-      updated = [...attendance];
-      updated[existingIndex] = {
-        ...updated[existingIndex],
-        status,
-        timestamp: new Date().toISOString()
-      };
-    } else {
-      const newAttId = 'att-' + Date.now();
-      const newRecord: Attendance = {
-        id: newAttId,
-        nisn,
-        studentName: student.name,
-        class: student.class,
-        date: dateStr,
-        status,
-        academicYear: academicSetting.activeYear,
-        semester: academicSetting.activeSemester,
-        timestamp: new Date().toISOString()
-      };
-      updated = [newRecord, ...attendance];
-    }
-
-    setAttendance(updated);
-    saveState('siap_attendance', updated);
+      let updated: Attendance[];
+      if (existingIndex > -1) {
+        updated = [...prevAttendance];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          status,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        const newAttId = 'att-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        const newRecord: Attendance = {
+          id: newAttId,
+          nisn,
+          studentName: student.name,
+          class: student.class,
+          date: dateStr,
+          status,
+          academicYear: academicSetting.activeYear,
+          semester: academicSetting.activeSemester,
+          timestamp: new Date().toISOString()
+        };
+        updated = [newRecord, ...prevAttendance];
+      }
+      saveState('siap_attendance', updated);
+      return updated;
+    });
 
     // Trigger otomatis email untuk absensi sukses
     if (student.parentEmail) {

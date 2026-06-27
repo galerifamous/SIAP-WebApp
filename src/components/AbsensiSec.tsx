@@ -78,22 +78,33 @@ export default function AbsensiSec({
   const lastScannedRef = React.useRef<{ nisn: string; time: number } | null>(null);
   const scanStatusRef = React.useRef(scanStatus);
 
+  const studentsRef = React.useRef(students);
+  const onMarkAttendanceRef = React.useRef(onMarkAttendance);
+
   React.useEffect(() => {
     scanStatusRef.current = scanStatus;
   }, [scanStatus]);
+
+  React.useEffect(() => {
+    studentsRef.current = students;
+  }, [students]);
+
+  React.useEffect(() => {
+    onMarkAttendanceRef.current = onMarkAttendance;
+  }, [onMarkAttendance]);
 
   // Handle scan with custom status
   const handleScanWithStatus = (nisn: string, status: 'Hadir' | 'Sakit' | 'Izin' | 'Alpa') => {
     setScanSuccess(null);
     setScanError(null);
 
-    const student = students.find(s => s.nisn === nisn);
+    const student = studentsRef.current.find(s => s.nisn === nisn);
     if (!student) {
       setScanError(`NISN "${nisn}" tidak terdaftar di database.`);
       return;
     }
 
-    onMarkAttendance(nisn, status);
+    onMarkAttendanceRef.current(nisn, status);
     playBeep();
 
     const statusMap: Record<string, string> = {
@@ -103,7 +114,7 @@ export default function AbsensiSec({
       Alpa: 'ALPA 🔴'
     };
     const statusText = statusMap[status] || status.toUpperCase();
-    setScanSuccess(`Absensi BERHASIL! Siswa: ${student.name} (${student.class}) tercatat ${statusText}. Notifikasi email otomatis dikirim ke Orangtua, Guru, dan Admin.`);
+    setScanSuccess(`Absensi BERHASIL! Siswa: ${student.name} (${student.class}) tercatat ${statusText}. Notifikasi email otomatis hanya dikirim ke Orangtua.`);
 
     // Clear success after 6 seconds
     setTimeout(() => {
@@ -124,6 +135,11 @@ export default function AbsensiSec({
     handleScanWithStatus(cleanNisn, scanStatusRef.current);
   };
 
+  const handleBarcodeScannedRef = React.useRef(handleBarcodeScanned);
+  React.useEffect(() => {
+    handleBarcodeScannedRef.current = handleBarcodeScanned;
+  });
+
   React.useEffect(() => {
     let html5QrCode: any = null;
     let isMounted = true;
@@ -143,7 +159,7 @@ export default function AbsensiSec({
               qrbox: { width: 220, height: 220 }
             },
             (decodedText: string) => {
-              handleBarcodeScanned(decodedText);
+              handleBarcodeScannedRef.current(decodedText);
             },
             (errorMessage: string) => {
               // Parse error, silent
@@ -225,47 +241,61 @@ export default function AbsensiSec({
 
   // Monthly rekap CSV generator
   const handleExportMonthlyCSV = () => {
+    const yearNum = Number(monthlyYear);
+    const monthNum = Number(monthlyMonth);
+    const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
     const targetPrefix = `${monthlyYear}-${String(monthlyMonth).padStart(2, '0')}`;
     const targetStudents = monthlyClass 
       ? students.filter(s => s.class === monthlyClass)
       : students;
 
+    const dateKeys: string[] = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      dateKeys.push(`${targetPrefix}-${String(d).padStart(2, '0')}`);
+    }
+
     const headers = [
-      'No',
       'NISN',
       'Nama Siswa',
-      'Kelas',
+      'Jenis Kelamin',
+      ...dateKeys.map((_, idx) => `Tanggal ${idx + 1}`),
       'Total Hadir (H)',
       'Total Sakit (S)',
       'Total Izin (I)',
-      'Total Alpa (A)',
-      'Total Hari Sekolah',
-      'Persentase Kehadiran (%)'
+      'Total Alpa (A)'
     ];
 
-    const rows = targetStudents.map((student, idx) => {
+    const rows = targetStudents.map((student) => {
       const studentAtts = attendance.filter(
         att => att.nisn === student.nisn && att.date.startsWith(targetPrefix)
       );
 
-      const hadir = studentAtts.filter(a => a.status === 'Hadir').length;
-      const sakit = studentAtts.filter(a => a.status === 'Sakit').length;
-      const izin = studentAtts.filter(a => a.status === 'Izin').length;
-      const alpa = studentAtts.filter(a => a.status === 'Alpa').length;
-      const total = hadir + sakit + izin + alpa;
-      const percentage = total > 0 ? Math.round((hadir / total) * 100) : 100;
+      const dailyStatuses = dateKeys.map(dateKey => {
+        const att = studentAtts.find(a => a.date === dateKey);
+        if (!att) return '';
+        const statusCharMap: Record<string, string> = {
+          Hadir: 'H',
+          Sakit: 'S',
+          Izin: 'I',
+          Alpa: 'A'
+        };
+        return statusCharMap[att.status] || '';
+      });
+
+      const totalH = dailyStatuses.filter(s => s === 'H').length;
+      const totalS = dailyStatuses.filter(s => s === 'S').length;
+      const totalI = dailyStatuses.filter(s => s === 'I').length;
+      const totalA = dailyStatuses.filter(s => s === 'A').length;
 
       return [
-        String(idx + 1),
         student.nisn,
         student.name,
-        student.class,
-        String(hadir),
-        String(sakit),
-        String(izin),
-        String(alpa),
-        String(total),
-        `${percentage}%`
+        student.gender,
+        ...dailyStatuses,
+        String(totalH),
+        String(totalS),
+        String(totalI),
+        String(totalA)
       ];
     });
 

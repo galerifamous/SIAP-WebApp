@@ -239,7 +239,7 @@ export default function NilaiSec({
         const sumAvg = g.sumatif && g.sumatif.length > 0 ? g.sumatif.reduce((s, v) => s + v, 0) / g.sumatif.length : 0;
         return {
           ...g,
-          sumatifStr: g.sumatif ? g.sumatif.join('; ') : '',
+          sumatifStr: g.sumatif ? g.sumatif.join(', ') : '',
           finalScore: Math.round((((sumAvg + (g.sts ?? 0) + (g.sas ?? 0)) / 3)) * 10) / 10
         };
       }),

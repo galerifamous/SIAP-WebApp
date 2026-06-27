@@ -212,7 +212,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             body {
               font-family: 'Inter', sans-serif;
               background-color: #f1f5f9;
-              padding: 40px;
+              padding: 20px;
               color: #1e293b;
               margin: 0;
               display: flex;
@@ -231,6 +231,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               gap: 15px;
               align-items: center;
               box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+              max-width: 600px;
             }
 
             .btn-print {
@@ -243,30 +244,36 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               font-size: 13px;
               cursor: pointer;
               transition: opacity 0.15s;
+              flex-shrink: 0;
             }
             .btn-print:hover { opacity: 0.9; }
 
-            /* Standard Portrait Dimensions: 54mm x 85.6mm scaled up for printing */
+            @page {
+              size: A4 portrait;
+              margin: 10mm;
+            }
+
             .cards-container {
               display: flex;
-              gap: 40px;
+              gap: 10mm;
               flex-wrap: wrap;
               justify-content: center;
             }
 
+            /* Exact CR-80 standard size: 54mm x 85.6mm */
             .card-wrapper {
-              width: 320px;
-              height: 500px;
+              width: 54mm;
+              height: 85.6mm;
               background: #ffffff;
-              border-radius: 16px;
-              border: 1px solid #cbd5e1;
-              box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+              border-radius: 3.18mm;
+              border: 0.4mm solid #cbd5e1;
               overflow: hidden;
               position: relative;
               box-sizing: border-box;
               display: flex;
               flex-direction: column;
               page-break-inside: avoid;
+              box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
             }
 
             /* Front Card Styling */
@@ -277,24 +284,26 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             .header-strip {
               background: linear-gradient(135deg, ${themeColorHex}, ${themeColorHexDark});
               color: #ffffff;
-              padding: 14px 12px;
+              padding: 2.2mm 2mm;
               display: flex;
               align-items: center;
-              gap: 10px;
-              border-bottom: 3px solid #f59e0b;
+              gap: 1.5mm;
+              border-bottom: 0.8mm solid #f59e0b;
               position: relative;
+              height: 12mm;
+              box-sizing: border-box;
             }
 
             .logo-container {
-              width: 32px;
-              height: 32px;
+              width: 6.5mm;
+              height: 6.5mm;
               background-color: rgba(255,255,255,0.15);
-              border-radius: 8px;
+              border-radius: 1.2mm;
               display: flex;
               align-items: center;
               justify-content: center;
-              padding: 3px;
-              border: 1px solid rgba(255,255,255,0.2);
+              padding: 0.5mm;
+              border: 0.2mm solid rgba(255,255,255,0.2);
               flex-shrink: 0;
             }
             .logo-img {
@@ -304,41 +313,58 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
             .logo-fallback {
               color: #ffffff;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .logo-fallback svg {
+              width: 4.5mm;
+              height: 4.5mm;
             }
 
             .school-meta {
               min-width: 0;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
             }
             .school-name {
-              font-size: 11px;
+              font-size: 5.5px;
               font-weight: 800;
-              letter-spacing: 0.3px;
+              letter-spacing: 0.2px;
               margin: 0;
               text-transform: uppercase;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
+              line-height: 1.2;
             }
             .school-addr {
-              font-size: 7.5px;
+              font-size: 4px;
               opacity: 0.85;
-              margin: 2px 0 0 0;
+              margin: 0.5mm 0 0 0;
               font-weight: 500;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
+              line-height: 1.2;
             }
 
             .card-title-bar {
               text-align: center;
               background-color: #f8fafc;
-              border-bottom: 1px solid #f1f5f9;
-              padding: 6px 0;
+              border-bottom: 0.2mm solid #f1f5f9;
+              padding: 1mm 0;
+              height: 4mm;
+              box-sizing: border-box;
+              display: flex;
+              align-items: center;
+              justify-content: center;
             }
             .card-title-text {
-              font-size: 9px;
+              font-size: 5.2px;
               font-weight: 800;
-              letter-spacing: 1.5px;
+              letter-spacing: 1px;
               color: #475569;
               text-transform: uppercase;
               margin: 0;
@@ -350,23 +376,25 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               display: flex;
               flex-direction: column;
               align-items: center;
-              padding: 16px 20px;
+              padding: 2.5mm 3.5mm;
               box-sizing: border-box;
+              overflow: hidden;
             }
 
             .photo-frame {
-              width: 95px;
-              height: 120px;
-              border-radius: 10px;
-              border: 3px solid ${themeColorHex};
-              box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+              width: 18mm;
+              height: 24mm;
+              border-radius: 1.5mm;
+              border: 0.6mm solid ${themeColorHex};
+              box-shadow: 0 2px 4px rgba(0,0,0,0.08);
               overflow: hidden;
               background-color: #f8fafc;
-              margin-bottom: 12px;
+              margin-bottom: 1.5mm;
               display: flex;
               align-items: center;
               justify-content: center;
               position: relative;
+              flex-shrink: 0;
             }
             .photo-frame img.photo {
               width: 100%;
@@ -381,65 +409,76 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               justify-content: center;
               background-color: #f1f5f9;
             }
+            .photo-placeholder svg {
+              width: 8mm;
+              height: 8mm;
+            }
 
             .student-name-box {
               text-align: center;
-              margin-bottom: 10px;
+              margin-bottom: 1.2mm;
               width: 100%;
+              flex-shrink: 0;
             }
             .student-name {
-              font-size: 14px;
+              font-size: 8px;
               font-weight: 800;
               color: #0f172a;
               margin: 0;
               text-transform: uppercase;
-              letter-spacing: -0.2px;
+              letter-spacing: -0.1px;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
+              line-height: 1.2;
             }
             .student-class-badge {
               display: inline-block;
-              font-size: 9px;
+              font-size: 5px;
               font-weight: 700;
               color: ${themeColorHex};
               background-color: rgba(0, 0, 0, 0.04);
-              border: 1px solid rgba(0, 0, 0, 0.05);
-              padding: 2px 8px;
-              border-radius: 20px;
-              margin-top: 3px;
+              border: 0.2mm solid rgba(0, 0, 0, 0.05);
+              padding: 0.4mm 1.6mm;
+              border-radius: 4mm;
+              margin-top: 0.5mm;
               text-transform: uppercase;
+              line-height: 1;
             }
 
             /* Detail Table */
             .details-table {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 5px;
-              font-size: 9.5px;
+              margin-bottom: 0;
+              font-size: 5.5px;
+              flex-shrink: 0;
             }
             .details-table td {
-              padding: 3.5px 0;
+              padding: 0.6mm 0;
               vertical-align: top;
+              line-height: 1.2;
             }
             .details-label {
               color: #64748b;
               font-weight: 600;
-              width: 80px;
+              width: 14mm;
             }
             .details-colon {
               color: #cbd5e1;
-              width: 10px;
+              width: 2mm;
             }
             .details-value {
               color: #1e293b;
               font-weight: 700;
+              word-break: break-all;
             }
 
             .front-footer-strip {
-              height: 12px;
+              height: 2mm;
               background-color: ${themeColorHex};
               margin-top: auto;
+              flex-shrink: 0;
             }
 
             /* Back Card Styling */
@@ -450,84 +489,92 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
 
             .back-accent-stripe {
-              height: 10px;
+              height: 2mm;
               background: linear-gradient(90deg, ${themeColorHex}, #cbd5e1, ${themeColorHexDark});
+              flex-shrink: 0;
             }
 
             .back-content {
               flex: 1;
-              padding: 20px 18px;
+              padding: 3mm 4mm;
               display: flex;
               flex-direction: column;
               align-items: center;
               box-sizing: border-box;
+              overflow: hidden;
             }
 
             .rules-title-box {
               width: 100%;
-              margin-bottom: 8px;
+              margin-bottom: 1mm;
+              flex-shrink: 0;
             }
             .rules-title {
-              font-size: 10px;
+              font-size: 5.5px;
               font-weight: 800;
               color: ${themeColorHex};
-              letter-spacing: 0.8px;
+              letter-spacing: 0.5px;
               text-transform: uppercase;
               margin: 0;
-              border-bottom: 1.5px solid #e2e8f0;
-              padding-bottom: 4px;
+              border-bottom: 0.3mm solid #e2e8f0;
+              padding-bottom: 0.6mm;
             }
 
             .rules-list {
-              font-size: 8.5px;
+              font-size: 4.8px;
               color: #475569;
-              padding-left: 14px;
-              margin: 0 0 15px 0;
-              line-height: 1.5;
+              padding-left: 3mm;
+              margin: 0 0 2mm 0;
+              line-height: 1.4;
               font-weight: 500;
               width: 100%;
+              flex-shrink: 0;
             }
             .rules-list li {
-              margin-bottom: 4px;
+              margin-bottom: 0.6mm;
             }
 
-            /* Large Centered Barcode / QR Code */
+            /* ENLARGED QR Code / Barcode styling */
             .center-qr-container {
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: center;
-              margin: 5px 0 15px 0;
+              margin: 1mm 0 2mm 0;
               background-color: #f8fafc;
-              border: 1px solid #cbd5e1;
-              border-radius: 12px;
-              padding: 10px 12px;
-              width: 130px;
-              box-shadow: inset 0 1px 3px rgba(0,0,0,0.02);
+              border: 0.3mm solid #cbd5e1;
+              border-radius: 2mm;
+              padding: 1.5mm 2mm;
+              width: 38mm;
+              box-shadow: inset 0 0.2mm 0.6mm rgba(0,0,0,0.02);
+              flex-shrink: 0;
+              box-sizing: border-box;
             }
             .center-qr-image {
-              width: 95px;
-              height: 95px;
-              margin-bottom: 6px;
+              width: 32mm;
+              height: 32mm;
+              margin-bottom: 1.2mm;
               background: white;
-              padding: 4px;
-              border-radius: 6px;
-              border: 1px solid #e2e8f0;
+              padding: 0.8mm;
+              border-radius: 1.5mm;
+              border: 0.2mm solid #e2e8f0;
+              box-sizing: border-box;
             }
             .center-qr-caption {
               font-family: 'JetBrains Mono', monospace;
-              font-size: 8px;
+              font-size: 5.5px;
               font-weight: 700;
               color: #475569;
-              letter-spacing: 1.5px;
+              letter-spacing: 0.5px;
             }
 
             .back-bottom-row {
               width: 100%;
               display: flex;
-              justify-content: space-between;
+              justify-content: center;
               align-items: flex-end;
               margin-top: auto;
+              flex-shrink: 0;
             }
 
             .stamp-signature-area {
@@ -539,23 +586,24 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
             .signature-box {
               text-align: center;
-              width: 110px;
+              width: 28mm;
               position: relative;
               display: flex;
               flex-direction: column;
               align-items: center;
             }
             .sig-date {
-              font-size: 6.5px;
+              font-size: 5px;
               color: #475569;
-              margin-bottom: 34px;
+              margin-bottom: 6mm;
               text-transform: uppercase;
-              letter-spacing: 0.5px;
+              letter-spacing: 0.3px;
+              line-height: 1.1;
             }
             .sig-image {
               position: absolute;
-              top: 10px;
-              height: 32px;
+              top: 2.5mm;
+              height: 7mm;
               width: auto;
               object-fit: contain;
               z-index: 10;
@@ -563,42 +611,44 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
             .stamp-seal-img {
               position: absolute;
-              top: 4px;
-              left: -12px;
-              width: 38px;
-              height: 38px;
+              top: 1mm;
+              left: -2mm;
+              width: 8mm;
+              height: 8mm;
               object-fit: contain;
               z-index: 5;
               opacity: 0.8;
               pointer-events: none;
             }
             .sig-name {
-              font-size: 7.5px;
+              font-size: 5.5px;
               font-weight: 800;
               color: #0f172a;
-              border-bottom: 0.8px solid #1e293b;
-              padding-bottom: 1px;
+              border-bottom: 0.4mm solid #1e293b;
+              padding-bottom: 0.3mm;
               margin: 0;
               text-transform: uppercase;
               width: 100%;
               white-space: nowrap;
+              line-height: 1.2;
             }
             .sig-nip, .sig-title {
-              font-size: 6px;
+              font-size: 4.5px;
               color: #64748b;
-              margin-top: 1.5px;
+              margin-top: 0.5mm;
               font-family: monospace;
               white-space: nowrap;
+              line-height: 1.1;
             }
 
             /* Stamp Effect */
             .stamp-seal {
               position: absolute;
-              top: 4px;
-              left: -12px;
-              width: 38px;
-              height: 38px;
-              border: 1px dashed rgba(225, 29, 72, 0.4);
+              top: 1mm;
+              left: -2mm;
+              width: 8mm;
+              height: 8mm;
+              border: 0.3mm dashed rgba(225, 29, 72, 0.4);
               border-radius: 50%;
               display: flex;
               align-items: center;
@@ -608,7 +658,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               z-index: 5;
             }
             .stamp-text {
-              font-size: 4px;
+              font-size: 2px;
               font-weight: 800;
               color: rgba(225, 29, 72, 0.5);
               text-transform: uppercase;
@@ -619,14 +669,17 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
             .card-back-footer {
               background-color: #fafafa;
-              border-top: 1px solid #e2e8f0;
-              padding: 8px 18px;
+              border-top: 0.3mm solid #e2e8f0;
+              padding: 1.5mm 3mm;
               display: flex;
               justify-content: space-between;
               align-items: center;
-              font-size: 7px;
+              font-size: 5px;
               color: #94a3b8;
               font-weight: 600;
+              height: 4mm;
+              box-sizing: border-box;
+              flex-shrink: 0;
             }
 
             @media print {
@@ -639,7 +692,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               }
               .card-wrapper {
                 box-shadow: none;
-                border: 1px solid #94a3b8;
+                border: 0.4mm solid #94a3b8;
                 page-break-inside: avoid;
               }
             }
@@ -703,7 +756,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                   <tr>
                     <td class="details-label">Alamat</td>
                     <td class="details-colon">:</td>
-                    <td class="details-value" style="font-size: 8.5px; line-height: 1.2;">${student.address || '-'}</td>
+                    <td class="details-value" style="font-size: 5px; line-height: 1.2;">${student.address || '-'}</td>
                   </tr>` : ''}
                 </table>
               </div>
@@ -772,6 +825,764 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
     printWindow.document.close();
   };
 
+  const handlePrintMassCards = () => {
+    const targetStudents = classFilter
+      ? students.filter(s => s.class === classFilter)
+      : students;
+
+    const sortedStudents = [...targetStudents].sort((a, b) => a.name.localeCompare(b.name));
+
+    if (sortedStudents.length === 0) {
+      alert('Tidak ada siswa untuk dicetak pada filter kelas yang dipilih.');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Mohon izinkan pop-up browser Anda untuk mencetak.');
+      return;
+    }
+
+    const rulesHtml = customNotes
+      .split('\n')
+      .map(line => `<li>${line.replace(/^\d+\.\s*/, '')}</li>`)
+      .join('');
+
+    const logoHtml = systemSetting.logoUrl
+      ? `<img src="${systemSetting.logoUrl}" class="logo-img" />`
+      : `<div class="logo-fallback"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"></path></svg></div>`;
+
+    const themeColorHex = {
+      emerald: '#059669',
+      blue: '#2563eb',
+      crimson: '#e11d48',
+      indigo: '#4f46e5',
+      dark: '#1e293b',
+      amber: '#d97706'
+    }[theme];
+
+    const themeColorHexDark = {
+      emerald: '#0f766e',
+      blue: '#1e40af',
+      crimson: '#9f1239',
+      indigo: '#3730a3',
+      dark: '#0f172a',
+      amber: '#78350f'
+    }[theme];
+
+    // Helper functions inside the printing scope
+    const getFrontCardHtml = (student: Student | undefined) => {
+      if (!student) {
+        return `<div class="card-placeholder-empty"></div>`;
+      }
+      
+      const studentPhotoHtml = student.photoUrl
+        ? `<img src="${student.photoUrl}" class="photo" />`
+        : `<div class="photo-placeholder">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+           </div>`;
+
+      return `
+        <div class="card-wrapper card-front">
+          <div class="header-strip">
+            <div class="logo-container">
+              ${logoHtml}
+            </div>
+            <div class="school-meta">
+              <h1 class="school-name">${customSchoolName}</h1>
+              <p class="school-addr">${customSchoolAddress}</p>
+            </div>
+          </div>
+
+          <div class="card-title-bar">
+            <h2 class="card-title-text">${cardTitle}</h2>
+          </div>
+
+          <div class="content-area">
+            <div class="photo-frame">
+              ${studentPhotoHtml}
+            </div>
+
+            <div class="student-name-box">
+              <h3 class="student-name">${student.name}</h3>
+              <span class="student-class-badge">KELAS ${student.class}</span>
+            </div>
+
+            <table class="details-table">
+              <tr>
+                <td class="details-label">NISN / ID</td>
+                <td class="details-colon">:</td>
+                <td class="details-value">${student.nisn}</td>
+              </tr>
+              ${showTtl ? `
+              <tr>
+                <td class="details-label">TTL</td>
+                <td class="details-colon">:</td>
+                <td class="details-value">${student.pob || '-'}, ${student.dob || '-'}</td>
+              </tr>` : ''}
+              ${showGender ? `
+              <tr>
+                <td class="details-label">Jenis Kelamin</td>
+                <td class="details-colon">:</td>
+                <td class="details-value">${student.gender}</td>
+              </tr>` : ''}
+              ${showAddress ? `
+              <tr>
+                <td class="details-label">Alamat</td>
+                <td class="details-colon">:</td>
+                <td class="details-value" style="font-size: 5px; line-height: 1.2;">${student.address || '-'}</td>
+              </tr>` : ''}
+            </table>
+          </div>
+
+          <div class="front-footer-strip"></div>
+        </div>
+      `;
+    };
+
+    const getBackCardHtml = (student: Student | undefined) => {
+      if (!student) {
+        return `<div class="card-placeholder-empty"></div>`;
+      }
+
+      return `
+        <div class="card-wrapper card-back">
+          <div class="back-accent-stripe"></div>
+          
+          <div class="back-content">
+            ${showRules ? `
+            <div class="rules-title-box">
+              <h4 class="rules-title">TATA TERTIB KARTU</h4>
+            </div>
+            <ul class="rules-list">
+              ${rulesHtml}
+            </ul>
+            ` : ''}
+
+            <!-- Center Large Barcode / QR Code for Presensi -->
+            <div class="center-qr-container">
+              <img src="${getQrUrl(student.nisn)}" class="center-qr-image" />
+              <span class="center-qr-caption">ID: ${student.nisn}</span>
+            </div>
+
+            <!-- Bottom Signature Area -->
+            <div class="back-bottom-row">
+              <div class="stamp-signature-area">
+                ${showSignature ? `
+                <div class="signature-box">
+                  <div class="sig-date">Kepala Madrasah,</div>
+                  
+                  ${customStampImg ? `
+                    <img src="${customStampImg}" class="stamp-seal-img" />
+                  ` : `
+                    <div class="stamp-seal">
+                      <div class="stamp-text">${customStampText.replace(/\n/g, '<br/>')}</div>
+                    </div>
+                  `}
+
+                  ${customHeadmasterSignatureImg ? `
+                    <img src="${customHeadmasterSignatureImg}" class="sig-image" />
+                  ` : ''}
+
+                  <h5 class="sig-name">${customHeadmasterName}</h5>
+                  <span class="sig-title">NIP. ${customHeadmasterNip}</span>
+                </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="card-back-footer">
+            <span>Diterbit oleh ${customSchoolName}</span>
+            <span style="font-family: monospace;">SIAP-V1</span>
+          </div>
+        </div>
+      `;
+    };
+
+    // Chunk students into groups of 10 to fit A4 landscape beautifully (5 columns x 2 rows = 10 cards)
+    const chunks: Student[][] = [];
+    for (let i = 0; i < sortedStudents.length; i += 10) {
+      chunks.push(sortedStudents.slice(i, i + 10));
+    }
+
+    let pagesHtml = '';
+    chunks.forEach((chunk) => {
+      // 1. FRONT PAGE (Odd Page) - Standard 5x2 grid order (0 to 9)
+      pagesHtml += `
+        <div class="a4-page">
+          ${getFrontCardHtml(chunk[0])}
+          ${getFrontCardHtml(chunk[1])}
+          ${getFrontCardHtml(chunk[2])}
+          ${getFrontCardHtml(chunk[3])}
+          ${getFrontCardHtml(chunk[4])}
+          ${getFrontCardHtml(chunk[5])}
+          ${getFrontCardHtml(chunk[6])}
+          ${getFrontCardHtml(chunk[7])}
+          ${getFrontCardHtml(chunk[8])}
+          ${getFrontCardHtml(chunk[9])}
+        </div>
+      `;
+
+      // 2. BACK PAGE (Even Page) - Horizontally mirrored order per row to line up front and back cards beautifully in double-sided printing!
+      // Row 1 (0-4) fronts mirror to (4,3,2,1,0) back
+      // Row 2 (5-9) fronts mirror to (9,8,7,6,5) back
+      pagesHtml += `
+        <div class="a4-page">
+          ${getBackCardHtml(chunk[4])}
+          ${getBackCardHtml(chunk[3])}
+          ${getBackCardHtml(chunk[2])}
+          ${getBackCardHtml(chunk[1])}
+          ${getBackCardHtml(chunk[0])}
+          ${getBackCardHtml(chunk[9])}
+          ${getBackCardHtml(chunk[8])}
+          ${getBackCardHtml(chunk[7])}
+          ${getBackCardHtml(chunk[6])}
+          ${getBackCardHtml(chunk[5])}
+        </div>
+      `;
+    });
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Cetak Massal Kartu Siswa - ${classFilter || 'Semua Kelas'}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+            
+            body {
+              font-family: 'Inter', sans-serif;
+              background-color: #f1f5f9;
+              padding: 20px 0;
+              color: #1e293b;
+              margin: 0;
+            }
+
+            .no-print-bar {
+              background-color: #ffffff;
+              border: 1px solid #e2e8f0;
+              padding: 16px 24px;
+              border-radius: 12px;
+              margin: 0 auto 30px auto;
+              display: flex;
+              gap: 15px;
+              align-items: center;
+              justify-content: space-between;
+              box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+              max-width: 1123px;
+              box-sizing: border-box;
+            }
+
+            .btn-print {
+              background-color: ${themeColorHex};
+              color: white;
+              border: none;
+              padding: 10px 20px;
+              border-radius: 8px;
+              font-weight: 700;
+              font-size: 13px;
+              cursor: pointer;
+              transition: opacity 0.15s;
+            }
+            .btn-print:hover { opacity: 0.9; }
+
+            @page {
+              size: A4 landscape;
+              margin: 0;
+            }
+
+            /* Optimized Landscape A4 grid layout for 10 CR80 cards (5 columns x 2 rows) */
+            .a4-page {
+              width: 297mm;
+              height: 210mm;
+              box-sizing: border-box;
+              background-color: #ffffff;
+              display: grid;
+              grid-template-columns: repeat(5, 54mm);
+              grid-template-rows: repeat(2, 85.6mm);
+              gap: 3mm 4mm;
+              padding: 15mm 10mm;
+              justify-content: center;
+              align-content: center;
+              page-break-after: always;
+              page-break-inside: avoid;
+              position: relative;
+              margin: 20px auto;
+              border: 1px dashed #cbd5e1;
+              box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            }
+
+            /* CR-80 standard card size */
+            .card-wrapper {
+              width: 54mm;
+              height: 85.6mm;
+              background: #ffffff;
+              border-radius: 3.18mm;
+              border: 0.4mm solid #cbd5e1;
+              overflow: hidden;
+              position: relative;
+              box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+              page-break-inside: avoid;
+            }
+
+            .card-placeholder-empty {
+              width: 54mm;
+              height: 85.6mm;
+              visibility: hidden;
+            }
+
+            /* Front Card Styling */
+            .card-front {
+              background-color: #ffffff;
+            }
+
+            .header-strip {
+              background: linear-gradient(135deg, ${themeColorHex}, ${themeColorHexDark});
+              color: #ffffff;
+              padding: 2.2mm 2mm;
+              display: flex;
+              align-items: center;
+              gap: 1.5mm;
+              border-bottom: 0.8mm solid #f59e0b;
+              position: relative;
+              height: 12mm;
+              box-sizing: border-box;
+            }
+
+            .logo-container {
+              width: 6.5mm;
+              height: 6.5mm;
+              background-color: rgba(255,255,255,0.15);
+              border-radius: 1.2mm;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 0.5mm;
+              border: 0.2mm solid rgba(255,255,255,0.2);
+              flex-shrink: 0;
+            }
+            .logo-img {
+              max-width: 100%;
+              max-height: 100%;
+              object-fit: contain;
+            }
+            .logo-fallback {
+              color: #ffffff;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .logo-fallback svg {
+              width: 4.5mm;
+              height: 4.5mm;
+            }
+
+            .school-meta {
+              min-width: 0;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+            }
+            .school-name {
+              font-size: 5.5px;
+              font-weight: 800;
+              letter-spacing: 0.2px;
+              margin: 0;
+              text-transform: uppercase;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              line-height: 1.2;
+            }
+            .school-addr {
+              font-size: 4px;
+              opacity: 0.85;
+              margin: 0.5mm 0 0 0;
+              font-weight: 500;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              line-height: 1.2;
+            }
+
+            .card-title-bar {
+              text-align: center;
+              background-color: #f8fafc;
+              border-bottom: 0.2mm solid #f1f5f9;
+              padding: 1mm 0;
+              height: 4mm;
+              box-sizing: border-box;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            .card-title-text {
+              font-size: 5.2px;
+              font-weight: 800;
+              letter-spacing: 1px;
+              color: #475569;
+              text-transform: uppercase;
+              margin: 0;
+            }
+
+            /* Card Content Area */
+            .content-area {
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              padding: 2.5mm 3.5mm;
+              box-sizing: border-box;
+              overflow: hidden;
+            }
+
+            .photo-frame {
+              width: 18mm;
+              height: 24mm;
+              border-radius: 1.5mm;
+              border: 0.6mm solid ${themeColorHex};
+              box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+              overflow: hidden;
+              background-color: #f8fafc;
+              margin-bottom: 1.5mm;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              position: relative;
+              flex-shrink: 0;
+            }
+            .photo-frame img.photo {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+            }
+            .photo-placeholder {
+              width: 100%;
+              height: 100%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background-color: #f1f5f9;
+            }
+            .photo-placeholder svg {
+              width: 8mm;
+              height: 8mm;
+            }
+
+            .student-name-box {
+              text-align: center;
+              margin-bottom: 1.2mm;
+              width: 100%;
+              flex-shrink: 0;
+            }
+            .student-name {
+              font-size: 8px;
+              font-weight: 800;
+              color: #0f172a;
+              margin: 0;
+              text-transform: uppercase;
+              letter-spacing: -0.1px;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              line-height: 1.2;
+            }
+            .student-class-badge {
+              display: inline-block;
+              font-size: 5px;
+              font-weight: 700;
+              color: ${themeColorHex};
+              background-color: rgba(0, 0, 0, 0.04);
+              border: 0.2mm solid rgba(0, 0, 0, 0.05);
+              padding: 0.4mm 1.6mm;
+              border-radius: 4mm;
+              margin-top: 0.5mm;
+              text-transform: uppercase;
+              line-height: 1;
+            }
+
+            /* Detail Table */
+            .details-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 0;
+              font-size: 5.5px;
+              flex-shrink: 0;
+            }
+            .details-table td {
+              padding: 0.6mm 0;
+              vertical-align: top;
+              line-height: 1.2;
+            }
+            .details-label {
+              color: #64748b;
+              font-weight: 600;
+              width: 14mm;
+            }
+            .details-colon {
+              color: #cbd5e1;
+              width: 2mm;
+            }
+            .details-value {
+              color: #1e293b;
+              font-weight: 700;
+              word-break: break-all;
+            }
+
+            .front-footer-strip {
+              height: 2mm;
+              background-color: ${themeColorHex};
+              margin-top: auto;
+              flex-shrink: 0;
+            }
+
+            /* Back Card Styling */
+            .card-back {
+              background-color: #ffffff;
+              display: flex;
+              flex-direction: column;
+            }
+
+            .back-accent-stripe {
+              height: 2mm;
+              background: linear-gradient(90deg, ${themeColorHex}, #cbd5e1, ${themeColorHexDark});
+              flex-shrink: 0;
+            }
+
+            .back-content {
+              flex: 1;
+              padding: 3mm 4mm;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              box-sizing: border-box;
+              overflow: hidden;
+            }
+
+            .rules-title-box {
+              width: 100%;
+              margin-bottom: 1mm;
+              flex-shrink: 0;
+            }
+            .rules-title {
+              font-size: 5.5px;
+              font-weight: 800;
+              color: ${themeColorHex};
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+              margin: 0;
+              border-bottom: 0.3mm solid #e2e8f0;
+              padding-bottom: 0.6mm;
+            }
+
+            .rules-list {
+              font-size: 4.8px;
+              color: #475569;
+              padding-left: 3mm;
+              margin: 0 0 2mm 0;
+              line-height: 1.4;
+              font-weight: 500;
+              width: 100%;
+              flex-shrink: 0;
+            }
+            .rules-list li {
+              margin-bottom: 0.6mm;
+            }
+
+            /* ENLARGED QR Code / Barcode styling */
+            .center-qr-container {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              margin: 1mm 0 2mm 0;
+              background-color: #f8fafc;
+              border: 0.3mm solid #cbd5e1;
+              border-radius: 2mm;
+              padding: 1.5mm 2mm;
+              width: 38mm;
+              box-shadow: inset 0 0.2mm 0.6mm rgba(0,0,0,0.02);
+              flex-shrink: 0;
+              box-sizing: border-box;
+            }
+            .center-qr-image {
+              width: 32mm;
+              height: 32mm;
+              margin-bottom: 1.2mm;
+              background: white;
+              padding: 0.8mm;
+              border-radius: 1.5mm;
+              border: 0.2mm solid #e2e8f0;
+              box-sizing: border-box;
+            }
+            .center-qr-caption {
+              font-family: 'JetBrains Mono', monospace;
+              font-size: 5.5px;
+              font-weight: 700;
+              color: #475569;
+              letter-spacing: 0.5px;
+            }
+
+            .back-bottom-row {
+              width: 100%;
+              display: flex;
+              justify-content: center;
+              align-items: flex-end;
+              margin-top: auto;
+              flex-shrink: 0;
+            }
+
+            .stamp-signature-area {
+              width: 100%;
+              display: flex;
+              justify-content: flex-end;
+              position: relative;
+            }
+
+            .signature-box {
+              text-align: center;
+              width: 28mm;
+              position: relative;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+            .sig-date {
+              font-size: 5px;
+              color: #475569;
+              margin-bottom: 6mm;
+              text-transform: uppercase;
+              letter-spacing: 0.3px;
+              line-height: 1.1;
+            }
+            .sig-image {
+              position: absolute;
+              top: 2.5mm;
+              height: 7mm;
+              width: auto;
+              object-fit: contain;
+              z-index: 10;
+              pointer-events: none;
+            }
+            .stamp-seal-img {
+              position: absolute;
+              top: 1mm;
+              left: -2mm;
+              width: 8mm;
+              height: 8mm;
+              object-fit: contain;
+              z-index: 5;
+              opacity: 0.8;
+              pointer-events: none;
+            }
+            .sig-name {
+              font-size: 5.5px;
+              font-weight: 800;
+              color: #0f172a;
+              border-bottom: 0.4mm solid #1e293b;
+              padding-bottom: 0.3mm;
+              margin: 0;
+              text-transform: uppercase;
+              width: 100%;
+              white-space: nowrap;
+              line-height: 1.2;
+            }
+            .sig-nip, .sig-title {
+              font-size: 4.5px;
+              color: #64748b;
+              margin-top: 0.5mm;
+              font-family: monospace;
+              white-space: nowrap;
+              line-height: 1.1;
+            }
+
+            /* Stamp Effect */
+            .stamp-seal {
+              position: absolute;
+              top: 1mm;
+              left: -2mm;
+              width: 8mm;
+              height: 8mm;
+              border: 0.3mm dashed rgba(225, 29, 72, 0.4);
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transform: rotate(-12deg);
+              pointer-events: none;
+              z-index: 5;
+            }
+            .stamp-text {
+              font-size: 2px;
+              font-weight: 800;
+              color: rgba(225, 29, 72, 0.5);
+              text-transform: uppercase;
+              text-align: center;
+              line-height: 1.1;
+              white-space: pre-line;
+            }
+
+            .card-back-footer {
+              background-color: #fafafa;
+              border-top: 0.3mm solid #e2e8f0;
+              padding: 1.5mm 3mm;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              font-size: 5px;
+              color: #94a3b8;
+              font-weight: 600;
+              height: 4mm;
+              box-sizing: border-box;
+              flex-shrink: 0;
+            }
+
+            @media print {
+              body {
+                background-color: #ffffff;
+                padding: 0;
+                margin: 0;
+              }
+              .no-print-bar {
+                display: none;
+              }
+              .a4-page {
+                page-break-after: always;
+                page-break-inside: avoid;
+                margin: 0;
+                border: none;
+                box-shadow: none;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="no-print-bar">
+            <div>
+              <strong style="font-size: 15px;">Mode Cetak Massal Kartu Siswa SIAP</strong>
+              <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
+                Silakan klik tombol cetak. <strong>PANDUAN DUPLEX (BOLAK-BALIK):</strong> Setel orientasi pencetakan ke <strong>"Landscape"</strong>, ukuran kertas <strong>"A4"</strong>, margin <strong>"None"</strong>, centang opsi <strong>"Background graphics"</strong>, dan pilih pencetakan dua sisi (duplex) dengan opsi <strong>"Flip on short edge"</strong> (atau short-edge binding) agar bagian depan (halaman ganjil) dan belakang (halaman genap) sejajar, presisi, tegak, dan siap untuk dipotong langsung!
+              </div>
+            </div>
+            <button class="btn-print" onclick="window.print()">Mulai Cetak Kartu Massal</button>
+          </div>
+
+          <div style="display: flex; flex-direction: column; align-items: center;">
+            ${pagesHtml}
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+  };
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 selection:bg-emerald-500 selection:text-white font-sans text-xs">
       {/* Header and top banner */}
@@ -816,17 +1627,26 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2">
                 <select
                   value={classFilter}
                   onChange={(e) => setClassFilter(e.target.value)}
-                  className="flex-1 bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-300 focus:outline-none text-xs"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-300 focus:outline-none text-xs"
                 >
                   <option value="">Semua Kelas</option>
                   {availableClasses.map(cls => (
                     <option key={cls} value={cls}>Kelas {cls}</option>
                   ))}
                 </select>
+
+                <button
+                  type="button"
+                  onClick={handlePrintMassCards}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold rounded-lg transition-all active:scale-95 text-[11px] cursor-pointer shadow-md shadow-amber-500/10"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Cetak Massal {classFilter ? `Kelas ${classFilter}` : 'Semua Kelas'}</span>
+                </button>
               </div>
             </div>
 
