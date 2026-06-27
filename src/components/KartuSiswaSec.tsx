@@ -41,7 +41,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
   const [customSchoolAddress, setCustomSchoolAddress] = useState(systemSetting.schoolAddress || 'Jl. Pendidikan No. 45, Jakarta, Indonesia');
   const [customHeadmasterName, setCustomHeadmasterName] = useState(systemSetting.headmasterName || 'H. Mulyono, S.Pd., M.Pd.');
   const [customHeadmasterNip, setCustomHeadmasterNip] = useState('197812052005011002');
-  const [customStampText, setCustomStampText] = useState('SIAP V1\nOFFICIAL\nSEAL');
+  const [customStampText, setCustomStampText] = useState('SIAP versi 1\nOFFICIAL\nSEAL');
   
   // Custom Signature & Stamp Image States
   const [customHeadmasterSignatureImg, setCustomHeadmasterSignatureImg] = useState(() => {
@@ -295,20 +295,20 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
 
             .logo-container {
-              width: 6.5mm;
-              height: 6.5mm;
+              width: 8.5mm;
+              height: 8.5mm;
               background-color: rgba(255,255,255,0.15);
               border-radius: 1.2mm;
               display: flex;
               align-items: center;
               justify-content: center;
-              padding: 0.5mm;
+              padding: 0.2mm;
               border: 0.2mm solid rgba(255,255,255,0.2);
               flex-shrink: 0;
             }
             .logo-img {
-              max-width: 100%;
-              max-height: 100%;
+              width: 100%;
+              height: 100%;
               object-fit: contain;
             }
             .logo-fallback {
@@ -813,7 +813,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
               <div class="card-back-footer">
                 <span>Diterbit oleh ${customSchoolName}</span>
-                <span style="font-family: monospace;">SIAP-V1</span>
+                <span style="font-family: monospace;">versi 1</span>
               </div>
             </div>
           </div>
@@ -997,7 +997,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
           <div class="card-back-footer">
             <span>Diterbit oleh ${customSchoolName}</span>
-            <span style="font-family: monospace;">SIAP-V1</span>
+            <span style="font-family: monospace;">versi 1</span>
           </div>
         </div>
       `;
@@ -1155,20 +1155,20 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
 
             .logo-container {
-              width: 6.5mm;
-              height: 6.5mm;
+              width: 8.5mm;
+              height: 8.5mm;
               background-color: rgba(255,255,255,0.15);
               border-radius: 1.2mm;
               display: flex;
               align-items: center;
               justify-content: center;
-              padding: 0.5mm;
+              padding: 0.2mm;
               border: 0.2mm solid rgba(255,255,255,0.2);
               flex-shrink: 0;
             }
             .logo-img {
-              max-width: 100%;
-              max-height: 100%;
+              width: 100%;
+              height: 100%;
               object-fit: contain;
             }
             .logo-fallback {
@@ -1945,9 +1945,9 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                     
                     {/* Header Strip */}
                     <div className={`p-3 text-white flex items-center gap-2 border-b-2 border-amber-400 bg-gradient-to-br ${activeTheme.bgGrad}`}>
-                      <div className="w-7 h-7 bg-white/10 border border-white/25 rounded-md flex items-center justify-center p-0.5 flex-shrink-0">
+                      <div className={`bg-white/10 border border-white/25 rounded-md flex items-center justify-center flex-shrink-0 ${systemSetting.logoUrl ? 'w-9 h-9 p-0.5' : 'w-7 h-7 p-0.5'}`}>
                         {systemSetting.logoUrl ? (
-                          <img src={systemSetting.logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
+                          <img src={systemSetting.logoUrl} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                         ) : (
                           <School className="w-4 h-4 text-white" />
                         )}
@@ -2124,7 +2124,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                     {/* Back card footer */}
                     <div className="border-t border-slate-900 bg-slate-950 px-4 py-2 flex justify-between items-center text-[6.5px] text-slate-500 font-bold">
                       <span>Diterbit oleh {customSchoolName}</span>
-                      <span className="font-mono">SIAP V1</span>
+                      <span className="font-mono">versi 1</span>
                     </div>
 
                   </div>

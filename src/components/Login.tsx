@@ -62,9 +62,9 @@ export default function Login({ onLogin, logoUrl, schoolName, adminUsername = 'a
         <div className="p-8">
           {/* Logo / Title Area */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center p-3.5 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 mb-4 shadow-inner">
+            <div className={`inline-flex items-center justify-center bg-emerald-500/10 rounded-2xl border border-emerald-500/20 mb-4 shadow-inner overflow-hidden ${logoUrl ? 'w-24 h-24 p-1' : 'w-20 h-20 p-3.5'}`}>
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="w-12 h-12 object-contain" referrerPolicy="no-referrer" />
+                <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
               ) : (
                 <School className="w-12 h-12 text-emerald-400" />
               )}
@@ -191,7 +191,7 @@ export default function Login({ onLogin, logoUrl, schoolName, adminUsername = 'a
 
         {/* Footer Info */}
         <div className="px-8 py-4 bg-slate-950/30 border-t border-slate-800 flex justify-between items-center text-[10px] text-slate-500">
-          <span>Versi 2.0 (Expert Edition)</span>
+          <span>versi 1</span>
           <span className="flex items-center gap-1">
             <Award className="w-3.5 h-3.5 text-emerald-500/60" /> Secure System
           </span>

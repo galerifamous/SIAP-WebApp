@@ -104,11 +104,11 @@ export default function Sidebar({
           </button>
           <div className="flex items-center gap-2">
             {logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="w-6 h-6 object-contain" referrerPolicy="no-referrer" />
+              <img src={logoUrl} alt="Logo" className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
             ) : (
               <School className="w-5 h-5 text-emerald-400" />
             )}
-            <span className="text-white font-bold text-sm tracking-tight">SIAP V1</span>
+            <span className="text-white font-bold text-sm tracking-tight">SIAP versi 1</span>
           </div>
         </div>
         <div className="text-[10px] text-slate-400 font-mono bg-slate-950/40 px-2.5 py-1 border border-slate-800 rounded-lg">
@@ -134,16 +134,16 @@ export default function Sidebar({
         <div className="flex-1 flex flex-col overflow-y-auto pt-6 pb-4">
           {/* Brand Logo and Title */}
           <div className="px-5 mb-6 flex items-center gap-3">
-            <div className="flex-shrink-0 p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 shadow-inner">
+            <div className={`flex-shrink-0 bg-emerald-500/10 rounded-xl border border-emerald-500/20 shadow-inner overflow-hidden flex items-center justify-center ${logoUrl ? 'w-12 h-12 p-0.5' : 'p-2'}`}>
               {logoUrl ? (
-                <img src={logoUrl} alt="Logo" className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
+                <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
               ) : (
                 <School className="w-8 h-8 text-emerald-400" />
               )}
             </div>
             <div className="min-w-0">
               <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-1.5 leading-none">
-                SIAP <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono font-bold">V1</span>
+                SIAP <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono font-bold">versi 1</span>
               </h2>
               <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase tracking-wider truncate" title={schoolName}>
                 {schoolName}
