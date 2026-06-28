@@ -223,51 +223,51 @@ export default function Dashboard({
         // --- ADMIN & GURU PORTAL VIEW ---
         <>
           {/* Key Metric Summary Cards */}
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             {/* Siswa Card */}
-            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-1.5 xs:p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl transition duration-200 flex flex-col justify-between h-full">
-              <div className="flex justify-between items-start gap-1 sm:gap-2">
-                <p className="text-slate-400 text-[7px] xs:text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Total Siswa Aktif</p>
-                <div className="p-0.5 xs:p-1 sm:p-1.5 md:p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 rounded-md sm:rounded-xl shrink-0">
-                  <Users className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
+            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-4 sm:p-5 rounded-xl md:rounded-2xl transition duration-200 flex flex-col justify-between h-full">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Total Siswa Aktif</p>
+                <div className="p-1.5 sm:p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 rounded-xl shrink-0">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-1 sm:mt-4">
-                <h3 className="text-xs xs:text-base sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{totalStudents}</h3>
-                <p className="text-[5px] xs:text-[8px] sm:text-[10px] md:text-xs text-slate-500 mt-0.5 sm:mt-2 leading-tight">
-                  <span className="hidden xs:inline">Terdistribusi dlm </span><span className="text-emerald-400 font-bold font-mono">6</span> Kelas
+              <div className="mt-4">
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{totalStudents}</h3>
+                <p className="text-[10px] md:text-xs text-slate-500 mt-2 leading-tight">
+                  Terdistribusi dlm <span className="text-emerald-400 font-bold font-mono">6</span> Kelas
                 </p>
               </div>
             </div>
 
             {/* Kehadiran Card */}
-            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-1.5 xs:p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl transition duration-200 flex flex-col justify-between h-full">
-              <div className="flex justify-between items-start gap-1 sm:gap-2">
-                <p className="text-slate-400 text-[7px] xs:text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Kehadiran Hari Ini</p>
-                <div className="p-0.5 xs:p-1 sm:p-1.5 md:p-2 bg-cyan-500/10 text-cyan-400 border border-cyan-500/15 rounded-md sm:rounded-xl shrink-0">
-                  <CalendarCheck className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
+            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-4 sm:p-5 rounded-xl md:rounded-2xl transition duration-200 flex flex-col justify-between h-full">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Kehadiran Hari Ini</p>
+                <div className="p-1.5 sm:p-2 bg-cyan-500/10 text-cyan-400 border border-cyan-500/15 rounded-xl shrink-0">
+                  <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-1 sm:mt-4">
-                <h3 className="text-xs xs:text-base sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{attendancePercentage}%</h3>
-                <p className="text-[5px] xs:text-[8px] sm:text-[10px] md:text-xs text-slate-500 mt-0.5 sm:mt-2 leading-tight">
-                  <span className="hidden xs:inline">Hadir hari ini: </span><span className="text-cyan-400 font-bold font-mono">{todayAttendance.length || totalStudents}</span> anak
+              <div className="mt-4">
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{attendancePercentage}%</h3>
+                <p className="text-[10px] md:text-xs text-slate-500 mt-2 leading-tight">
+                  Hadir hari ini: <span className="text-cyan-400 font-bold font-mono">{todayAttendance.length || totalStudents}</span> anak
                 </p>
               </div>
             </div>
 
             {/* Kasus Aktif Card */}
-            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-1.5 xs:p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl transition duration-200 flex flex-col justify-between h-full">
-              <div className="flex justify-between items-start gap-1 sm:gap-2">
-                <p className="text-slate-400 text-[7px] xs:text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Laporan Kasus</p>
-                <div className="p-0.5 xs:p-1 sm:p-1.5 md:p-2 bg-rose-500/10 text-rose-400 border border-rose-500/15 rounded-md sm:rounded-xl shrink-0">
-                  <AlertTriangle className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
+            <div className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-4 sm:p-5 rounded-xl md:rounded-2xl transition duration-200 flex flex-col justify-between h-full">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Laporan Kasus</p>
+                <div className="p-1.5 sm:p-2 bg-rose-500/10 text-rose-400 border border-rose-500/15 rounded-xl shrink-0">
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-1 sm:mt-4">
-                <h3 className="text-xs xs:text-base sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{pendingCases}</h3>
-                <p className="text-[5px] xs:text-[8px] sm:text-[10px] md:text-xs text-slate-500 mt-0.5 sm:mt-2 leading-tight">
-                  Butuh bimbingan <span className="hidden xs:inline">BK</span>
+              <div className="mt-4">
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{pendingCases}</h3>
+                <p className="text-[10px] md:text-xs text-slate-500 mt-2 leading-tight">
+                  Butuh bimbingan <span className="font-bold text-rose-400">BK</span>
                 </p>
               </div>
             </div>
@@ -504,50 +504,50 @@ export default function Dashboard({
         // --- SISWA PORTAL VIEW ---
         <>
           {/* Key Metric Summary Cards */}
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             {/* Kehadiran Card */}
-            <div className="bg-slate-900 border border-slate-800 p-1.5 xs:p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full hover:border-slate-700/80 transition duration-200">
-              <div className="flex justify-between items-start gap-1 sm:gap-2">
-                <p className="text-slate-400 text-[7px] xs:text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Persentase Kehadiran</p>
-                <div className="p-0.5 xs:p-1 sm:p-1.5 md:p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 rounded-md sm:rounded-xl shrink-0">
-                  <CalendarCheck className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full hover:border-slate-700/80 transition duration-200">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Persentase Kehadiran</p>
+                <div className="p-1.5 sm:p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 rounded-xl shrink-0">
+                  <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-1 sm:mt-4">
-                <h3 className="text-xs xs:text-base sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{myAttendanceRate}%</h3>
-                <p className="text-[5px] xs:text-[8px] sm:text-[10px] md:text-xs text-slate-500 mt-0.5 sm:mt-2 leading-tight">
-                  Hadir <span className="text-emerald-400 font-bold font-mono">{myPresent}</span><span className="hidden xs:inline"> dari {myAttendance.length}</span> hari
+              <div className="mt-4">
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{myAttendanceRate}%</h3>
+                <p className="text-[10px] md:text-xs text-slate-500 mt-2 leading-tight">
+                  Hadir <span className="text-emerald-400 font-bold font-mono">{myPresent}</span> dari {myAttendance.length} hari
                 </p>
               </div>
             </div>
 
             {/* Prestasi Card */}
-            <div className="bg-slate-900 border border-slate-800 p-1.5 xs:p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full hover:border-slate-700/80 transition duration-200">
-              <div className="flex justify-between items-start gap-1 sm:gap-2">
-                <p className="text-slate-400 text-[7px] xs:text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Prestasi Anda</p>
-                <div className="p-0.5 xs:p-1 sm:p-1.5 md:p-2 bg-amber-500/10 text-amber-400 border border-amber-500/15 rounded-md sm:rounded-xl shrink-0">
-                  <Trophy className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full hover:border-slate-700/80 transition duration-200">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Prestasi Anda</p>
+                <div className="p-1.5 sm:p-2 bg-amber-500/10 text-amber-400 border border-amber-500/15 rounded-xl shrink-0">
+                  <Trophy className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-1 sm:mt-4">
-                <h3 className="text-xs xs:text-base sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{myAchievements.length}</h3>
-                <p className="text-[5px] xs:text-[8px] sm:text-[10px] md:text-xs text-slate-500 mt-0.5 sm:mt-2 leading-tight">
-                  <span className="hidden xs:inline">Penghargaan </span>Aktif
+              <div className="mt-4">
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{myAchievements.length}</h3>
+                <p className="text-[10px] md:text-xs text-slate-500 mt-2 leading-tight">
+                  Penghargaan Aktif
                 </p>
               </div>
             </div>
 
             {/* Catatan Kasus Card */}
-            <div className="bg-slate-900 border border-slate-800 p-1.5 xs:p-3 sm:p-4 md:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full hover:border-slate-700/80 transition duration-200">
-              <div className="flex justify-between items-start gap-1 sm:gap-2">
-                <p className="text-slate-400 text-[7px] xs:text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Catatan Pelanggaran</p>
-                <div className="p-0.5 xs:p-1 sm:p-1.5 md:p-2 bg-rose-500/10 text-rose-400 border border-rose-500/15 rounded-md sm:rounded-xl shrink-0">
-                  <AlertTriangle className="w-3 h-3 xs:w-4 xs:h-4 sm:w-5 sm:h-5" />
+            <div className="bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full hover:border-slate-700/80 transition duration-200">
+              <div className="flex justify-between items-start gap-2">
+                <p className="text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight">Catatan Pelanggaran</p>
+                <div className="p-1.5 sm:p-2 bg-rose-500/10 text-rose-400 border border-rose-500/15 rounded-xl shrink-0">
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-1 sm:mt-4">
-                <h3 className="text-xs xs:text-base sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{myCases.length}</h3>
-                <p className="text-[5px] xs:text-[8px] sm:text-[10px] md:text-xs text-slate-500 mt-0.5 sm:mt-2 leading-tight">
+              <div className="mt-4">
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white font-mono leading-none">{myCases.length}</h3>
+                <p className="text-[10px] md:text-xs text-slate-500 mt-2 leading-tight">
                   {myCases.length > 0 ? 'Perlu BK' : 'Sangat Baik!'}
                 </p>
               </div>
