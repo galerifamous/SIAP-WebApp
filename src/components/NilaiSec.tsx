@@ -396,10 +396,10 @@ export default function NilaiSec({
                 <button
                   type="button"
                   onClick={() => setOverrideTab(null)}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-[10px] font-bold uppercase transition cursor-pointer"
+                  className="flex items-center justify-center w-7 h-7 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white rounded-lg transition cursor-pointer active:scale-95"
+                  title="Kembali ke Rekap"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Kembali ke Rekap</span>
                 </button>
               )}
             </div>
@@ -771,14 +771,13 @@ export default function NilaiSec({
                   <th className="p-4 text-center">ASAS</th>
                   <th className="p-4 text-center">Rata Asesmen</th>
                   <th className="p-4 text-center">Nilai Rapor</th>
-                  <th className="p-4 text-center">Status</th>
                   {role !== 'SISWA' && <th className="p-4 text-center w-48">Aksi</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-300">
                 {filteredGrades.length === 0 ? (
                   <tr>
-                    <td colSpan={role === 'SISWA' ? 11 : 12} className="p-10 text-center text-slate-500 italic">
+                    <td colSpan={role === 'SISWA' ? 10 : 11} className="p-10 text-center text-slate-500 italic">
                       {role === 'SISWA' ? 'Belum ada laporan nilai rapor untuk Anda di semester ini.' : 'Belum ada data nilai terdaftar untuk kriteria filter ini.'}
                     </td>
                   </tr>
@@ -837,15 +836,6 @@ export default function NilaiSec({
                         <td className="p-4 text-center font-mono font-medium text-slate-400">{asasVal}</td>
                         <td className="p-4 text-center font-mono font-bold text-blue-400 text-sm">{avgAsesmen}</td>
                         <td className="p-4 text-center font-mono font-bold text-white text-sm">{finalVal}</td>
-                        <td className="p-4 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
-                            finalVal >= 75
-                              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/10'
-                              : 'text-rose-400 bg-rose-500/10 border-rose-500/10'
-                          }`}>
-                            {finalVal >= 75 ? 'LULUS' : 'REMIDI'}
-                          </span>
-                        </td>
                         {role !== 'SISWA' && (
                           <td className="p-4 text-center">
                             <div className="flex items-center justify-center gap-1.5">

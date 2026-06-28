@@ -426,6 +426,13 @@ export default function BackupRestoreSec({
     setSuccessMsg(null);
     localStorage.setItem('siap_gas_url', gasUrl);
 
+    // Sync gasUrl to backend server
+    fetch('/api/save-gas-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gasUrl })
+    }).catch(err => console.warn("Failed to sync GAS URL to server:", err));
+
     try {
       const backupObj = {
         siap_students: students,
@@ -485,6 +492,13 @@ export default function BackupRestoreSec({
     setErrorMsg(null);
     setSuccessMsg(null);
     localStorage.setItem('siap_gas_url', gasUrl);
+
+    // Sync gasUrl to backend server
+    fetch('/api/save-gas-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gasUrl })
+    }).catch(err => console.warn("Failed to sync GAS URL to server:", err));
 
     try {
       const urlWithCacheBuster = gasUrl + (gasUrl.includes('?') ? '&' : '?') + 't=' + new Date().getTime();

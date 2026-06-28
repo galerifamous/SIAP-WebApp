@@ -92,7 +92,7 @@ export default function App() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [classStaffs, setClassStaffs] = useState<ClassStaff[]>([]);
 
-  // --- LOAD INITIAL DATA FROM LOCALSTORAGE ---
+  // --- LOAD INITIAL DATA FROM LOCALSTORAGE AND EXPRESS SERVER ---
   useEffect(() => {
     // Helper to get or set local database values safely
     function getLocalOrSeed<T>(key: string, fallback: T): T {
@@ -109,14 +109,14 @@ export default function App() {
       }
     }
 
-    // Load configurations
+    // Load configurations from local first for fast startup
     const sys = getLocalOrSeed<SystemSetting>('siap_system', INITIAL_SYSTEM);
     const acad = getLocalOrSeed<AcademicSetting>('siap_academic', INITIAL_ACADEMIC);
     
     setSystemSetting(sys);
     setAcademicSetting(acad);
 
-    // Load master listings
+    // Load master listings from local first
     setStudents(getLocalOrSeed<Student[]>('siap_students', INITIAL_STUDENTS));
     setTeachers(getLocalOrSeed<Teacher[]>('siap_teachers', INITIAL_TEACHERS));
 
@@ -138,13 +138,144 @@ export default function App() {
         localStorage.removeItem('siap_session');
       }
     }
-    
-    setTimeout(() => {
-      isLoadedRef.current = true;
-    }, 500);
+
+    // Fetch real-time synced data from our backend
+    fetch('/api/load')
+      .then(res => res.json())
+      .then(resJson => {
+        if (resJson && resJson.success && resJson.data) {
+          const d = resJson.data;
+          console.log("Successfully loaded persistent data from Express backend:", d);
+          
+          if (d.siap_system) {
+            setSystemSetting(d.siap_system);
+            localStorage.setItem('siap_system', JSON.stringify(d.siap_system));
+          }
+          if (d.siap_academic) {
+            setAcademicSetting(d.siap_academic);
+            localStorage.setItem('siap_academic', JSON.stringify(d.siap_academic));
+          }
+          if (d.siap_students) {
+            setStudents(d.siap_students);
+            localStorage.setItem('siap_students', JSON.stringify(d.siap_students));
+          }
+          if (d.siap_teachers) {
+            setTeachers(d.siap_teachers);
+            localStorage.setItem('siap_teachers', JSON.stringify(d.siap_teachers));
+          }
+          if (d.siap_attendance) {
+            setAttendance(d.siap_attendance);
+            localStorage.setItem('siap_attendance', JSON.stringify(d.siap_attendance));
+          }
+          if (d.siap_grades) {
+            setGrades(d.siap_grades);
+            localStorage.setItem('siap_grades', JSON.stringify(d.siap_grades));
+          }
+          if (d.siap_cases) {
+            setCases(d.siap_cases);
+            localStorage.setItem('siap_cases', JSON.stringify(d.siap_cases));
+          }
+          if (d.siap_achievements) {
+            setAchievements(d.siap_achievements);
+            localStorage.setItem('siap_achievements', JSON.stringify(d.siap_achievements));
+          }
+          if (d.siap_emails) {
+            setEmails(d.siap_emails);
+            localStorage.setItem('siap_emails', JSON.stringify(d.siap_emails));
+          }
+          if (d.siap_holidays) {
+            setHolidays(d.siap_holidays);
+            localStorage.setItem('siap_holidays', JSON.stringify(d.siap_holidays));
+          }
+          if (d.siap_class_staffs) {
+            setClassStaffs(d.siap_class_staffs);
+            localStorage.setItem('siap_class_staffs', JSON.stringify(d.siap_class_staffs));
+          }
+          if (d.siap_gas_url) {
+            localStorage.setItem('siap_gas_url', d.siap_gas_url);
+          }
+          if (d.siap_card_signature_img) {
+            localStorage.setItem('siap_card_signature_img', d.siap_card_signature_img);
+          }
+          if (d.siap_card_stamp_img) {
+            localStorage.setItem('siap_card_stamp_img', d.siap_card_stamp_img);
+          }
+        } else {
+          console.log("No data found on backend. Seeding backend with initial datasets.");
+          const stateObj = {
+            siap_students: getLocalOrSeed<Student[]>('siap_students', INITIAL_STUDENTS),
+            siap_teachers: getLocalOrSeed<Teacher[]>('siap_teachers', INITIAL_TEACHERS),
+            siap_attendance: getLocalOrSeed<Attendance[]>('siap_attendance', INITIAL_ATTENDANCE(acad.activeYear, acad.activeSemester)),
+            siap_grades: getLocalOrSeed<Grade[]>('siap_grades', INITIAL_GRADES(acad.activeYear, acad.activeSemester)),
+            siap_cases: getLocalOrSeed<CaseReport[]>('siap_cases', INITIAL_CASES(acad.activeYear, acad.activeSemester)),
+            siap_achievements: getLocalOrSeed<Achievement[]>('siap_achievements', INITIAL_ACHIEVEMENTS(acad.activeYear, acad.activeSemester)),
+            siap_emails: getLocalOrSeed<EmailLog[]>('siap_emails', INITIAL_EMAILS),
+            siap_academic: acad,
+            siap_system: sys,
+            siap_holidays: getLocalOrSeed<Holiday[]>('siap_holidays', []),
+            siap_class_staffs: getLocalOrSeed<ClassStaff[]>('siap_class_staffs', INITIAL_CLASS_STAFFS),
+            siap_gas_url: localStorage.getItem('siap_gas_url') || '',
+            siap_card_signature_img: localStorage.getItem('siap_card_signature_img') || '',
+            siap_card_stamp_img: localStorage.getItem('siap_card_stamp_img') || ''
+          };
+          fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(stateObj)
+          }).catch(err => console.warn("Failed to seed backend:", err));
+        }
+      })
+      .catch(err => {
+        console.warn("Express API load failed or server is booting up:", err);
+      })
+      .finally(() => {
+        setTimeout(() => {
+          isLoadedRef.current = true;
+        }, 800);
+      });
   }, []);
 
   const isLoadedRef = React.useRef(false);
+
+  // --- AUTOMATIC LOCAL EXPRESS SERVER SYNC ---
+  useEffect(() => {
+    if (!isLoadedRef.current) return;
+
+    const timer = setTimeout(() => {
+      const stateObj = {
+        siap_students: students,
+        siap_teachers: teachers,
+        siap_attendance: attendance,
+        siap_grades: grades,
+        siap_cases: cases,
+        siap_achievements: achievements,
+        siap_emails: emails,
+        siap_academic: academicSetting,
+        siap_system: systemSetting,
+        siap_holidays: holidays,
+        siap_class_staffs: classStaffs,
+        siap_gas_url: localStorage.getItem('siap_gas_url') || '',
+        siap_card_signature_img: localStorage.getItem('siap_card_signature_img') || '',
+        siap_card_stamp_img: localStorage.getItem('siap_card_stamp_img') || ''
+      };
+
+      fetch('/api/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(stateObj)
+      })
+      .then(() => {
+        console.log('Database server successfully synced.');
+      })
+      .catch((err) => {
+        console.warn('Failed to sync to database server:', err);
+      });
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [students, teachers, attendance, grades, cases, achievements, emails, academicSetting, systemSetting, holidays, classStaffs]);
 
   // --- AUTOMATIC CLOUD DATABASE SYNC ON STATE CHANGE ---
   useEffect(() => {
@@ -179,7 +310,7 @@ export default function App() {
       .catch((err) => {
         console.warn('Gagal sinkronisasi cloud otomatis (CORS/jaringan):', err);
       });
-    }, 1500);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [students, teachers, attendance, grades, cases, achievements, emails, academicSetting, systemSetting]);
@@ -1164,11 +1295,10 @@ export default function App() {
             {navHistory.length > 1 && (
               <button
                 onClick={handleGoBack}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-black uppercase transition border border-slate-700 active:scale-95 shrink-0 cursor-pointer"
+                className="flex items-center justify-center w-7 h-7 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition border border-slate-700 active:scale-95 shrink-0 cursor-pointer"
                 title="Kembali ke halaman sebelumnya"
               >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Kembali</span>
+                <ArrowLeft className="w-3.5 h-3.5" />
               </button>
             )}
             <div>
