@@ -48,6 +48,15 @@ export default function SiswaList({
   availableClasses,
   role
 }: SiswaListProps) {
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  React.useEffect(() => {
+    const handleThemeChange = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    window.addEventListener('theme-change', handleThemeChange);
+    return () => window.removeEventListener('theme-change', handleThemeChange);
+  }, []);
+
   // Navigation & Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('');
@@ -308,18 +317,26 @@ export default function SiswaList({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 selection:bg-emerald-500 selection:text-white font-sans">
+    <div className={`p-6 selection:bg-emerald-500 selection:text-white font-sans rounded-2xl border transition duration-300 ${
+      isDark ? 'bg-[#121e15] border-[#17221c]' : 'bg-white border-[#cbd5ce]'
+    }`}>
       {/* Header and Actions bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5 mb-6">
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5 mb-6 ${
+        isDark ? 'border-[#17221c]' : 'border-[#cbd5ce]'
+      }`}>
         <div>
-          <h2 className="text-lg font-bold text-white tracking-tight">Database Lengkap Siswa</h2>
-          <p className="text-slate-400 text-xs mt-1">Kelola seluruh data siswa, unggah foto, dan lakukan ekspor/impor masal</p>
+          <h2 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>Database Lengkap Siswa</h2>
+          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Kelola seluruh data siswa, unggah foto, dan lakukan ekspor/impor masal</p>
         </div>
 
         {role === 'ADMIN' && (
           <div className="flex flex-wrap gap-2.5">
             {/* Import Bulk Button */}
-            <label className="cursor-pointer bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-200 font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-2 transition duration-150">
+            <label className={`cursor-pointer font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-2 transition duration-150 border ${
+              isDark 
+                ? 'bg-slate-800 hover:bg-slate-700/80 border-slate-700/60 text-slate-200' 
+                : 'bg-slate-100 hover:bg-slate-200 border-[#cbd5ce] text-slate-700'
+            }`}>
               <Upload className="w-4 h-4 text-emerald-400" />
               <span>Impor Masal</span>
               <input
@@ -334,7 +351,11 @@ export default function SiswaList({
             {/* Template Download */}
             <button
               onClick={handleDownloadTemplate}
-              className="bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-200 font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-2 transition duration-150"
+              className={`font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-2 transition duration-150 border ${
+                isDark 
+                  ? 'bg-slate-800 hover:bg-slate-700/80 border-slate-700/60 text-slate-200' 
+                  : 'bg-slate-100 hover:bg-slate-200 border-[#cbd5ce] text-slate-700'
+              }`}
               title="Unduh template Excel (CSV) untuk input masal"
             >
               <Download className="w-4 h-4 text-blue-400" />
@@ -344,7 +365,7 @@ export default function SiswaList({
             {/* Add Student Button */}
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-2 px-3.5 rounded-xl flex items-center gap-2 transition duration-150 shadow-md shadow-emerald-500/10"
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-2 px-3.5 rounded-xl flex items-center gap-2 transition duration-150 shadow-md shadow-emerald-500/10 cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
               <span>Tambah Siswa</span>
@@ -364,7 +385,11 @@ export default function SiswaList({
             placeholder="Cari siswa berdasarkan nama, NISN, atau wali murid..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-950/40 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-slate-300 text-xs focus:outline-none focus:border-emerald-500/80 transition-all placeholder:text-slate-600"
+            className={`w-full rounded-xl py-2.5 pl-10 pr-4 text-xs focus:outline-none focus:border-emerald-500/80 transition-all border ${
+              isDark 
+                ? 'bg-slate-950/40 border-slate-800 text-slate-300 placeholder:text-slate-600' 
+                : 'bg-slate-50 border-[#cbd5ce] text-slate-800 placeholder:text-slate-400'
+            }`}
           />
         </div>
 
@@ -375,18 +400,26 @@ export default function SiswaList({
           <select
             value={classFilter}
             onChange={(e) => setClassFilter(e.target.value)}
-            className="bg-slate-950/40 border border-slate-800 rounded-xl py-2 px-3 text-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-500/80"
+            className={`rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:border-emerald-500/80 border ${
+              isDark 
+                ? 'bg-[#121e15] border-slate-800 text-slate-300' 
+                : 'bg-white border-[#cbd5ce] text-slate-700'
+            }`}
           >
-            <option value="">Semua Kelas</option>
+            <option value="" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-850"}>Semua Kelas</option>
             {availableClasses.map(c => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c} className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-850"}>{c}</option>
             ))}
           </select>
 
           {/* Export buttons */}
           <button
             onClick={handleExportExcel}
-            className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-emerald-400 border border-slate-700/60 rounded-xl transition duration-150"
+            className={`p-2.5 rounded-xl transition duration-150 border ${
+              isDark 
+                ? 'bg-slate-800 hover:bg-slate-700/80 text-emerald-400 border-slate-700/60' 
+                : 'bg-slate-50 hover:bg-slate-100 text-emerald-600 border-[#cbd5ce]'
+            }`}
             title="Ekspor Excel (CSV)"
           >
             <FileSpreadsheet className="w-4.5 h-4.5" />
@@ -394,7 +427,11 @@ export default function SiswaList({
 
           <button
             onClick={handleExportPDF}
-            className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-red-400 border border-slate-700/60 rounded-xl transition duration-150"
+            className={`p-2.5 rounded-xl transition duration-150 border ${
+              isDark 
+                ? 'bg-slate-800 hover:bg-slate-700/80 text-rose-400 border-slate-700/60' 
+                : 'bg-slate-50 hover:bg-slate-100 text-rose-600 border-[#cbd5ce]'
+            }`}
             title="Ekspor PDF / Cetak"
           >
             <FileDown className="w-4.5 h-4.5" />
@@ -403,10 +440,14 @@ export default function SiswaList({
       </div>
 
       {/* Students Data Grid/Table */}
-      <div className="overflow-x-auto border border-slate-800 rounded-xl bg-slate-950/10">
+      <div className={`overflow-x-auto rounded-xl border transition duration-300 ${
+        isDark ? 'border-[#17221c] bg-[#0c130f]' : 'border-[#cbd5ce] bg-slate-50/50'
+      }`}>
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="bg-slate-950/40 text-slate-400 border-b border-slate-800 font-bold uppercase tracking-wider">
+            <tr className={`font-bold uppercase tracking-wider border-b transition ${
+              isDark ? 'bg-slate-950/40 text-slate-400 border-slate-800' : 'bg-slate-100 text-slate-600 border-[#cbd5ce]'
+            }`}>
               <th className="p-4 w-12 text-center">Foto</th>
               <th className="p-4">NISN / Nama Siswa</th>
               <th className="p-4">Rombel</th>
@@ -418,7 +459,7 @@ export default function SiswaList({
               {role === 'ADMIN' && <th className="p-4 text-center w-24">Aksi</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60">
+          <tbody className={`divide-y transition ${isDark ? 'divide-slate-800/60' : 'divide-[#cbd5ce]/50'}`}>
             {filteredStudents.length === 0 ? (
               <tr>
                 <td colSpan={9} className="p-10 text-center text-slate-500 italic">
@@ -427,45 +468,51 @@ export default function SiswaList({
               </tr>
             ) : (
               filteredStudents.map((student) => (
-                <tr key={student.nisn} className="hover:bg-slate-800/20 text-slate-300 transition duration-100">
+                <tr key={student.nisn} className={`transition duration-100 ${
+                  isDark ? 'hover:bg-slate-800/20 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
+                }`}>
                   <td className="p-4 text-center">
                     {student.photoUrl ? (
                       <img
                         src={student.photoUrl}
                         alt={student.name}
-                        className="w-10 h-10 object-cover rounded-full border border-slate-700 mx-auto bg-slate-800"
+                        className={`w-10 h-10 object-cover rounded-full border mx-auto ${
+                          isDark ? 'border-slate-700 bg-slate-800' : 'border-[#cbd5ce] bg-white'
+                        }`}
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto">
+                      <div className={`w-10 h-10 rounded-full border flex items-center justify-center mx-auto ${
+                        isDark ? 'border-slate-700 bg-slate-800' : 'border-[#cbd5ce] bg-white'
+                      }`}>
                         <Camera className="w-4 h-4 text-slate-500" />
                       </div>
                     )}
                   </td>
                   <td className="p-4">
-                    <p className="font-bold text-white text-sm">{student.name}</p>
+                    <p className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-900'}`}>{student.name}</p>
                     <p className="text-[10px] text-slate-500 font-mono mt-0.5">NISN: {student.nisn}</p>
                   </td>
                   <td className="p-4">
-                    <span className="px-2.5 py-1 text-[10px] font-bold text-teal-400 bg-teal-500/10 rounded-lg border border-teal-500/10">
+                    <span className="px-2.5 py-1 text-[10px] font-bold text-teal-500 dark:text-teal-400 bg-teal-500/10 rounded-lg border border-teal-500/10">
                       {student.class}
                     </span>
                   </td>
-                  <td className="p-4 font-semibold text-slate-400">{student.gender}</td>
+                  <td className={`p-4 font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{student.gender}</td>
                   <td className="p-4">
-                    <p className="text-slate-300">{student.pob}</p>
+                    <p className={isDark ? 'text-slate-300' : 'text-slate-700'}>{student.pob}</p>
                     <p className="text-[10px] text-slate-500 mt-0.5">{student.dob}</p>
                   </td>
                   <td className="p-4">
-                    <p className="font-bold text-slate-300">{student.parentName}</p>
+                    <p className={`font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{student.parentName}</p>
                     <p className="text-[10px] text-slate-500 truncate max-w-[150px]" title={student.parentEmail}>
                       {student.parentEmail}
                     </p>
                   </td>
-                  <td className="p-4 text-right font-mono font-bold text-emerald-400">
+                  <td className="p-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
                     Rp {student.savings.toLocaleString('id-ID')}
                   </td>
-                  <td className="p-4 text-right font-mono font-bold text-rose-400">
+                  <td className="p-4 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
                     Rp {student.cashBill.toLocaleString('id-ID')}
                   </td>
                   {role === 'ADMIN' && (
@@ -473,7 +520,11 @@ export default function SiswaList({
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => setEditingStudent(student)}
-                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg transition"
+                          className={`p-1.5 border rounded-lg transition ${
+                            isDark 
+                              ? 'bg-slate-800 hover:bg-slate-700 text-emerald-400 border-slate-700' 
+                              : 'bg-slate-50 hover:bg-slate-100 text-emerald-600 border-[#cbd5ce]'
+                          }`}
                           title="Edit Data Siswa"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
@@ -484,7 +535,11 @@ export default function SiswaList({
                               onDeleteStudent(student.nisn);
                             }
                           }}
-                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 rounded-lg transition"
+                          className={`p-1.5 border rounded-lg transition ${
+                            isDark 
+                              ? 'bg-slate-800 hover:bg-slate-700 text-rose-400 border-slate-700' 
+                              : 'bg-slate-50 hover:bg-slate-100 text-rose-600 border-[#cbd5ce]'
+                          }`}
                           title="Hapus Siswa"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -502,10 +557,14 @@ export default function SiswaList({
       {/* MODAL: ADD STUDENT MANUALLY */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
-          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/20">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Tambah Siswa Baru</h3>
-              <button onClick={() => setShowAddModal(false)} className="p-1 text-slate-400 hover:text-white transition">
+          <div className={`w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col border transition duration-300 ${
+            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#cbd5ce]'
+          }`}>
+            <div className={`px-6 py-4 border-b flex justify-between items-center transition ${
+              isDark ? 'border-slate-800 bg-slate-950/20' : 'border-[#cbd5ce] bg-slate-50'
+            }`}>
+              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-800'}`}>Tambah Siswa Baru</h3>
+              <button onClick={() => setShowAddModal(false)} className={`p-1 transition ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'}`}>
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -521,7 +580,7 @@ export default function SiswaList({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* NISN */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">NISN (10 Digit Wajib) *</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>NISN (10 Digit Wajib) *</label>
                   <input
                     type="text"
                     required
@@ -529,42 +588,48 @@ export default function SiswaList({
                     placeholder="Masukkan 10 digit NISN"
                     value={formData.nisn}
                     onChange={(e) => setFormData(prev => ({ ...prev, nisn: e.target.value.replace(/\D/g, '') }))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Nama Lengkap */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Nama Lengkap Siswa *</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Nama Lengkap Siswa *</label>
                   <input
                     type="text"
                     required
                     placeholder="Masukkan nama lengkap siswa"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Rombel / Kelas */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Kelas (Rombongan Belajar) *</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Kelas (Rombongan Belajar) *</label>
                   <select
                     value={formData.class}
                     onChange={(e) => setFormData(prev => ({ ...prev, class: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 font-semibold border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   >
                     {availableClasses.map(c => (
-                      <option key={c} value={c}>{c}</option>
+                      <option key={c} value={c} className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-850"}>{c}</option>
                     ))}
                   </select>
                 </div>
 
                 {/* Jenis Kelamin */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Jenis Kelamin *</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Jenis Kelamin *</label>
                   <div className="flex gap-4 mt-2">
-                    <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+                    <label className={`flex items-center gap-2 cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-750'}`}>
                       <input
                         type="radio"
                         name="gender"
@@ -574,7 +639,7 @@ export default function SiswaList({
                       />
                       <span>Laki-laki</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+                    <label className={`flex items-center gap-2 cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-750'}`}>
                       <input
                         type="radio"
                         name="gender"
@@ -589,97 +654,115 @@ export default function SiswaList({
 
                 {/* Tempat Lahir */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Tempat Lahir</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Tempat Lahir</label>
                   <input
                     type="text"
                     placeholder="Contoh: Jakarta"
                     value={formData.pob}
                     onChange={(e) => setFormData(prev => ({ ...prev, pob: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Tanggal Lahir */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Tanggal Lahir</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Tanggal Lahir</label>
                   <input
                     type="date"
                     value={formData.dob}
                     onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 font-semibold border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Nama Orangtua */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Nama Orangtua / Wali *</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Nama Orangtua / Wali *</label>
                   <input
                     type="text"
                     required
                     placeholder="Masukkan nama orangtua/wali murid"
                     value={formData.parentName}
                     onChange={(e) => setFormData(prev => ({ ...prev, parentName: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Email Orangtua */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Email Orangtua (Untuk Notifikasi) *</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Email Orangtua (Untuk Notifikasi) *</label>
                   <input
                     type="email"
                     required
                     placeholder="contoh@gmail.com"
                     value={formData.parentEmail}
                     onChange={(e) => setFormData(prev => ({ ...prev, parentEmail: e.target.value }))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Tabungan */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Tabungan Siswa (Rp)</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Tabungan Siswa (Rp)</label>
                   <input
                     type="number"
                     placeholder="0"
                     value={formData.savings || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, savings: Number(e.target.value) }))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 font-mono border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Tagihan Kas */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Tagihan Uang Kas (Rp)</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Tagihan Uang Kas (Rp)</label>
                   <input
                     type="number"
                     placeholder="0"
                     value={formData.cashBill || ''}
                     onChange={(e) => setFormData(prev => ({ ...prev, cashBill: Number(e.target.value) }))}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 font-mono border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
               </div>
 
               {/* Alamat */}
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Alamat Lengkap</label>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Alamat Lengkap</label>
                 <textarea
                   placeholder="Masukkan alamat rumah lengkap siswa..."
                   rows={2}
                   value={formData.address}
                   onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                  className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 border ${
+                    isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                  }`}
                 />
               </div>
 
               {/* Photo Upload Area */}
               <div>
-                <label className="block text-slate-400 font-semibold mb-2">Unggah Foto Siswa</label>
+                <label className={`block font-semibold mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Unggah Foto Siswa</label>
                 <div className="flex items-center gap-4">
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex-1 border-2 border-dashed border-slate-800 hover:border-emerald-500/50 rounded-xl p-4 text-center cursor-pointer transition bg-slate-950/20"
+                    className={`flex-1 border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition ${
+                      isDark 
+                        ? 'border-slate-800 hover:border-emerald-500/50 bg-slate-950/20' 
+                        : 'border-[#cbd5ce] hover:border-emerald-500/50 bg-slate-50'
+                    }`}
                   >
                     <Camera className="w-5 h-5 mx-auto text-slate-500 mb-1" />
                     <span className="text-[10px] text-slate-400 font-bold">Pilih file foto JPG/PNG</span>
@@ -692,7 +775,7 @@ export default function SiswaList({
                     />
                   </div>
                   {formData.photoUrl && (
-                    <div className="relative w-16 h-16 rounded-xl border border-slate-700 overflow-hidden bg-slate-800">
+                    <div className={`relative w-16 h-16 rounded-xl border overflow-hidden ${isDark ? 'border-slate-700 bg-slate-800' : 'border-[#cbd5ce] bg-white'}`}>
                       <img src={formData.photoUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       <button
                         type="button"
@@ -710,17 +793,23 @@ export default function SiswaList({
               </div>
 
               {/* Buttons */}
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-800 bg-slate-950/10">
+              <div className={`flex justify-end gap-2 pt-4 border-t transition ${
+                isDark ? 'border-slate-800 bg-slate-950/10' : 'border-[#cbd5ce] bg-slate-50'
+              }`}>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700/80 text-slate-300 font-bold rounded-lg border border-slate-700/40"
+                  className={`px-4 py-2 font-bold rounded-lg border transition ${
+                    isDark 
+                      ? 'bg-slate-800 hover:bg-slate-700/80 text-slate-300 border-slate-700/40' 
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-[#cbd5ce]'
+                  }`}
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg shadow-lg shadow-emerald-500/10"
+                  className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg shadow-lg shadow-emerald-500/10 cursor-pointer"
                 >
                   Simpan Siswa
                 </button>
@@ -733,10 +822,14 @@ export default function SiswaList({
       {/* MODAL: EDIT STUDENT */}
       {editingStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
-          <div className="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/20">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">Edit Data Siswa ({editingStudent.name})</h3>
-              <button onClick={() => setEditingStudent(null)} className="p-1 text-slate-400 hover:text-white transition">
+          <div className={`w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col border transition duration-300 ${
+            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#cbd5ce]'
+          }`}>
+            <div className={`px-6 py-4 border-b flex justify-between items-center transition ${
+              isDark ? 'border-slate-800 bg-slate-950/20' : 'border-[#cbd5ce] bg-slate-50'
+            }`}>
+              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-800'}`}>Edit Data Siswa ({editingStudent.name})</h3>
+              <button onClick={() => setEditingStudent(null)} className={`p-1 transition ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'}`}>
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -745,46 +838,52 @@ export default function SiswaList({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* NISN */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">NISN (Tidak Dapat Diubah)</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>NISN (Tidak Dapat Diubah)</label>
                   <input
                     type="text"
                     disabled
                     value={editingStudent.nisn}
-                    className="w-full bg-slate-950/50 border border-slate-800 rounded-lg p-2.5 text-slate-500 font-mono font-bold cursor-not-allowed"
+                    className={`w-full rounded-lg p-2.5 font-mono font-bold cursor-not-allowed border ${
+                      isDark ? 'bg-slate-950/50 border-slate-800 text-slate-500' : 'bg-slate-100 border-[#cbd5ce] text-slate-400'
+                    }`}
                   />
                 </div>
 
                 {/* Nama Lengkap */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Nama Lengkap Siswa *</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Nama Lengkap Siswa *</label>
                   <input
                     type="text"
                     required
                     value={editingStudent.name}
                     onChange={(e) => setEditingStudent(prev => prev ? { ...prev, name: e.target.value } : null)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Rombel / Kelas */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Kelas (Rombongan Belajar) *</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Kelas (Rombongan Belajar) *</label>
                   <select
                     value={editingStudent.class}
                     onChange={(e) => setEditingStudent(prev => prev ? { ...prev, class: e.target.value } : null)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 font-semibold border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   >
                     {availableClasses.map(c => (
-                      <option key={c} value={c}>{c}</option>
+                      <option key={c} value={c} className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-850"}>{c}</option>
                     ))}
                   </select>
                 </div>
 
                 {/* Jenis Kelamin */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Jenis Kelamin *</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Jenis Kelamin *</label>
                   <div className="flex gap-4 mt-2">
-                    <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+                    <label className={`flex items-center gap-2 cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-750'}`}>
                       <input
                         type="radio"
                         name="edit-gender"
@@ -794,7 +893,7 @@ export default function SiswaList({
                       />
                       <span>Laki-laki</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+                    <label className={`flex items-center gap-2 cursor-pointer ${isDark ? 'text-slate-300' : 'text-slate-750'}`}>
                       <input
                         type="radio"
                         name="edit-gender"
@@ -809,91 +908,109 @@ export default function SiswaList({
 
                 {/* Tempat Lahir */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Tempat Lahir</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Tempat Lahir</label>
                   <input
                     type="text"
                     value={editingStudent.pob || ''}
                     onChange={(e) => setEditingStudent(prev => prev ? { ...prev, pob: e.target.value } : null)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Tanggal Lahir */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Tanggal Lahir</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Tanggal Lahir</label>
                   <input
                     type="date"
                     value={editingStudent.dob || ''}
                     onChange={(e) => setEditingStudent(prev => prev ? { ...prev, dob: e.target.value } : null)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-semibold"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 font-semibold border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Nama Orangtua */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Nama Orangtua / Wali *</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Nama Orangtua / Wali *</label>
                   <input
                     type="text"
                     required
                     value={editingStudent.parentName}
                     onChange={(e) => setEditingStudent(prev => prev ? { ...prev, parentName: e.target.value } : null)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Email Orangtua */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Email Orangtua (Untuk Notifikasi) *</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Email Orangtua (Untuk Notifikasi) *</label>
                   <input
                     type="email"
                     required
                     value={editingStudent.parentEmail}
                     onChange={(e) => setEditingStudent(prev => prev ? { ...prev, parentEmail: e.target.value } : null)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Tabungan */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Tabungan Siswa (Rp)</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Tabungan Siswa (Rp)</label>
                   <input
                     type="number"
                     value={editingStudent.savings}
                     onChange={(e) => setEditingStudent(prev => prev ? { ...prev, savings: Number(e.target.value) } : null)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 font-mono border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
 
                 {/* Tagihan Kas */}
                 <div>
-                  <label className="block text-slate-400 font-semibold mb-1">Tagihan Uang Kas (Rp)</label>
+                  <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Tagihan Uang Kas (Rp)</label>
                   <input
                     type="number"
                     value={editingStudent.cashBill}
                     onChange={(e) => setEditingStudent(prev => prev ? { ...prev, cashBill: Number(e.target.value) } : null)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono"
+                    className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 font-mono border ${
+                      isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                    }`}
                   />
                 </div>
               </div>
 
               {/* Alamat */}
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Alamat Lengkap</label>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Alamat Lengkap</label>
                 <textarea
                   rows={2}
                   value={editingStudent.address || ''}
                   onChange={(e) => setEditingStudent(prev => prev ? { ...prev, address: e.target.value } : null)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-emerald-500"
+                  className={`w-full rounded-lg p-2.5 focus:outline-none focus:border-emerald-500 border ${
+                    isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-[#cbd5ce] text-slate-800'
+                  }`}
                 />
               </div>
 
               {/* Photo Upload Area */}
               <div>
-                <label className="block text-slate-400 font-semibold mb-2">Perbarui Foto Siswa</label>
+                <label className={`block font-semibold mb-2 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Perbarui Foto Siswa</label>
                 <div className="flex items-center gap-4">
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex-1 border-2 border-dashed border-slate-800 hover:border-emerald-500/50 rounded-xl p-4 text-center cursor-pointer transition bg-slate-950/20"
+                    className={`flex-1 border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition ${
+                      isDark 
+                        ? 'border-slate-800 hover:border-emerald-500/50 bg-slate-950/20' 
+                        : 'border-[#cbd5ce] hover:border-emerald-500/50 bg-slate-50'
+                    }`}
                   >
                     <Camera className="w-5 h-5 mx-auto text-slate-500 mb-1" />
                     <span className="text-[10px] text-slate-400 font-bold">Ganti Foto JPG/PNG</span>
@@ -906,7 +1023,7 @@ export default function SiswaList({
                     />
                   </div>
                   {editingStudent.photoUrl && (
-                    <div className="relative w-16 h-16 rounded-xl border border-slate-700 overflow-hidden bg-slate-800">
+                    <div className={`relative w-16 h-16 rounded-xl border overflow-hidden ${isDark ? 'border-slate-700 bg-slate-800' : 'border-[#cbd5ce] bg-white'}`}>
                       <img src={editingStudent.photoUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       <button
                         type="button"
@@ -921,17 +1038,23 @@ export default function SiswaList({
               </div>
 
               {/* Buttons */}
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-800 bg-slate-950/10">
+              <div className={`flex justify-end gap-2 pt-4 border-t transition ${
+                isDark ? 'border-slate-800 bg-slate-950/10' : 'border-[#cbd5ce] bg-slate-50'
+              }`}>
                 <button
                   type="button"
                   onClick={() => setEditingStudent(null)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700/80 text-slate-300 font-bold rounded-lg border border-slate-700/40"
+                  className={`px-4 py-2 font-bold rounded-lg border transition ${
+                    isDark 
+                      ? 'bg-slate-800 hover:bg-slate-700/80 text-slate-300 border-slate-700/40' 
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-[#cbd5ce]'
+                  }`}
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg shadow-lg shadow-emerald-500/10"
+                  className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg shadow-lg shadow-emerald-500/10 cursor-pointer"
                 >
                   Simpan Perubahan
                 </button>

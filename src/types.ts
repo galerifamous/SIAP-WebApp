@@ -109,6 +109,7 @@ export interface AcademicSetting {
   subjects: string[];
   classes: string[];
   subjectExclusions?: { className: string; subject: string }[];
+  kkm?: number;
 }
 
 export interface SystemSetting {

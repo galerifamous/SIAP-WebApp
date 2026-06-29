@@ -32,12 +32,40 @@ import UangKasSec from './components/UangKasSec';
 import BackupRestoreSec from './components/BackupRestoreSec';
 import KartuSiswaSec from './components/KartuSiswaSec';
 import UnduhAplikasiSec from './components/UnduhAplikasiSec';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Sun, Moon } from 'lucide-react';
 import NaikKelasSec from './components/NaikKelasSec';
 
 export default function App() {
   // --- AUTH STATES ---
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; username: string; role: Role; studentNisn?: string } | null>(null);
+  
+  // --- DARK MODE THEME STATE ---
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('siap_dark_mode');
+    return saved ? saved === 'true' : false; // Default to Light Mode (white & green base color)
+  });
+
+  const toggleDarkMode = () => {
+    setDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('siap_dark_mode', String(next));
+      if (next) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      window.dispatchEvent(new Event('theme-change'));
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
   
   const [activeMenu, setActiveMenuState] = useState<string>(() => localStorage.getItem('siap_active_menu') || 'dashboard');
   const [navHistory, setNavHistory] = useState<string[]>(() => {
@@ -1255,6 +1283,8 @@ export default function App() {
         schoolName={systemSetting.schoolName}
         adminUsername={systemSetting.adminUsername}
         adminPassword={systemSetting.adminPassword}
+        darkMode={darkMode}
+        onToggleDarkMode={toggleDarkMode}
       />
     );
   }
@@ -1268,7 +1298,9 @@ export default function App() {
     : undefined;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans selection:bg-emerald-500 selection:text-white max-w-full overflow-hidden">
+    <div className={`min-h-screen flex font-sans max-w-full overflow-hidden transition-colors duration-300 ${
+      darkMode ? 'bg-[#0f1612] text-[#f0f5f1]' : 'bg-[#f0f5f1] text-[#12261a]'
+    }`}>
       {/* Collapsible Sidebar */}
       <Sidebar
         role={currentUser.role}
@@ -1290,53 +1322,75 @@ export default function App() {
       {/* Main Right Side Content Container */}
       <main className="flex-1 lg:pl-64 min-h-screen flex flex-col pt-16 lg:pt-0 min-w-0 max-w-full overflow-x-hidden">
         {/* Top Header Bar */}
-        <header className="px-6 py-4 border-b border-slate-900 bg-slate-900/40 backdrop-blur-md flex flex-col sm:flex-row justify-between sm:items-center gap-4 z-10">
+        <header className={`px-6 py-4 border-b flex flex-col sm:flex-row justify-between sm:items-center gap-4 z-10 transition-all duration-300 ${
+          darkMode 
+            ? 'bg-[#0f1612]/80 border-[#17221c] backdrop-blur-md' 
+            : 'bg-[#f0f5f1]/80 border-[#cbd5ce] backdrop-blur-md'
+        }`}>
           <div className="flex items-center gap-3">
             {navHistory.length > 1 && (
               <button
                 onClick={handleGoBack}
-                className="flex items-center justify-center w-7 h-7 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition border border-slate-700 active:scale-95 shrink-0 cursor-pointer"
+                className={`flex items-center justify-center w-8 h-8 rounded-xl transition-all duration-300 active:scale-95 shrink-0 cursor-pointer ${
+                  darkMode 
+                    ? 'bg-[#0f1612] text-emerald-400 shadow-[4px_4px_10px_#070a08,-4px_-4px_10px_#17221c] border border-emerald-500/10' 
+                    : 'bg-[#f0f5f1] text-emerald-600 shadow-[4px_4px_10px_#dce3dd,-4px_-4px_10px_#ffffff] border border-emerald-500/10'
+                }`}
                 title="Kembali ke halaman sebelumnya"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
+                <ArrowLeft className="w-4 h-4" />
               </button>
             )}
             <div>
-              <h1 className="text-sm font-bold text-white tracking-tight uppercase">
+              <h1 className={`text-sm font-extrabold tracking-tight uppercase ${
+                darkMode ? 'text-white' : 'text-[#0f1612]'
+              }`}>
                 SIAP Academic Management System
               </h1>
-              <p className="text-[10px] text-slate-500 mt-0.5 font-semibold">
-                <span className="text-teal-400">{getTopBarSub()}</span>
+              <p className="text-[10px] text-slate-500 mt-0.5 font-bold">
+                <span className="text-emerald-500">{getTopBarSub()}</span>
               </p>
             </div>
           </div>
           
-          <div className="flex flex-wrap items-center gap-4 justify-between sm:justify-end">
+          <div className="flex flex-wrap items-center gap-3 justify-between sm:justify-end">
             <div className="hidden sm:flex items-center gap-3">
-              <div className="flex items-center gap-1.5 bg-slate-950/40 border border-slate-800 rounded-xl px-2.5 py-1.5">
+              <div className={`flex items-center gap-1.5 border rounded-xl px-3 py-1.5 transition-all duration-300 ${
+                darkMode 
+                  ? 'bg-[#0b0f0c] border-[#17221c]' 
+                  : 'bg-[#ebf1ec] border-[#cbd5ce]'
+              }`}>
                 <span className="text-slate-500 text-[9px] font-bold uppercase tracking-wider">Tahun:</span>
                 <select
                   value={academicSetting.activeYear}
                   onChange={(e) => handleUpdateYear(e.target.value)}
-                  className="bg-transparent text-emerald-400 font-mono font-bold text-[11px] focus:outline-none cursor-pointer"
+                  className={`bg-transparent font-mono font-bold text-[11px] focus:outline-none cursor-pointer ${
+                    darkMode ? 'text-emerald-400' : 'text-emerald-600'
+                  }`}
                 >
                   {academicSetting.years.map((yr) => (
-                    <option key={yr} value={yr} className="bg-slate-900 text-slate-100">
+                    <option key={yr} value={yr} className={darkMode ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>
                       {yr}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-slate-950/40 border border-slate-800 rounded-xl px-2.5 py-1.5">
+              <div className={`flex items-center gap-1.5 border rounded-xl px-3 py-1.5 transition-all duration-300 ${
+                darkMode 
+                  ? 'bg-[#0b0f0c] border-[#17221c]' 
+                  : 'bg-[#ebf1ec] border-[#cbd5ce]'
+              }`}>
                 <span className="text-slate-500 text-[9px] font-bold uppercase tracking-wider">Semester:</span>
                 <select
                   value={academicSetting.activeSemester}
                   onChange={(e) => handleUpdateSemester(e.target.value as 'Ganjil' | 'Genap')}
-                  className="bg-transparent text-teal-400 font-mono font-bold text-[11px] focus:outline-none cursor-pointer"
+                  className={`bg-transparent font-mono font-bold text-[11px] focus:outline-none cursor-pointer ${
+                    darkMode ? 'text-emerald-400' : 'text-emerald-600'
+                  }`}
                 >
                   {academicSetting.semesters.map((sem) => (
-                    <option key={sem} value={sem} className="bg-slate-900 text-slate-100">
+                    <option key={sem} value={sem} className={darkMode ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>
                       {sem}
                     </option>
                   ))}
@@ -1344,7 +1398,22 @@ export default function App() {
               </div>
             </div>
 
-            <div className="text-right text-[10px] text-slate-500 font-bold uppercase tracking-wider sm:border-l sm:border-slate-800 sm:pl-4">
+            {/* Elegant Neumorphic Dark Mode Toggle */}
+            <button
+              onClick={toggleDarkMode}
+              className={`p-2 rounded-xl flex items-center justify-center transition-all duration-300 cursor-pointer active:scale-95 ${
+                darkMode
+                  ? 'bg-[#0f1612] text-amber-400 shadow-[inset_2px_2px_5px_#070a08,inset_-2px_-2px_5px_#17221c] border border-[#17221c]'
+                  : 'bg-[#f0f5f1] text-emerald-600 shadow-[4px_4px_10px_#dce3dd,-4px_-4px_10px_#ffffff] border border-white'
+              }`}
+              title={darkMode ? "Ubah ke Mode Terang" : "Ubah ke Mode Gelap"}
+            >
+              {darkMode ? <Sun className="w-4 h-4 animate-spin-slow" /> : <Moon className="w-4 h-4" />}
+            </button>
+
+            <div className={`text-right text-[10px] text-slate-500 font-bold uppercase tracking-wider sm:border-l sm:pl-4 ${
+              darkMode ? 'sm:border-[#17221c]' : 'sm:border-[#cbd5ce]'
+            }`}>
               <span>Tgl: {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}</span>
             </div>
           </div>
@@ -1356,7 +1425,9 @@ export default function App() {
         </div>
 
         {/* Footer with copyright */}
-        <footer className="px-6 py-4 border-t border-slate-900 bg-slate-950/20 text-center text-[10px] text-slate-500 font-medium">
+        <footer className={`px-6 py-4 border-t text-center text-[10px] text-slate-500 font-medium transition-colors duration-300 ${
+          darkMode ? 'border-[#17221c] bg-[#070a08]/30' : 'border-[#cbd5ce] bg-slate-200/20'
+        }`}>
           <p>© {new Date().getFullYear()} {systemSetting.schoolName}. Hak Cipta Dilindungi Undang-Undang. Powered by SIAP Academic Management System.</p>
         </footer>
       </main>

@@ -129,7 +129,8 @@ export const INITIAL_ACADEMIC: AcademicSetting = {
   years: ['2024/2025', '2025/2026', '2026/2027'],
   semesters: ['Ganjil', 'Genap'],
   subjects: ['Matematika', 'Bahasa Indonesia', 'IPA', 'IPS', 'Bahasa Inggris', 'Pendidikan Agama', 'PJOK', 'Seni Budaya'],
-  classes: ['VII-A', 'VII-B', 'VIII-A', 'VIII-B', 'IX-A', 'IX-B']
+  classes: ['VII-A', 'VII-B', 'VIII-A', 'VIII-B', 'IX-A', 'IX-B'],
+  kkm: 75
 };
 
 export const INITIAL_SYSTEM: SystemSetting = {

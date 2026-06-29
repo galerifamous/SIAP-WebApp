@@ -65,7 +65,6 @@ export default function AbsensiSec({
   onAddHoliday,
   onDeleteHoliday
 }: AbsensiSecProps) {
-  // Navigation tabs driven by sidebar menu selection
   const activeTab = activeMenu ? (activeMenu === 'absensi-scan' ? 'scan' : 'list') : (role === 'SISWA' ? 'list' : 'scan');
 
   // Scanner Simulator States

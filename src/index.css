@@ -1,1 +1,115 @@
 @import "tailwindcss";
+
+@theme {
+  --color-nm-bg-light: #f0f5f1; /* beautiful soft greenish off-white background */
+  --color-nm-bg-dark: #0f1612; /* beautiful soft deep forest green-gray background */
+}
+
+/* Base Body Style */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Light Mode Neumorphic Cards */
+.nm-card-light {
+  background: #f0f5f1;
+  box-shadow: 6px 6px 16px #dce3dd, -6px -6px 16px #ffffff;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.nm-card-light-green {
+  background: #f0f5f1;
+  box-shadow: 6px 6px 16px #d2ded5, -6px -6px 16px #ffffff;
+  border-radius: 1rem;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.nm-inset-light {
+  background: #ebf1ec;
+  box-shadow: inset 4px 4px 8px #cbd5ce, inset -4px -4px 8px #ffffff;
+  border-radius: 0.75rem;
+}
+
+.nm-btn-light {
+  background: #f0f5f1;
+  box-shadow: 4px 4px 10px #dce3dd, -4px -4px 10px #ffffff;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nm-btn-light:hover {
+  transform: translateY(-1px);
+  box-shadow: 2px 2px 5px #dce3dd, -2px -2px 5px #ffffff;
+}
+.nm-btn-light:active {
+  transform: translateY(0);
+  box-shadow: inset 3px 3px 6px #cbd5ce, inset -3px -3px 6px #ffffff;
+}
+
+.nm-btn-light-green {
+  background: #10b981;
+  color: white;
+  box-shadow: 4px 4px 10px #d2ded5, -4px -4px 10px #ffffff;
+  border-radius: 0.75rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nm-btn-light-green:hover {
+  background: #059669;
+  box-shadow: 2px 2px 5px #d2ded5, -2px -2px 5px #ffffff;
+}
+.nm-btn-light-green:active {
+  box-shadow: inset 3px 3px 6px #047857, inset -3px -3px 6px #059669;
+}
+
+/* Dark Mode Neumorphic Cards */
+.nm-card-dark {
+  background: #0f1612;
+  box-shadow: 6px 6px 16px #070a08, -6px -6px 16px #17221c;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.nm-card-dark-green {
+  background: #0f1612;
+  box-shadow: 6px 6px 16px #070a08, -6px -6px 16px #17221c;
+  border-radius: 1rem;
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.nm-inset-dark {
+  background: #0b0f0c;
+  box-shadow: inset 4px 4px 8px #040605, inset -4px -4px 8px #121814;
+  border-radius: 0.75rem;
+}
+
+.nm-btn-dark {
+  background: #0f1612;
+  box-shadow: 4px 4px 10px #070a08, -4px -4px 10px #17221c;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nm-btn-dark:hover {
+  transform: translateY(-1px);
+  box-shadow: 2px 2px 5px #070a08, -2px -2px 5px #17221c;
+}
+.nm-btn-dark:active {
+  transform: translateY(0);
+  box-shadow: inset 3px 3px 6px #040605, inset -3px -3px 6px #121814;
+}
+
+.nm-btn-dark-green {
+  background: #10b981;
+  color: white;
+  box-shadow: 4px 4px 10px #070a08, -4px -4px 10px #17221c;
+  border-radius: 0.75rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nm-btn-dark-green:hover {
+  background: #059669;
+  box-shadow: 2px 2px 5px #070a08, -2px -2px 5px #17221c;
+}
+.nm-btn-dark-green:active {
+  box-shadow: inset 3px 3px 6px #047857, inset -3px -3px 6px #059669;
+}

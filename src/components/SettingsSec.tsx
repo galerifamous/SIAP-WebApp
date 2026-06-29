@@ -406,7 +406,7 @@ export default function SettingsSec({
             <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-emerald-400" /> Penyetelan Tahun Pelajaran & Semester Aktif
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-slate-400 font-semibold mb-1.5">Tahun Pelajaran Utama</label>
                 <select
@@ -430,6 +430,19 @@ export default function SettingsSec({
                   <option value="Ganjil">Ganjil</option>
                   <option value="Genap">Genap</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1.5">Kriteria Ketuntasan Minimal (KKM)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={academicSetting.kkm !== undefined ? academicSetting.kkm : 75}
+                  onChange={(e) => onUpdateAcademic({ ...academicSetting, kkm: Number(e.target.value) })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
+                />
               </div>
             </div>
             <p className="text-[10px] text-slate-500 mt-3 leading-relaxed italic">

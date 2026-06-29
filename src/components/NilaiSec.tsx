@@ -367,7 +367,7 @@ export default function NilaiSec({
         String(asasVal),
         String(avgAsesmen),
         String(finalVal),
-        finalVal >= 75 ? 'LULUS' : 'REMIDI'
+        finalVal >= (academicSetting?.kkm ?? 75) ? 'LULUS' : 'REMIDI'
       ];
     });
     printToPDF(`Laporan Rekap Nilai Akademik Siswa`, headers, rows, schoolName, academicYear, semester);
@@ -627,7 +627,7 @@ export default function NilaiSec({
               {/* Live Preview Average */}
               {selectedStudentNisn && (sumatifDetails.some(item => item.harian && item.harian.length > 0) || stsVal !== '' || sasVal !== '') && (
                 <div className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl flex justify-between items-center">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider">Estimasi Nilai Rapor Final:</span>
+                   <span className="text-slate-400 font-bold uppercase tracking-wider">Estimasi Nilai Rapor Final:</span>
                   {(() => {
                     const validItems = sumatifDetails.filter(item => item.harian && item.harian.length > 0);
                     const sumAverages = validItems.map(item => {
@@ -638,9 +638,10 @@ export default function NilaiSec({
                     const st = stsVal === '' ? 0 : Number(stsVal);
                     const sa = sasVal === '' ? 0 : Number(sasVal);
                     const est = Math.round(((sumAvg + st + sa) / 3) * 10) / 10;
+                    const minKkm = academicSetting?.kkm ?? 75;
                     return (
                       <span className={`font-mono text-base font-bold px-3 py-1 rounded-lg ${
-                        est >= 75
+                        est >= minKkm
                           ? 'text-emerald-400 bg-emerald-500/10'
                           : 'text-rose-400 bg-rose-500/10'
                       }`}>
@@ -667,10 +668,10 @@ export default function NilaiSec({
               <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-xl">
                 <div className="flex justify-between items-center font-bold">
                   <span className="text-slate-400">KKM Sekolah:</span>
-                  <span className="text-teal-400 font-mono text-sm bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/10">75.0</span>
+                  <span className="text-teal-400 font-mono text-sm bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/10">{(academicSetting?.kkm ?? 75).toFixed(1)}</span>
                 </div>
                 <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
-                  Siswa dengan nilai rata-rata di bawah 75 diwajibkan mengikuti program remedial dari guru mapel masing-masing.
+                  Siswa dengan nilai rata-rata di bawah {academicSetting?.kkm ?? 75} diwajibkan mengikuti program remedial dari guru mapel masing-masing.
                 </p>
               </div>
 

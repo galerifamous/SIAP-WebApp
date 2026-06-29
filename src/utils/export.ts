@@ -398,7 +398,7 @@ export function printToPDF(title: string, headers: string[], rows: string[][], s
           <div class="meta-item">
             <span class="meta-label">Sistem Aplikasi</span>
             <span>:</span>
-            <span class="meta-value">SIAP v1 (Official Digital Report)</span>
+            <span class="meta-value">SIAP (Official Digital Report)</span>
           </div>
           <div class="meta-item">
             <span class="meta-label">Tanggal Cetak</span>

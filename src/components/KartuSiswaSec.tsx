@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Printer,
   Search,
@@ -30,6 +30,15 @@ interface KartuSiswaSecProps {
 type CardTheme = 'emerald' | 'blue' | 'crimson' | 'indigo' | 'dark' | 'amber';
 
 export default function KartuSiswaSec({ students, availableClasses, systemSetting }: KartuSiswaSecProps) {
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    const handleThemeChange = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    window.addEventListener('theme-change', handleThemeChange);
+    return () => window.removeEventListener('theme-change', handleThemeChange);
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(students[0] || null);
@@ -41,7 +50,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
   const [customSchoolAddress, setCustomSchoolAddress] = useState(systemSetting.schoolAddress || 'Jl. Pendidikan No. 45, Jakarta, Indonesia');
   const [customHeadmasterName, setCustomHeadmasterName] = useState(systemSetting.headmasterName || 'H. Mulyono, S.Pd., M.Pd.');
   const [customHeadmasterNip, setCustomHeadmasterNip] = useState('197812052005011002');
-  const [customStampText, setCustomStampText] = useState('SIAP versi 1\nOFFICIAL\nSEAL');
+  const [customStampText, setCustomStampText] = useState('SIAP OFFICIAL\nSEAL');
   
   // Custom Signature & Stamp Image States
   const [customHeadmasterSignatureImg, setCustomHeadmasterSignatureImg] = useState(() => {
@@ -813,7 +822,6 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
               <div class="card-back-footer">
                 <span>Diterbit oleh ${customSchoolName}</span>
-                <span style="font-family: monospace;">versi 1</span>
               </div>
             </div>
           </div>
@@ -997,7 +1005,6 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
           <div class="card-back-footer">
             <span>Diterbit oleh ${customSchoolName}</span>
-            <span style="font-family: monospace;">versi 1</span>
           </div>
         </div>
       `;
@@ -1584,14 +1591,20 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 selection:bg-emerald-500 selection:text-white font-sans text-xs">
+    <div className={`border rounded-2xl p-6 selection:bg-emerald-500 selection:text-white font-sans text-xs transition-all duration-300 ${
+      isDark 
+        ? 'bg-[#121e15] border-[#17221c]' 
+        : 'bg-white border-[#cbd5ce] shadow-[2px_2px_5px_#cbd5ce]'
+    }`}>
       {/* Header and top banner */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-5 mb-6">
+      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b pb-5 mb-6 ${
+        isDark ? 'border-slate-800' : 'border-[#cbd5ce]'
+      }`}>
         <div>
-          <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+          <h2 className={`text-lg font-bold tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>
             <CreditCard className="w-5 h-5 text-emerald-400" /> Pembuatan Kartu Siswa Digital (Portrait)
           </h2>
-          <p className="text-slate-400 text-xs mt-1">Buat, kustomisasi penuh, cetak, dan unduh kartu pelajar profesional siswa lengkap dengan barcode QR absensi di belakang kartu</p>
+          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Buat, kustomisasi penuh, cetak, dan unduh kartu pelajar profesional siswa lengkap dengan barcode QR absensi di belakang kartu</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] bg-emerald-500/10 text-emerald-400 font-mono font-bold border border-emerald-500/20 px-2.5 py-1 rounded-lg flex items-center gap-1.5 shadow-sm">
@@ -1607,8 +1620,14 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
         <div className="xl:col-span-5 space-y-5">
           
           {/* 1. Student Selector Card */}
-          <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-2xl space-y-3">
-            <h3 className="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-2 border-b border-slate-800 pb-1.5">
+          <div className={`p-4 rounded-2xl space-y-3 border transition-all duration-300 ${
+            isDark 
+              ? 'bg-slate-950/40 border-slate-800' 
+              : 'bg-[#ebf1ec] border-[#cbd5ce] shadow-[1px_1px_3px_#cbd5ce]'
+          }`}>
+            <h3 className={`font-bold uppercase tracking-wider text-[11px] flex items-center gap-2 border-b pb-1.5 ${
+              isDark ? 'text-white border-slate-800' : 'text-slate-800 border-[#cbd5ce]'
+            }`}>
               <User className="w-4 h-4 text-emerald-400" /> 1. Pilih Siswa
             </h3>
 
@@ -1623,7 +1642,11 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                   placeholder="Cari nama atau NISN..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-2 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-xs"
+                  className={`w-full border rounded-lg pl-9 pr-3 py-2 placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-xs ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-slate-200' 
+                      : 'bg-white border-[#cbd5ce] text-slate-850 shadow-[inset_1px_1px_3px_#cbd5ce]'
+                  }`}
                 />
               </div>
 
@@ -1631,11 +1654,15 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                 <select
                   value={classFilter}
                   onChange={(e) => setClassFilter(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-300 focus:outline-none text-xs"
+                  className={`w-full border rounded-lg p-2 focus:outline-none text-xs font-semibold ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-slate-300' 
+                      : 'bg-white border-[#cbd5ce] text-slate-700 shadow-[1px_1px_3px_#cbd5ce]'
+                  }`}
                 >
-                  <option value="">Semua Kelas</option>
+                  <option value="" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Semua Kelas</option>
                   {availableClasses.map(cls => (
-                    <option key={cls} value={cls}>Kelas {cls}</option>
+                    <option key={cls} value={cls} className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Kelas {cls}</option>
                   ))}
                 </select>
 
@@ -1651,7 +1678,9 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             </div>
 
             {/* Mini list container */}
-            <div className="max-h-44 overflow-y-auto space-y-1 border border-slate-800/80 rounded-lg p-1.5 bg-slate-950/20">
+            <div className={`max-h-44 overflow-y-auto space-y-1 border rounded-lg p-1.5 ${
+              isDark ? 'border-slate-800/80 bg-slate-950/20' : 'border-[#cbd5ce] bg-white shadow-[1px_1px_3px_#cbd5ce]'
+            }`}>
               {filteredStudents.length === 0 ? (
                 <p className="p-3 text-slate-500 italic text-center text-[11px]">Siswa tidak ditemukan</p>
               ) : (
@@ -1659,15 +1688,15 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                   <button
                     key={std.nisn}
                     onClick={() => setSelectedStudent(std)}
-                    className={`w-full text-left p-2 rounded-lg transition-all flex items-center justify-between ${
+                    className={`w-full text-left p-2 rounded-lg transition-all flex items-center justify-between cursor-pointer ${
                       selectedStudent?.nisn === std.nisn
                         ? 'bg-emerald-500 text-slate-950 font-bold'
-                        : 'text-slate-300 hover:bg-slate-800/50'
+                        : (isDark ? 'text-slate-300 hover:bg-slate-800/50' : 'text-slate-700 hover:bg-[#ebf1ec]')
                     }`}
                   >
                     <div className="min-w-0 flex-1 pr-2">
                       <p className="text-[11px] font-bold truncate">{std.name}</p>
-                      <p className={`text-[9px] font-mono ${selectedStudent?.nisn === std.nisn ? 'text-slate-900/80' : 'text-slate-500'}`}>
+                      <p className={`text-[9px] font-mono ${selectedStudent?.nisn === std.nisn ? 'text-slate-900/80' : (isDark ? 'text-slate-500' : 'text-slate-500')}`}>
                         {std.nisn} • Kelas {std.class}
                       </p>
                     </div>
@@ -1681,68 +1710,92 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
           </div>
 
           {/* 2. Admin Card Builder Panel - Full customization of headers and school metadata */}
-          <div className="p-4 bg-slate-950/40 border border-slate-800 rounded-2xl space-y-4">
-            <h3 className="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-2 border-b border-slate-800 pb-1.5">
+          <div className={`p-4 rounded-2xl space-y-4 border transition-all duration-300 ${
+            isDark 
+              ? 'bg-slate-950/40 border-slate-800' 
+              : 'bg-[#ebf1ec] border-[#cbd5ce] shadow-[1px_1px_3px_#cbd5ce]'
+          }`}>
+            <h3 className={`font-bold uppercase tracking-wider text-[11px] flex items-center gap-2 border-b pb-1.5 ${
+              isDark ? 'text-white border-slate-800' : 'text-slate-800 border-[#cbd5ce]'
+            }`}>
               <Settings className="w-4 h-4 text-emerald-400" /> 2. Kustomisasi Desain & Data Instansi
             </h3>
 
             {/* School Name & Address */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Nama Madrasah / Sekolah</label>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Nama Madrasah / Sekolah</label>
                 <input
                   type="text"
                   value={customSchoolName}
                   onChange={(e) => setCustomSchoolName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500 text-[10px]"
+                  className={`w-full border rounded-lg p-2 focus:outline-none focus:border-emerald-500 text-[10px] ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-slate-200' 
+                      : 'bg-white border-[#cbd5ce] text-slate-850 shadow-[inset_1px_1px_2px_#cbd5ce]'
+                  }`}
                   placeholder="Nama Madrasah"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Alamat Madrasah</label>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Alamat Madrasah</label>
                 <input
                   type="text"
                   value={customSchoolAddress}
                   onChange={(e) => setCustomSchoolAddress(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500 text-[10px]"
+                  className={`w-full border rounded-lg p-2 focus:outline-none focus:border-emerald-500 text-[10px] ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-slate-200' 
+                      : 'bg-white border-[#cbd5ce] text-slate-850 shadow-[inset_1px_1px_2px_#cbd5ce]'
+                  }`}
                   placeholder="Alamat Instansi"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Nama Kepala Sekolah / Madrasah</label>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Nama Kepala Sekolah / Madrasah</label>
                 <input
                   type="text"
                   value={customHeadmasterName}
                   onChange={(e) => setCustomHeadmasterName(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500 text-[10px]"
+                  className={`w-full border rounded-lg p-2 focus:outline-none focus:border-emerald-500 text-[10px] ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-slate-200' 
+                      : 'bg-white border-[#cbd5ce] text-slate-850 shadow-[inset_1px_1px_2px_#cbd5ce]'
+                  }`}
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">NIP Kepala Madrasah</label>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>NIP Kepala Madrasah</label>
                 <input
                   type="text"
                   value={customHeadmasterNip}
                   onChange={(e) => setCustomHeadmasterNip(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500 text-[10px] font-mono"
+                  className={`w-full border rounded-lg p-2 focus:outline-none focus:border-emerald-500 text-[10px] font-mono ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-slate-200' 
+                      : 'bg-white border-[#cbd5ce] text-slate-850 shadow-[inset_1px_1px_2px_#cbd5ce]'
+                  }`}
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Upload Gambar TTD Kepala</label>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Upload Gambar TTD Kepala</label>
                 <div className="flex gap-1.5 items-center">
                   <input
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleFileUpload(e, 'sig')}
-                    className="block w-full text-[9px] text-slate-500
+                    className={`block w-full text-[9px] text-slate-500
                       file:mr-2 file:py-1 file:px-2
                       file:rounded-md file:border-0
-                      file:text-[9px] file:font-semibold
-                      file:bg-slate-800 file:text-slate-300
-                      hover:file:bg-slate-700 cursor-pointer"
+                      file:text-[9px] file:font-semibold cursor-pointer ${
+                        isDark 
+                          ? 'file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700' 
+                          : 'file:bg-[#ebf1ec] file:text-slate-700 hover:file:bg-[#cbd5ce]'
+                      }`}
                   />
                   {customHeadmasterSignatureImg && (
                     <button
@@ -1751,7 +1804,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                         setCustomHeadmasterSignatureImg('');
                         localStorage.removeItem('siap_card_signature_img');
                       }}
-                      className="text-rose-500 hover:text-rose-400 font-bold text-[9px] px-2 py-1 bg-rose-500/10 rounded border border-rose-500/20 shrink-0"
+                      className="text-rose-500 hover:text-rose-400 font-bold text-[9px] px-2 py-1 bg-rose-500/10 rounded border border-rose-500/20 shrink-0 cursor-pointer"
                     >
                       Hapus
                     </button>
@@ -1760,18 +1813,20 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               </div>
 
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Upload Gambar Stempel</label>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Upload Gambar Stempel</label>
                 <div className="flex gap-1.5 items-center">
                   <input
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleFileUpload(e, 'stamp')}
-                    className="block w-full text-[9px] text-slate-500
+                    className={`block w-full text-[9px] text-slate-500
                       file:mr-2 file:py-1 file:px-2
                       file:rounded-md file:border-0
-                      file:text-[9px] file:font-semibold
-                      file:bg-slate-800 file:text-slate-300
-                      hover:file:bg-slate-700 cursor-pointer"
+                      file:text-[9px] file:font-semibold cursor-pointer ${
+                        isDark 
+                          ? 'file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700' 
+                          : 'file:bg-[#ebf1ec] file:text-slate-700 hover:file:bg-[#cbd5ce]'
+                      }`}
                   />
                   {customStampImg && (
                     <button
@@ -1780,7 +1835,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                         setCustomStampImg('');
                         localStorage.removeItem('siap_card_stamp_img');
                       }}
-                      className="text-rose-500 hover:text-rose-400 font-bold text-[9px] px-2 py-1 bg-rose-500/10 rounded border border-rose-500/20 shrink-0"
+                      className="text-rose-500 hover:text-rose-400 font-bold text-[9px] px-2 py-1 bg-rose-500/10 rounded border border-rose-500/20 shrink-0 cursor-pointer"
                     >
                       Hapus
                     </button>
@@ -1789,29 +1844,37 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               </div>
 
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Teks Stempel Cap (Maks 3 Baris)</label>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Teks Stempel Cap (Maks 3 Baris)</label>
                 <textarea
                   rows={2}
                   value={customStampText}
                   onChange={(e) => setCustomStampText(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 focus:outline-none focus:border-emerald-500 text-[10px]"
+                  className={`w-full border rounded-lg p-2 focus:outline-none focus:border-emerald-500 text-[10px] ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-slate-200' 
+                      : 'bg-white border-[#cbd5ce] text-slate-850 shadow-[inset_1px_1px_2px_#cbd5ce]'
+                  }`}
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Judul Kartu</label>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Judul Kartu</label>
                 <input
                   type="text"
                   value={cardTitle}
                   onChange={(e) => setCardTitle(e.target.value.toUpperCase())}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-200 uppercase font-bold focus:outline-none focus:border-emerald-500 text-[10px]"
+                  className={`w-full border rounded-lg p-2 uppercase font-bold focus:outline-none focus:border-emerald-500 text-[10px] ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-slate-200' 
+                      : 'bg-white border-[#cbd5ce] text-slate-850 shadow-[inset_1px_1px_2px_#cbd5ce]'
+                  }`}
                 />
               </div>
             </div>
 
             {/* Colors */}
             <div>
-              <label className="block text-slate-400 font-semibold mb-1.5">Warna Tema Kartu</label>
+              <label className={`block font-semibold mb-1.5 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Warna Tema Kartu</label>
               <div className="grid grid-cols-6 gap-1.5">
                 {(Object.keys(themeStyles) as CardTheme[]).map(t => {
                   const tColors: Record<CardTheme, string> = {
@@ -1840,58 +1903,78 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             </div>
 
             {/* Toggle components */}
-            <div className="space-y-2 pt-2 border-t border-slate-800/80">
-              <label className="block text-slate-400 font-semibold mb-1">Opsi Tampilkan Detail</label>
+            <div className={`space-y-2 pt-2 border-t ${isDark ? 'border-slate-800/80' : 'border-[#cbd5ce]'}`}>
+              <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Opsi Tampilkan Detail</label>
               
               <div className="grid grid-cols-2 gap-2">
-                <label className="flex items-center gap-2 bg-slate-900/60 p-2 border border-slate-800/80 rounded-lg cursor-pointer hover:bg-slate-900 transition">
+                <label className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition ${
+                  isDark 
+                    ? 'bg-slate-900/60 border-slate-800/80 hover:bg-slate-900' 
+                    : 'bg-white border-[#cbd5ce] hover:bg-[#ebf1ec] text-slate-700'
+                }`}>
                   <input
                     type="checkbox"
                     checked={showTtl}
                     onChange={(e) => setShowTtl(e.target.checked)}
-                    className="accent-emerald-500"
+                    className="accent-emerald-500 cursor-pointer"
                   />
-                  <span className="text-[10px] text-slate-300 font-semibold">Tgl Lahir (TTL)</span>
+                  <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Tgl Lahir (TTL)</span>
                 </label>
 
-                <label className="flex items-center gap-2 bg-slate-900/60 p-2 border border-slate-800/80 rounded-lg cursor-pointer hover:bg-slate-900 transition">
+                <label className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition ${
+                  isDark 
+                    ? 'bg-slate-900/60 border-slate-800/80 hover:bg-slate-900' 
+                    : 'bg-white border-[#cbd5ce] hover:bg-[#ebf1ec] text-slate-700'
+                }`}>
                   <input
                     type="checkbox"
                     checked={showGender}
                     onChange={(e) => setShowGender(e.target.checked)}
-                    className="accent-emerald-500"
+                    className="accent-emerald-500 cursor-pointer"
                   />
-                  <span className="text-[10px] text-slate-300 font-semibold">Jenis Kelamin</span>
+                  <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Jenis Kelamin</span>
                 </label>
 
-                <label className="flex items-center gap-2 bg-slate-900/60 p-2 border border-slate-800/80 rounded-lg cursor-pointer hover:bg-slate-900 transition col-span-2">
+                <label className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition col-span-2 ${
+                  isDark 
+                    ? 'bg-slate-900/60 border-slate-800/80 hover:bg-slate-900' 
+                    : 'bg-white border-[#cbd5ce] hover:bg-[#ebf1ec] text-slate-700'
+                }`}>
                   <input
                     type="checkbox"
                     checked={showAddress}
                     onChange={(e) => setShowAddress(e.target.checked)}
-                    className="accent-emerald-500"
+                    className="accent-emerald-500 cursor-pointer"
                   />
-                  <span className="text-[10px] text-slate-300 font-semibold">Alamat Tempat Tinggal</span>
+                  <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Alamat Tempat Tinggal</span>
                 </label>
 
-                <label className="flex items-center gap-2 bg-slate-900/60 p-2 border border-slate-800/80 rounded-lg cursor-pointer hover:bg-slate-900 transition">
+                <label className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition ${
+                  isDark 
+                    ? 'bg-slate-900/60 border-slate-800/80 hover:bg-slate-900' 
+                    : 'bg-white border-[#cbd5ce] hover:bg-[#ebf1ec] text-slate-700'
+                }`}>
                   <input
                     type="checkbox"
                     checked={showRules}
                     onChange={(e) => setShowRules(e.target.checked)}
-                    className="accent-emerald-500"
+                    className="accent-emerald-500 cursor-pointer"
                   />
-                  <span className="text-[10px] text-slate-300 font-semibold">Tata Tertib</span>
+                  <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Tata Tertib</span>
                 </label>
 
-                <label className="flex items-center gap-2 bg-slate-900/60 p-2 border border-slate-800/80 rounded-lg cursor-pointer hover:bg-slate-900 transition">
+                <label className={`flex items-center gap-2 p-2 border rounded-lg cursor-pointer transition ${
+                  isDark 
+                    ? 'bg-slate-900/60 border-slate-800/80 hover:bg-slate-900' 
+                    : 'bg-white border-[#cbd5ce] hover:bg-[#ebf1ec] text-slate-700'
+                }`}>
                   <input
                     type="checkbox"
                     checked={showSignature}
                     onChange={(e) => setShowSignature(e.target.checked)}
-                    className="accent-emerald-500"
+                    className="accent-emerald-500 cursor-pointer"
                   />
-                  <span className="text-[10px] text-slate-300 font-semibold">Ttd Kepsek</span>
+                  <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Ttd Kepsek</span>
                 </label>
               </div>
             </div>
@@ -1899,12 +1982,16 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             {/* Backside notes */}
             {showRules && (
               <div>
-                <label className="block text-slate-400 font-semibold mb-1">Butir Tata Tertib (Satu per baris)</label>
+                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Butir Tata Tertib (Satu per baris)</label>
                 <textarea
                   rows={3}
                   value={customNotes}
                   onChange={(e) => setCustomNotes(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-slate-300 text-[10px] focus:outline-none focus:border-emerald-500 leading-normal"
+                  className={`w-full border rounded-lg p-2 text-[10px] focus:outline-none focus:border-emerald-500 leading-normal ${
+                    isDark 
+                      ? 'bg-slate-900 border-slate-800 text-slate-300' 
+                      : 'bg-white border-[#cbd5ce] text-slate-800 shadow-[inset_1px_1px_2px_#cbd5ce]'
+                  }`}
                 />
               </div>
             )}
@@ -1912,14 +1999,20 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
         </div>
 
         {/* RIGHT COLUMN: Visual Live Card Preview */}
-        <div className="xl:col-span-7 flex flex-col items-center justify-center p-6 bg-slate-950/20 border border-slate-800/80 rounded-2xl min-h-[500px]">
+        <div className={`xl:col-span-7 flex flex-col items-center justify-center p-6 border rounded-2xl min-h-[500px] transition-all duration-300 ${
+          isDark 
+            ? 'bg-slate-950/20 border-slate-800/80' 
+            : 'bg-[#ebf1ec] border-[#cbd5ce] shadow-[1px_1px_3px_#cbd5ce]'
+        }`}>
           
           {selectedStudent ? (
             <div className="w-full max-w-2xl space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-4">
+              <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b pb-4 ${
+                isDark ? 'border-slate-800' : 'border-[#cbd5ce]'
+              }`}>
                 <div>
-                  <h4 className="font-bold text-white text-sm">Visualisasi Preview Kartu</h4>
-                  <p className="text-slate-500 text-[11px] mt-0.5 font-semibold">Format potret standard dengan barcode absensi QR diletakkan di bagian belakang.</p>
+                  <h4 className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-850'}`}>Visualisasi Preview Kartu</h4>
+                  <p className={`text-[11px] mt-0.5 font-semibold ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Format potret standard dengan barcode absensi QR diletakkan di bagian belakang.</p>
                 </div>
                 
                 <button
@@ -2124,7 +2217,6 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                     {/* Back card footer */}
                     <div className="border-t border-slate-900 bg-slate-950 px-4 py-2 flex justify-between items-center text-[6.5px] text-slate-500 font-bold">
                       <span>Diterbit oleh {customSchoolName}</span>
-                      <span className="font-mono">versi 1</span>
                     </div>
 
                   </div>

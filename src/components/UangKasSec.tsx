@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Coins,
   Wallet,
@@ -45,6 +45,15 @@ export default function UangKasSec({
   role,
   studentNisn
 }: UangKasSecProps) {
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  useEffect(() => {
+    const handleThemeChange = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    window.addEventListener('theme-change', handleThemeChange);
+    return () => window.removeEventListener('theme-change', handleThemeChange);
+  }, []);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [financeTypeFilter, setFinanceTypeFilter] = useState<'all' | 'has_bill' | 'has_savings'>('all');
@@ -143,23 +152,29 @@ export default function UangKasSec({
     <div className="space-y-6">
       {/* Alert Status Banner */}
       {showStatusMsg && (
-        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-xs font-semibold animate-fadeIn">
+        <div className={`p-4 border rounded-2xl flex items-center gap-3 text-xs font-semibold animate-fadeIn ${
+          isDark 
+            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+            : 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-[1px_1px_3px_#cbd5ce]'
+        }`}>
           <Check className="w-5 h-5 flex-shrink-0" />
           <span>{showStatusMsg}</span>
         </div>
       )}
 
       {/* Header section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5 ${
+        isDark ? 'border-[#17221c]' : 'border-[#cbd5ce]'
+      }`}>
         <div>
-          <h2 className="text-lg font-bold text-white tracking-tight">Manajemen Uang Kas & Tabungan Siswa</h2>
-          <p className="text-slate-400 text-xs mt-1">Lacak tagihan kas kelas, catat setoran/penarikan tabungan, dan kirimkan tagihan ke email orangtua siswa</p>
+          <h2 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>Manajemen Uang Kas & Tabungan Siswa</h2>
+          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Lacak tagihan kas kelas, catat setoran/penarikan tabungan, dan kirimkan tagihan ke email orangtua siswa</p>
         </div>
 
         {role !== 'SISWA' && (
           <button
             onClick={handleSendMassEmails}
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 transition duration-150 shadow-md shadow-emerald-500/10 self-start md:self-auto"
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 transition duration-150 shadow-md shadow-emerald-500/10 self-start md:self-auto cursor-pointer"
           >
             <Mail className="w-4 h-4" />
             <span>Kirim Email Tagihan Massal</span>
@@ -169,52 +184,68 @@ export default function UangKasSec({
 
       {/* Statistic Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
+        <div className={`p-5 rounded-2xl flex items-center justify-between border transition-all duration-300 ${
+          isDark 
+            ? 'bg-[#121e15] border-[#17221c]' 
+            : 'bg-white border-[#cbd5ce]/60 shadow-[1px_1px_3px_#cbd5ce]'
+        }`}>
           <div className="space-y-1">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Tagihan Kas</span>
-            <div className="text-xl font-extrabold text-rose-400 font-mono">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Total Tagihan Kas</span>
+            <div className={`text-xl font-extrabold font-mono ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
               Rp {totalCashBill.toLocaleString('id-ID')}
             </div>
-            <p className="text-[10px] text-slate-400">{unpaidCount} siswa belum lunas</p>
+            <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{unpaidCount} siswa belum lunas</p>
           </div>
           <div className="p-3 bg-rose-500/10 rounded-xl border border-rose-500/20 text-rose-400">
             <Coins className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
+        <div className={`p-5 rounded-2xl flex items-center justify-between border transition-all duration-300 ${
+          isDark 
+            ? 'bg-[#121e15] border-[#17221c]' 
+            : 'bg-white border-[#cbd5ce]/60 shadow-[1px_1px_3px_#cbd5ce]'
+        }`}>
           <div className="space-y-1">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Tabungan</span>
-            <div className="text-xl font-extrabold text-emerald-400 font-mono">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Total Tabungan</span>
+            <div className={`text-xl font-extrabold font-mono ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
               Rp {totalSavings.toLocaleString('id-ID')}
             </div>
-            <p className="text-[10px] text-slate-400">Penyimpanan kas sekolah</p>
+            <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Penyimpanan kas sekolah</p>
           </div>
           <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
             <Wallet className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
+        <div className={`p-5 rounded-2xl flex items-center justify-between border transition-all duration-300 ${
+          isDark 
+            ? 'bg-[#121e15] border-[#17221c]' 
+            : 'bg-white border-[#cbd5ce]/60 shadow-[1px_1px_3px_#cbd5ce]'
+        }`}>
           <div className="space-y-1">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Siswa Lunas</span>
-            <div className="text-xl font-extrabold text-teal-400 font-mono">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Siswa Lunas</span>
+            <div className={`text-xl font-extrabold font-mono ${isDark ? 'text-teal-400' : 'text-teal-600'}`}>
               {paidCount} <span className="text-xs text-slate-500 font-sans font-normal">Siswa</span>
             </div>
-            <p className="text-[10px] text-slate-400">Sudah menyelesaikan uang kas</p>
+            <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Sudah menyelesaikan uang kas</p>
           </div>
           <div className="p-3 bg-teal-500/10 rounded-xl border border-teal-500/20 text-teal-400">
             <Check className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between">
+        <div className={`p-5 rounded-2xl flex items-center justify-between border transition-all duration-300 ${
+          isDark 
+            ? 'bg-[#121e15] border-[#17221c]' 
+            : 'bg-white border-[#cbd5ce]/60 shadow-[1px_1px_3px_#cbd5ce]'
+        }`}>
           <div className="space-y-1">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Tahun & Semester</span>
-            <div className="text-sm font-bold text-teal-400 font-mono">
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Tahun & Semester</span>
+            <div className={`text-sm font-bold font-mono ${isDark ? 'text-teal-400' : 'text-teal-600'}`}>
               {academicYear}
             </div>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Semester {semester}</p>
+            <p className={`text-[10px] uppercase tracking-wider font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Semester {semester}</p>
           </div>
           <div className="p-3 bg-teal-500/10 rounded-xl border border-teal-500/20 text-teal-400">
             <Sparkles className="w-5 h-5" />
@@ -224,7 +255,11 @@ export default function UangKasSec({
 
       {role !== 'SISWA' && (
         /* Filters and Search toolbar */
-        <div className="p-4 bg-slate-900/40 border border-slate-900 rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between text-xs">
+        <div className={`p-4 border rounded-2xl flex flex-col md:flex-row gap-4 items-center justify-between text-xs transition-all duration-300 ${
+          isDark 
+            ? 'bg-[#121e15]/40 border-[#17221c]' 
+            : 'bg-[#ebf1ec] border-[#cbd5ce]'
+        }`}>
           <div className="relative w-full md:w-80">
             <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
             <input
@@ -232,37 +267,49 @@ export default function UangKasSec({
               placeholder="Cari siswa berdasarkan nama atau NISN..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-9 pr-4 py-2 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition"
+              className={`w-full border rounded-xl pl-9 pr-4 py-2 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition ${
+                isDark 
+                  ? 'bg-slate-950 border-[#17221c] text-slate-200' 
+                  : 'bg-white border-[#cbd5ce] text-slate-800 shadow-[inset_1px_1px_3px_#cbd5ce]'
+              }`}
             />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             {/* Filter by Class */}
-            <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-850 w-full sm:w-auto">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border w-full sm:w-auto ${
+              isDark 
+                ? 'bg-slate-950 border-[#17221c]' 
+                : 'bg-white border-[#cbd5ce] shadow-[1px_1px_3px_#cbd5ce]'
+            }`}>
               <Filter className="w-3.5 h-3.5 text-slate-500" />
               <select
                 value={classFilter}
                 onChange={(e) => setClassFilter(e.target.value)}
-                className="bg-transparent text-slate-300 focus:outline-none cursor-pointer font-semibold"
+                className={`bg-transparent focus:outline-none cursor-pointer font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}
               >
-                <option value="">Semua Kelas</option>
+                <option value="" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Semua Kelas</option>
                 {availableClasses.map(c => (
-                  <option key={c} value={c}>Kelas {c}</option>
+                  <option key={c} value={c} className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Kelas {c}</option>
                 ))}
               </select>
             </div>
 
             {/* Filter by Finance status */}
-            <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-850 w-full sm:w-auto">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border w-full sm:w-auto ${
+              isDark 
+                ? 'bg-slate-950 border-[#17221c]' 
+                : 'bg-white border-[#cbd5ce] shadow-[1px_1px_3px_#cbd5ce]'
+            }`}>
               <Coins className="w-3.5 h-3.5 text-slate-500" />
               <select
                 value={financeTypeFilter}
                 onChange={(e) => setFinanceTypeFilter(e.target.value as any)}
-                className="bg-transparent text-slate-300 focus:outline-none cursor-pointer font-semibold"
+                className={`bg-transparent focus:outline-none cursor-pointer font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}
               >
-                <option value="all">Semua Data</option>
-                <option value="has_bill">Belum Lunas Kas</option>
-                <option value="has_savings">Memiliki Tabungan</option>
+                <option value="all" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Semua Data</option>
+                <option value="has_bill" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Belum Lunas Kas</option>
+                <option value="has_savings" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Memiliki Tabungan</option>
               </select>
             </div>
           </div>
@@ -270,7 +317,11 @@ export default function UangKasSec({
       )}
 
       {/* Main Student Cards & List */}
-      <div className="bg-slate-900 border border-slate-850 rounded-2xl overflow-hidden">
+      <div className={`border rounded-2xl overflow-hidden transition-all duration-300 ${
+        isDark 
+          ? 'bg-[#121e15] border-[#17221c]' 
+          : 'bg-white border-[#cbd5ce] shadow-[2px_2px_5px_#cbd5ce]'
+      }`}>
         {filteredStudents.length === 0 ? (
           <div className="p-12 text-center text-slate-500">
             <Info className="w-8 h-8 mx-auto mb-3 text-slate-600" />
@@ -278,8 +329,12 @@ export default function UangKasSec({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800 uppercase tracking-wider text-[10px]">
+            <table className={`w-full text-left text-xs ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+              <thead className={`font-bold border-b uppercase tracking-wider text-[10px] ${
+                isDark 
+                  ? 'bg-slate-950 text-slate-400 border-[#17221c]' 
+                  : 'bg-[#ebf1ec] text-slate-600 border-[#cbd5ce]'
+              }`}>
                 <tr>
                   <th className="p-4">NISN</th>
                   <th className="p-4">Nama Siswa</th>
@@ -290,26 +345,34 @@ export default function UangKasSec({
                   {role !== 'SISWA' && <th className="p-4 text-center w-48">Aksi</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-850">
+              <tbody className={`divide-y ${isDark ? 'divide-[#17221c]' : 'divide-[#cbd5ce]/50'}`}>
                 {filteredStudents.map((student) => (
-                  <tr key={student.nisn} className="hover:bg-slate-950/40 transition">
-                    <td className="p-4 font-mono text-slate-400 font-bold">{student.nisn}</td>
-                    <td className="p-4 font-bold text-white">{student.name}</td>
+                  <tr key={student.nisn} className={`transition ${isDark ? 'hover:bg-slate-950/40' : 'hover:bg-[#ebf1ec]/20'}`}>
+                    <td className={`p-4 font-mono font-bold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{student.nisn}</td>
+                    <td className={`p-4 font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{student.name}</td>
                     <td className="p-4">
-                      <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-bold font-mono text-[10px] border border-slate-700/60">
+                      <span className={`px-2 py-0.5 rounded-md font-bold font-mono text-[10px] border ${
+                        isDark 
+                          ? 'bg-slate-800 text-slate-300 border-slate-750/60' 
+                          : 'bg-[#ebf1ec] text-emerald-800 border-[#cbd5ce]'
+                      }`}>
                         {student.class}
                       </span>
                     </td>
                     <td className="p-4 text-right font-mono font-bold">
                       {student.cashBill > 0 ? (
-                        <span className="text-rose-400">Rp {student.cashBill.toLocaleString('id-ID')}</span>
+                        <span className={isDark ? 'text-rose-400' : 'text-rose-600'}>Rp {student.cashBill.toLocaleString('id-ID')}</span>
                       ) : (
-                        <span className="text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-full font-sans text-[10px]">
+                        <span className={`px-2 py-0.5 rounded-full font-sans text-[10px] ${
+                          isDark 
+                            ? 'text-teal-400 bg-teal-500/10 border border-teal-500/20' 
+                            : 'text-teal-700 bg-teal-50 border border-teal-200 font-semibold'
+                        }`}>
                           Lunas
                         </span>
                       )}
                     </td>
-                    <td className="p-4 text-right font-mono font-bold text-emerald-400">
+                    <td className={`p-4 text-right font-mono font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
                       Rp {student.savings.toLocaleString('id-ID')}
                     </td>
                     {role !== 'SISWA' && (
@@ -325,10 +388,14 @@ export default function UangKasSec({
                               onSendCashBillEmail(student.nisn, 'Uang Kas');
                               alert(`Email tagihan berhasil disimulasikan untuk dikirim ke ${student.parentEmail}`);
                             }}
-                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition ${
+                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
                               student.cashBill > 0
-                                ? 'bg-rose-500/10 text-rose-300 border-rose-500/20 hover:bg-rose-500/20'
-                                : 'bg-slate-950 text-slate-600 border-slate-800 cursor-not-allowed'
+                                ? (isDark 
+                                    ? 'bg-rose-500/10 text-rose-300 border-rose-500/20 hover:bg-rose-500/20'
+                                    : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100')
+                                : (isDark
+                                    ? 'bg-[#121e15] text-slate-600 border-[#17221c] cursor-not-allowed'
+                                    : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed')
                             }`}
                             title="Kirim Tagihan Uang Kas"
                             disabled={student.cashBill === 0}
@@ -343,7 +410,11 @@ export default function UangKasSec({
                               onSendCashBillEmail(student.nisn, 'Tabungan');
                               alert(`Email laporan tabungan disimulasikan untuk dikirim ke ${student.parentEmail}`);
                             }}
-                            className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 hover:bg-emerald-500/20 text-xs font-semibold flex items-center gap-1 transition"
+                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
+                              isDark
+                                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                            }`}
                             title="Kirim Laporan Tabungan"
                           >
                             <Mail className="w-3.5 h-3.5" />
@@ -358,7 +429,11 @@ export default function UangKasSec({
                           {/* Pay Cash Bill Button */}
                           <button
                             onClick={() => openModal(student, 'pay_bill')}
-                            className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition flex items-center gap-1 font-bold text-[10px] uppercase"
+                            className={`p-1.5 rounded-lg border transition flex items-center gap-1 font-bold text-[10px] uppercase cursor-pointer ${
+                              isDark
+                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20'
+                                : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 shadow-[1px_1px_2px_#cbd5ce]'
+                            }`}
                             title="Bayar Uang Kas"
                           >
                             <CreditCard className="w-3.5 h-3.5" />
@@ -368,7 +443,11 @@ export default function UangKasSec({
                           {/* Deposit Savings */}
                           <button
                             onClick={() => openModal(student, 'deposit_savings')}
-                            className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition flex items-center gap-1 font-bold text-[10px] uppercase"
+                            className={`p-1.5 rounded-lg border transition flex items-center gap-1 font-bold text-[10px] uppercase cursor-pointer ${
+                              isDark
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 shadow-[1px_1px_2px_#cbd5ce]'
+                            }`}
                             title="Setor Tabungan"
                           >
                             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -378,7 +457,15 @@ export default function UangKasSec({
                           {/* Withdraw Savings */}
                           <button
                             onClick={() => openModal(student, 'withdraw_savings')}
-                            className="p-1.5 rounded-lg bg-slate-950 text-slate-400 border border-slate-800 hover:bg-slate-800 transition flex items-center gap-1 font-bold text-[10px] uppercase"
+                            className={`p-1.5 rounded-lg border transition flex items-center gap-1 font-bold text-[10px] uppercase cursor-pointer ${
+                              student.savings > 0
+                                ? (isDark
+                                    ? 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-white'
+                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100')
+                                : (isDark
+                                    ? 'bg-slate-950 text-slate-600 border-slate-800 cursor-not-allowed'
+                                    : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed')
+                            }`}
                             title="Tarik Tabungan"
                             disabled={student.savings === 0}
                           >
@@ -399,47 +486,51 @@ export default function UangKasSec({
       {/* TRANSACTION COMPONENT MODAL */}
       {modalType && selectedStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+          <div className={`w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4 border transition-all duration-300 ${
+            isDark 
+              ? 'bg-slate-900 border-slate-800 text-white animate-scaleIn' 
+              : 'bg-white border-[#cbd5ce] text-slate-800 shadow-[4px_4px_15px_rgba(0,0,0,0.15)] animate-scaleIn'
+          }`}>
+            <div className={`flex justify-between items-center border-b pb-3 ${isDark ? 'border-slate-800' : 'border-[#cbd5ce]'}`}>
+              <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-800'}`}>
                 {modalType === 'pay_bill' && '💵 Pembayaran Uang Kas'}
                 {modalType === 'deposit_savings' && '💰 Setoran Tabungan Siswa'}
                 {modalType === 'withdraw_savings' && '🏧 Penarikan Tabungan Siswa'}
               </h3>
               <button
                 onClick={() => { setModalType(null); setSelectedStudent(null); }}
-                className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition"
+                className={`p-1 rounded-lg transition cursor-pointer ${isDark ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-[#ebf1ec] text-slate-500 hover:text-slate-850'}`}
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <div className="space-y-2">
-              <div className="flex justify-between text-xs text-slate-400">
-                <span>Nama Siswa:</span>
-                <span className="font-bold text-white">{selectedStudent.name}</span>
+              <div className="flex justify-between text-xs">
+                <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Nama Siswa:</span>
+                <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{selectedStudent.name}</span>
               </div>
-              <div className="flex justify-between text-xs text-slate-400">
-                <span>Kelas / NISN:</span>
-                <span className="font-mono text-emerald-400 font-semibold">{selectedStudent.class} / {selectedStudent.nisn}</span>
+              <div className="flex justify-between text-xs">
+                <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Kelas / NISN:</span>
+                <span className={`font-mono font-semibold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>{selectedStudent.class} / {selectedStudent.nisn}</span>
               </div>
               {modalType === 'pay_bill' && (
-                <div className="flex justify-between text-xs text-slate-400">
-                  <span>Sisa Tagihan Kas:</span>
-                  <span className="font-mono text-rose-400 font-bold">Rp {selectedStudent.cashBill.toLocaleString('id-ID')}</span>
+                <div className="flex justify-between text-xs">
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Sisa Tagihan Kas:</span>
+                  <span className={`font-mono font-bold ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>Rp {selectedStudent.cashBill.toLocaleString('id-ID')}</span>
                 </div>
               )}
               {(modalType === 'deposit_savings' || modalType === 'withdraw_savings') && (
-                <div className="flex justify-between text-xs text-slate-400">
-                  <span>Saldo Tabungan Saat Ini:</span>
-                  <span className="font-mono text-emerald-400 font-bold">Rp {selectedStudent.savings.toLocaleString('id-ID')}</span>
+                <div className="flex justify-between text-xs">
+                  <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>Saldo Tabungan Saat Ini:</span>
+                  <span className={`font-mono font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>Rp {selectedStudent.savings.toLocaleString('id-ID')}</span>
                 </div>
               )}
             </div>
 
             <form onSubmit={handleTransactionSubmit} className="space-y-4 text-xs">
               <div className="space-y-1">
-                <label className="block text-slate-400 font-semibold">
+                <label className={`block font-semibold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   Jumlah Nominal (Rupiah) *
                 </label>
                 <div className="relative">
@@ -451,7 +542,11 @@ export default function UangKasSec({
                     max={modalType === 'pay_bill' ? selectedStudent.cashBill : modalType === 'withdraw_savings' ? selectedStudent.savings : undefined}
                     value={amountInput}
                     onChange={(e) => setAmountInput(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-xl pl-9 pr-4 py-2 text-slate-200 font-mono font-bold focus:outline-none focus:border-emerald-500"
+                    className={`w-full border rounded-xl pl-9 pr-4 py-2 font-mono font-bold focus:outline-none focus:border-emerald-500 ${
+                      isDark 
+                        ? 'bg-slate-950 border-slate-850 text-slate-200' 
+                        : 'bg-white border-[#cbd5ce] text-slate-800 shadow-[inset_1px_1px_3px_#cbd5ce]'
+                    }`}
                     placeholder="Contoh: 10000"
                   />
                 </div>
@@ -461,13 +556,17 @@ export default function UangKasSec({
                 <button
                   type="button"
                   onClick={() => { setModalType(null); setSelectedStudent(null); }}
-                  className="flex-1 bg-slate-950 hover:bg-slate-850 text-slate-400 hover:text-white font-bold py-2.5 px-4 rounded-xl border border-slate-800 transition"
+                  className={`flex-1 font-bold py-2.5 px-4 rounded-xl border transition cursor-pointer ${
+                    isDark 
+                      ? 'bg-slate-950 hover:bg-slate-850 border-slate-800 text-slate-400 hover:text-white' 
+                      : 'bg-[#ebf1ec] hover:bg-[#cbd5ce] border-[#cbd5ce] text-slate-750'
+                  }`}
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 px-4 rounded-xl transition shadow-lg shadow-emerald-500/10"
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 px-4 rounded-xl transition shadow-lg shadow-emerald-500/10 cursor-pointer"
                 >
                   Konfirmasi Selesai
                 </button>

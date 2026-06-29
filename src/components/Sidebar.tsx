@@ -76,6 +76,15 @@ export default function Sidebar({
     pengaturan: false
   });
 
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  React.useEffect(() => {
+    const handleThemeChange = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    window.addEventListener('theme-change', handleThemeChange);
+    return () => window.removeEventListener('theme-change', handleThemeChange);
+  }, []);
+
   const toggleExpand = (menu: string) => {
     setExpandedMenus(prev => ({
       ...prev,
@@ -85,6 +94,38 @@ export default function Sidebar({
 
   const menuActive = (menuId: string) => activeMenu === menuId;
 
+  const getMenuItemClass = (menuId: string) => {
+    const active = menuActive(menuId);
+    if (active) {
+      return isDark
+        ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
+        : 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 font-bold';
+    } else {
+      return isDark
+        ? 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+        : 'text-slate-700 hover:text-emerald-700 hover:bg-[#cbd5ce]/45';
+    }
+  };
+
+  const getSubmenuItemClass = (menuId: string) => {
+    const active = menuActive(menuId);
+    if (active) {
+      return isDark
+        ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
+        : 'bg-emerald-500/10 text-emerald-700 border-l-2 border-emerald-600 font-bold';
+    } else {
+      return isDark
+        ? 'text-slate-400 hover:text-white hover:bg-slate-800/20'
+        : 'text-slate-600 hover:text-emerald-700 hover:bg-[#cbd5ce]/25';
+    }
+  };
+
+  const getHeaderItemClass = (menuId: string) => {
+    return isDark
+      ? 'w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all duration-200'
+      : 'w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:text-emerald-700 hover:bg-[#cbd5ce]/45 transition-all duration-200';
+  };
+
   const handleMenuClick = (menuId: string) => {
     setActiveMenu(menuId);
     setIsOpen(false);
@@ -93,11 +134,17 @@ export default function Sidebar({
   return (
     <>
       {/* Mobile Header Bar - Sticky/Fixed top, styled beautifully instead of floating elements */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 border-b border-slate-800 z-30 flex items-center justify-between px-4">
+      <div className={`lg:hidden fixed top-0 left-0 right-0 h-16 z-30 flex items-center justify-between px-4 transition-all duration-300 ${
+        isDark ? 'bg-[#0f1612] border-b border-[#17221c]' : 'bg-[#f0f5f1] border-b border-[#cbd5ce]'
+      }`}>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="p-2 bg-slate-950/40 border border-slate-800 text-slate-200 rounded-lg hover:bg-slate-800 transition"
+            className={`p-2 rounded-lg transition-all duration-300 cursor-pointer ${
+              isDark 
+                ? 'bg-[#0b0f0c] border border-[#17221c] text-[#f0f5f1] hover:bg-[#1a2b1e]' 
+                : 'bg-[#ebf1ec] border border-[#cbd5ce] text-slate-700 hover:bg-[#cbd5ce]/50 shadow-[inset_1px_1px_3px_#cbd5ce]'
+            }`}
             id="sidebar-toggle"
           >
             {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -106,12 +153,18 @@ export default function Sidebar({
             {logoUrl ? (
               <img src={logoUrl} alt="Logo" className="w-8 h-8 object-contain" referrerPolicy="no-referrer" />
             ) : (
-              <School className="w-5 h-5 text-emerald-400" />
+              <School className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
             )}
-            <span className="text-white font-bold text-sm tracking-tight">SIAP versi 1</span>
+            <span className={`font-bold text-sm tracking-tight transition-colors duration-300 ${
+              isDark ? 'text-white' : 'text-[#0f1612]'
+            }`}>SIAP</span>
           </div>
         </div>
-        <div className="text-[10px] text-slate-400 font-mono bg-slate-950/40 px-2.5 py-1 border border-slate-800 rounded-lg">
+        <div className={`text-[10px] font-mono px-2.5 py-1 border rounded-lg transition-all duration-300 ${
+          isDark 
+            ? 'text-slate-400 bg-[#0b0f0c] border-[#17221c]' 
+            : 'text-emerald-700 bg-[#ebf1ec] border-[#cbd5ce]'
+        }`}>
           {academicYear} | Smtr {semester}
         </div>
       </div>
@@ -126,60 +179,84 @@ export default function Sidebar({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-slate-900 border-r border-slate-800 flex flex-col justify-between transition-transform duration-300 transform lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 flex flex-col justify-between transition-all duration-300 transform lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${
+          isDark 
+            ? 'bg-[#0b0f0c] border-r border-[#17221c]' 
+            : 'bg-[#ebf1ec] border-r border-[#cbd5ce]'
         } font-sans selection:bg-emerald-500 selection:text-white`}
       >
         {/* Upper Sidebar */}
         <div className="flex-1 flex flex-col overflow-y-auto pt-6 pb-4">
           {/* Brand Logo and Title */}
           <div className="px-5 mb-6 flex items-center gap-3">
-            <div className={`flex-shrink-0 bg-emerald-500/10 rounded-xl border border-emerald-500/20 shadow-inner overflow-hidden flex items-center justify-center ${logoUrl ? 'w-12 h-12 p-0.5' : 'p-2'}`}>
+            <div className={`flex-shrink-0 rounded-xl border shadow-inner overflow-hidden flex items-center justify-center transition-all duration-300 ${
+              logoUrl ? 'w-12 h-12 p-0.5' : 'p-2'
+            } ${
+              isDark 
+                ? 'bg-emerald-500/10 border-emerald-500/20' 
+                : 'bg-white border-[#cbd5ce] shadow-[2px_2px_5px_#cbd5ce]'
+            }`}>
               {logoUrl ? (
                 <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
               ) : (
-                <School className="w-8 h-8 text-emerald-400" />
+                <School className={`w-8 h-8 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
               )}
             </div>
             <div className="min-w-0">
-              <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-1.5 leading-none">
-                SIAP <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono font-bold">versi 1</span>
+              <h2 className={`text-lg font-bold tracking-tight flex items-center gap-1.5 leading-none transition-colors duration-300 ${
+                isDark ? 'text-white' : 'text-[#0f1612]'
+              }`}>
+                SIAP
               </h2>
-              <p className="text-[10px] text-slate-400 mt-1 font-semibold uppercase tracking-wider truncate" title={schoolName}>
+              <p className="text-[10px] text-slate-500 mt-1 font-bold uppercase tracking-wider truncate" title={schoolName}>
                 {schoolName}
               </p>
             </div>
           </div>
 
           {/* Academic Stats Box */}
-          <div className="mx-4 mb-5 p-3.5 bg-slate-950/40 border border-slate-800/80 rounded-xl space-y-3">
+          <div className={`mx-4 mb-5 p-3.5 rounded-xl space-y-3 transition-all duration-300 ${
+            isDark 
+              ? 'bg-[#070a08] border border-[#17221c]' 
+              : 'bg-[#f0f5f1] border border-white shadow-[4px_4px_10px_#cbd5ce,-4px_-4px_10px_#ffffff]'
+          }`}>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+              <label className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
                 Tahun Pelajaran
               </label>
               <select
                 value={academicYear}
                 onChange={(e) => onYearChange(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-emerald-400 font-mono text-[11px] font-bold focus:outline-none focus:border-emerald-500 cursor-pointer"
+                className={`w-full border rounded-lg px-2.5 py-1.5 font-mono text-[11px] font-bold focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all duration-300 cursor-pointer ${
+                  isDark 
+                    ? 'bg-[#0f1612] border-[#17221c] text-emerald-400' 
+                    : 'bg-[#ebf1ec] border-[#cbd5ce] text-emerald-700'
+                }`}
               >
                 {academicYears.map((yr) => (
-                  <option key={yr} value={yr} className="bg-slate-900 text-slate-100">
+                  <option key={yr} value={yr} className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>
                     {yr}
                   </option>
                 ))}
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+              <label className="text-[10px] text-slate-500 font-extrabold uppercase tracking-wider">
                 Semester
               </label>
               <select
                 value={semester}
                 onChange={(e) => onSemesterChange(e.target.value as 'Ganjil' | 'Genap')}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-teal-400 font-mono text-[11px] font-bold focus:outline-none focus:border-teal-500 cursor-pointer"
+                className={`w-full border rounded-lg px-2.5 py-1.5 font-mono text-[11px] font-bold focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-all duration-300 cursor-pointer ${
+                  isDark 
+                    ? 'bg-[#0f1612] border-[#17221c] text-teal-400' 
+                    : 'bg-[#ebf1ec] border-[#cbd5ce] text-emerald-600'
+                }`}
               >
                 {semesters.map((sem) => (
-                  <option key={sem} value={sem} className="bg-slate-900 text-slate-100">
+                  <option key={sem} value={sem} className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>
                     {sem}
                   </option>
                 ))}
@@ -192,11 +269,7 @@ export default function Sidebar({
             {/* Dashboard (All Roles) */}
             <button
               onClick={() => handleMenuClick('dashboard')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                menuActive('dashboard')
-                  ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-              }`}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('dashboard')}`}
             >
               <div className="flex items-center gap-3">
                 <LayoutDashboard className="w-4.5 h-4.5" />
@@ -208,11 +281,7 @@ export default function Sidebar({
             {role === 'SISWA' && (
               <button
                 onClick={() => handleMenuClick('profil')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  menuActive('profil')
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-                }`}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('profil')}`}
               >
                 <div className="flex items-center gap-3">
                   <User className="w-4.5 h-4.5" />
@@ -225,11 +294,7 @@ export default function Sidebar({
             {role !== 'SISWA' && (
               <button
                 onClick={() => handleMenuClick('siswa')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  menuActive('siswa')
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-                }`}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('siswa')}`}
               >
                 <div className="flex items-center gap-3">
                   <Users className="w-4.5 h-4.5" />
@@ -242,11 +307,7 @@ export default function Sidebar({
             {role !== 'SISWA' && (
               <button
                 onClick={() => handleMenuClick('naik-kelas')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  menuActive('naik-kelas')
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-                }`}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('naik-kelas')}`}
               >
                 <div className="flex items-center gap-3">
                   <TrendingUp className="w-4.5 h-4.5" />
@@ -260,7 +321,7 @@ export default function Sidebar({
               <div className="space-y-1">
                 <button
                   onClick={() => toggleExpand('absensi')}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all duration-200"
+                  className={getHeaderItemClass('absensi')}
                 >
                   <div className="flex items-center gap-3">
                     <CalendarCheck className="w-4.5 h-4.5" />
@@ -272,22 +333,14 @@ export default function Sidebar({
                   <div className="pl-6 space-y-1 animate-slideDown">
                     <button
                       onClick={() => handleMenuClick('absensi-scan')}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                        menuActive('absensi-scan')
-                          ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/20'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('absensi-scan')}`}
                     >
                       <QrCode className="w-3.5 h-3.5" />
                       <span>Scan Barcode Absensi</span>
                     </button>
                     <button
                       onClick={() => handleMenuClick('absensi-siswa')}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                        menuActive('absensi-siswa')
-                          ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/20'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('absensi-siswa')}`}
                     >
                       <ClipboardList className="w-3.5 h-3.5" />
                       <span>Absensi Siswa</span>
@@ -298,11 +351,7 @@ export default function Sidebar({
             ) : (
               <button
                 onClick={() => handleMenuClick('absensi-siswa')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  menuActive('absensi-siswa')
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-                }`}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('absensi-siswa')}`}
               >
                 <div className="flex items-center gap-3">
                   <CalendarCheck className="w-4.5 h-4.5" />
@@ -316,7 +365,7 @@ export default function Sidebar({
               <div className="space-y-1">
                 <button
                   onClick={() => toggleExpand('nilai')}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all duration-200"
+                  className={getHeaderItemClass('nilai')}
                 >
                   <div className="flex items-center gap-3">
                     <GraduationCap className="w-4.5 h-4.5" />
@@ -328,22 +377,14 @@ export default function Sidebar({
                   <div className="pl-6 space-y-1">
                     <button
                       onClick={() => handleMenuClick('nilai-input')}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                        menuActive('nilai-input')
-                          ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/20'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('nilai-input')}`}
                     >
                       <PenTool className="w-3.5 h-3.5" />
                       <span>Input Nilai Siswa</span>
                     </button>
                     <button
                       onClick={() => handleMenuClick('nilai-siswa')}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                        menuActive('nilai-siswa')
-                          ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/20'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('nilai-siswa')}`}
                     >
                       <FileText className="w-3.5 h-3.5" />
                       <span>Nilai Siswa</span>
@@ -354,11 +395,7 @@ export default function Sidebar({
             ) : (
               <button
                 onClick={() => handleMenuClick('nilai-siswa')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  menuActive('nilai-siswa')
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-                }`}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('nilai-siswa')}`}
               >
                 <div className="flex items-center gap-3">
                   <GraduationCap className="w-4.5 h-4.5" />
@@ -371,7 +408,7 @@ export default function Sidebar({
             <div className="space-y-1">
               <button
                 onClick={() => toggleExpand('record')}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all duration-200"
+                className={getHeaderItemClass('record')}
               >
                 <div className="flex items-center gap-3">
                   <FolderOpen className="w-4.5 h-4.5" />
@@ -383,22 +420,14 @@ export default function Sidebar({
                 <div className="pl-6 space-y-1">
                   <button
                     onClick={() => handleMenuClick('kasus')}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                      menuActive('kasus')
-                        ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/20'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('kasus')}`}
                   >
                     <AlertTriangle className="w-3.5 h-3.5" />
                     <span>Laporan Kasus Siswa</span>
                   </button>
                   <button
                     onClick={() => handleMenuClick('prestasi')}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                      menuActive('prestasi')
-                        ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/20'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('prestasi')}`}
                   >
                     <Trophy className="w-3.5 h-3.5" />
                     <span>Prestasi Siswa</span>
@@ -410,11 +439,7 @@ export default function Sidebar({
             {/* Uang Kas & Tabungan (All Roles) */}
             <button
               onClick={() => handleMenuClick('uang-kas')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                menuActive('uang-kas')
-                  ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-              }`}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('uang-kas')}`}
             >
               <div className="flex items-center gap-3">
                 <Coins className="w-4.5 h-4.5" />
@@ -426,11 +451,7 @@ export default function Sidebar({
             {role !== 'SISWA' && (
               <button
                 onClick={() => handleMenuClick('qr-code')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  menuActive('qr-code')
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-                }`}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('qr-code')}`}
               >
                 <div className="flex items-center gap-3">
                   <QrCode className="w-4.5 h-4.5" />
@@ -443,11 +464,7 @@ export default function Sidebar({
             {role !== 'SISWA' && (
               <button
                 onClick={() => handleMenuClick('kartu-siswa')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  menuActive('kartu-siswa')
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-                }`}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('kartu-siswa')}`}
               >
                 <div className="flex items-center gap-3">
                   <CreditCard className="w-4.5 h-4.5" />
@@ -460,11 +477,7 @@ export default function Sidebar({
             {role !== 'SISWA' && (
               <button
                 onClick={() => handleMenuClick('backup-restore')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  menuActive('backup-restore')
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-                }`}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('backup-restore')}`}
               >
                 <div className="flex items-center gap-3">
                   <Database className="w-4.5 h-4.5" />
@@ -476,11 +489,7 @@ export default function Sidebar({
             {/* Unduh Aplikasi (Semua Akun - Admin, Guru, Siswa) */}
             <button
               onClick={() => handleMenuClick('unduh-aplikasi')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                menuActive('unduh-aplikasi')
-                  ? 'bg-emerald-500 text-slate-950 shadow-md font-bold'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-              }`}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('unduh-aplikasi')}`}
             >
               <div className="flex items-center gap-3">
                 <Download className="w-4.5 h-4.5" />
@@ -493,7 +502,7 @@ export default function Sidebar({
               <div className="space-y-1">
                 <button
                   onClick={() => toggleExpand('pengaturan')}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800/40 transition-all duration-200"
+                  className={getHeaderItemClass('pengaturan')}
                 >
                   <div className="flex items-center gap-3">
                     <Settings className="w-4.5 h-4.5" />
@@ -505,33 +514,21 @@ export default function Sidebar({
                   <div className="pl-6 space-y-1">
                     <button
                       onClick={() => handleMenuClick('set-akademik')}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                        menuActive('set-akademik')
-                          ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/20'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('set-akademik')}`}
                     >
                       <Sliders className="w-3.5 h-3.5" />
                       <span>Pengaturan Akademik</span>
                     </button>
                     <button
                       onClick={() => handleMenuClick('set-sistem')}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                        menuActive('set-sistem')
-                          ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/20'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('set-sistem')}`}
                     >
                       <Monitor className="w-3.5 h-3.5" />
                       <span>Pengaturan Sistem</span>
                     </button>
                     <button
                       onClick={() => handleMenuClick('set-guru')}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                        menuActive('set-guru')
-                          ? 'bg-emerald-500/10 text-emerald-400 border-l-2 border-emerald-500'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-800/20'
-                      }`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('set-guru')}`}
                     >
                       <Briefcase className="w-3.5 h-3.5" />
                       <span>Guru</span>
@@ -544,21 +541,29 @@ export default function Sidebar({
         </div>
 
         {/* User Card & Logout (All Roles) */}
-        <div className="p-4 border-t border-slate-800/80 bg-slate-950/20">
+        <div className={`p-4 border-t transition-all duration-300 ${
+          isDark ? 'border-[#17221c] bg-[#070a08]/30' : 'border-[#cbd5ce] bg-[#f0f5f1]/50 shadow-[inset_1px_1px_3px_#cbd5ce]'
+        }`}>
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-200">
-              <User className="w-5 h-5 text-emerald-400" />
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 ${
+              isDark ? 'bg-[#121e15] border border-[#17221c] text-[#f0f5f1]' : 'bg-white border border-[#cbd5ce] text-slate-700 shadow-[1px_1px_3px_#cbd5ce]'
+            }`}>
+              <User className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs font-bold text-white truncate">{userName}</p>
-              <p className="text-[10px] text-slate-400/80 font-bold uppercase tracking-wider">
+              <p className={`text-xs font-extrabold truncate ${isDark ? 'text-white' : 'text-[#0f1612]'}`}>{userName}</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                 {role === 'ADMIN' ? 'Administrator' : role === 'GURU' ? (teacherDutyType || 'Tenaga Pendidik') : 'Siswa Aktif'}
               </p>
             </div>
           </div>
           <button
             onClick={onLogout}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 font-semibold text-xs rounded-xl border border-rose-500/20 transition-all active:scale-[0.98]"
+            className={`w-full flex items-center justify-center gap-2 py-2 px-3 font-bold text-xs rounded-xl transition-all duration-300 active:scale-[0.98] cursor-pointer ${
+              isDark 
+                ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20' 
+                : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 shadow-[2px_2px_5px_#cbd5ce,-2px_-2px_5px_#ffffff]'
+            }`}
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Keluar Sistem</span>
