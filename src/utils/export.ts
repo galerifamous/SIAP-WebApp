@@ -348,6 +348,29 @@ export function printToPDF(title: string, headers: string[], rows: string[][], s
             margin-top: 4px;
           }
 
+          .document-footer {
+            position: fixed;
+            bottom: -5mm;
+            left: 0;
+            right: 0;
+            height: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 8px;
+            color: #94a3b8;
+            font-family: 'Inter', sans-serif;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 4px;
+            z-index: 9999;
+          }
+          .document-footer-left {
+            font-weight: bold;
+          }
+          .document-footer-right::after {
+            content: "Halaman " counter(page);
+            font-weight: bold;
+          }
+
           @media print {
             body {
               background-color: #ffffff;
@@ -360,6 +383,12 @@ export function printToPDF(title: string, headers: string[], rows: string[][], s
         </style>
       </head>
       <body>
+        <!-- Footer on every page -->
+        <div class="document-footer">
+          <div class="document-footer-left">Aplikasi SIAP • Dokumen Resmi Madrasah</div>
+          <div class="document-footer-right"></div>
+        </div>
+
         <!-- Beautiful Kop Surat (Letterhead) -->
         <div class="kop-container">
           ${logoUrl ? `

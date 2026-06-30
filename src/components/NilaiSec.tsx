@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Student, Grade, Teacher, ClassStaff, AcademicSetting, SumatifDetail } from '../types';
 import { downloadFile, convertToCSV, printToPDF } from '../utils/export';
+import * as XLSX from 'xlsx';
 
 interface NilaiSecProps {
   students: Student[];
@@ -274,103 +275,339 @@ export default function NilaiSec({
     return matchesSearch && matchesClass && matchesSubject;
   });
 
-  // Export to CSV
+  // Export to Excel (highly structured dual-row merged format)
   const handleExportExcel = () => {
-    const headers = [
-      'ID Nilai', 'NISN', 'Nama Siswa', 'Kelas', 'Mata Pelajaran', 
-      'Detail Sumatif', 'Rata-rata Sumatif', 'ASTS', 'ASAS', 'Rata-rata Asesmen', 
-      'Nilai Rapor', 'Tahun Pelajaran', 'Semester', 'Waktu Penginputan'
-    ];
-    const csvContent = convertToCSV(
-      filteredGrades.map(g => {
-        const sumAverages = g.sumatifDetails && g.sumatifDetails.length > 0
-          ? g.sumatifDetails.map(item => {
-              const h = item.harian || [];
-              return h.length > 0 ? h.reduce((a, b) => a + b, 0) / h.length : 0;
-            })
-          : (g.sumatif || []);
-        const sumAvg = sumAverages.length > 0 ? sumAverages.reduce((s, v) => s + v, 0) / sumAverages.length : 0;
-        const formattedSumAvg = Math.round(sumAvg * 10) / 10;
+    const targetGrades = filteredGrades;
+    const maxSums = Math.max(...targetGrades.map(g => g.sumatif?.length || 0), 4);
 
-        const detailSumatifStr = g.sumatifDetails && g.sumatifDetails.length > 0
-          ? g.sumatifDetails.map(item => {
-              const h = item.harian || [];
-              const avg = h.length > 0 ? Math.round(h.reduce((a, b) => a + b, 0) / h.length) : 0;
-              return `${item.name}: ${avg}`;
-            }).join(' | ')
-          : (g.sumatif || []).map((val, idx) => `Sumatif ${idx + 1}: ${val}`).join(' | ');
+    // Header Row 1
+    const row1 = ['NISN', 'Nama Siswa', 'JK', subjectFilter || 'Mata Pelajaran'];
+    for (let i = 1; i < maxSums; i++) {
+      row1.push(''); // spacing for merge of Subject name across sumatif columns
+    }
+    row1.push('Rata-Rata SUM', 'STS', 'ASAS', 'Rata-Rata ASAS');
 
-        const astsVal = g.sts ?? 0;
-        const asasVal = g.sas ?? 0;
-        const avgAsesmen = Math.round(((astsVal + asasVal) / 2) * 10) / 10;
-        const finalVal = Math.round(((sumAvg + astsVal + asasVal) / 3) * 10) / 10;
+    // Header Row 2
+    const row2 = ['', '', ''];
+    for (let i = 1; i <= maxSums; i++) {
+      row2.push(`SUM ${i}`);
+    }
+    row2.push('', '', '', '');
 
-        return {
-          ...g,
-          detailSumatifStr,
-          formattedSumAvg,
-          astsVal,
-          asasVal,
-          avgAsesmen,
-          finalVal
-        };
-      }),
-      headers,
-      [
-        'id', 'nisn', 'studentName', 'class', 'subject', 
-        'detailSumatifStr', 'formattedSumAvg', 'astsVal', 'asasVal', 'avgAsesmen', 
-        'finalVal', 'academicYear', 'semester', 'timestamp'
-      ]
-    );
-    downloadFile(csvContent, `Rekap_Nilai_Siswa_${academicYear.replace('/', '-')}.csv`, 'text/csv;charset=utf-8;');
-  };
+    // Data rows
+    const dataRows = targetGrades.map(g => {
+      const sGender = students.find(s => s.nisn === g.nisn)?.gender;
+      const jk = sGender === 'Laki-laki' ? 'L' : 'P';
+      
+      const sums: any[] = [];
+      for (let i = 0; i < maxSums; i++) {
+        sums.push(g.sumatif && g.sumatif[i] !== undefined ? g.sumatif[i] : '-');
+      }
 
-  // Export to PDF
-  const handleExportPDF = () => {
-    const headers = [
-      'No', 'NISN', 'Nama Siswa', 'Kelas', 'Mata Pelajaran', 
-      'Detail Sumatif', 'Rata Sumatif', 'ASTS', 'ASAS', 'Rata Asesmen', 
-      'Nilai Rapor', 'Status'
-    ];
-    const rows = filteredGrades.map((g, idx) => {
-      const sumAverages = g.sumatifDetails && g.sumatifDetails.length > 0
-        ? g.sumatifDetails.map(item => {
-            const h = item.harian || [];
-            return h.length > 0 ? h.reduce((a, b) => a + b, 0) / h.length : 0;
-          })
-        : (g.sumatif || []);
-      const sumAvg = sumAverages.length > 0 ? sumAverages.reduce((s, v) => s + v, 0) / sumAverages.length : 0;
-      const formattedSumAvg = Math.round(sumAvg * 10) / 10;
+      const sumAvg = g.sumatif && g.sumatif.length > 0 
+        ? Math.round((g.sumatif.reduce((a, b) => a + b, 0) / g.sumatif.length) * 10) / 10 
+        : 0;
 
-      const detailSumatifStr = g.sumatifDetails && g.sumatifDetails.length > 0
-        ? g.sumatifDetails.map(item => {
-            const h = item.harian || [];
-            const avg = h.length > 0 ? Math.round(h.reduce((a, b) => a + b, 0) / h.length) : 0;
-            return `${item.name}: ${avg}`;
-          }).join(', ')
-        : (g.sumatif || []).map((val, sIdx) => `Sumatif ${sIdx + 1}: ${val}`).join(', ');
-
-      const astsVal = g.sts ?? 0;
-      const asasVal = g.sas ?? 0;
-      const avgAsesmen = Math.round(((astsVal + asasVal) / 2) * 10) / 10;
-      const finalVal = Math.round(((sumAvg + astsVal + asasVal) / 3) * 10) / 10;
+      const stsVal = g.sts ?? 0;
+      const sasVal = g.sas ?? 0;
+      const rAsas = Math.round(((stsVal + sasVal) / 2) * 10) / 10;
 
       return [
-        String(idx + 1),
         g.nisn,
         g.studentName,
-        g.class,
-        g.subject,
-        detailSumatifStr,
-        String(formattedSumAvg),
-        String(astsVal),
-        String(asasVal),
-        String(avgAsesmen),
-        String(finalVal),
-        finalVal >= (academicSetting?.kkm ?? 75) ? 'LULUS' : 'REMIDI'
+        jk,
+        ...sums,
+        sumAvg,
+        stsVal,
+        sasVal,
+        rAsas
       ];
     });
-    printToPDF(`Laporan Rekap Nilai Akademik Siswa`, headers, rows, schoolName, academicYear, semester);
+
+    const aoa = [row1, row2, ...dataRows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Set merges
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // NISN
+      { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } }, // Nama Siswa
+      { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } }, // JK
+      { s: { r: 0, c: 3 }, e: { r: 0, c: 3 + maxSums - 1 } }, // Subject name
+      { s: { r: 0, c: 3 + maxSums }, e: { r: 1, c: 3 + maxSums } }, // Rata-Rata SUM
+      { s: { r: 0, c: 3 + maxSums + 1 }, e: { r: 1, c: 3 + maxSums + 1 } }, // STS
+      { s: { r: 0, c: 3 + maxSums + 2 }, e: { r: 1, c: 3 + maxSums + 2 } }, // ASAS
+      { s: { r: 0, c: 3 + maxSums + 3 }, e: { r: 1, c: 3 + maxSums + 3 } }  // Rata-Rata ASAS
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Nilai');
+    XLSX.writeFile(wb, `Rekap_Nilai_Siswa_${academicYear.replace('/', '-')}_${classFilter || 'Semua'}.xlsx`);
+  };
+
+  // Export to PDF / Print (A4 landscape high fidelity printer)
+  const handleExportPDF = () => {
+    const targetGrades = filteredGrades;
+    const maxSums = Math.max(...targetGrades.map(g => g.sumatif?.length || 0), 4);
+
+    // Retrieve system settings
+    let schoolAddress = '';
+    let logoUrl = '';
+    let headmasterName = 'H. Mulyono, S.Pd., M.Pd.';
+    try {
+      const sysRaw = localStorage.getItem('siap_system');
+      if (sysRaw) {
+        const sys = JSON.parse(sysRaw);
+        if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
+        if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.headmasterName) headmasterName = sys.headmasterName;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    let cityName = 'Indonesia';
+    if (schoolAddress) {
+      const parts = schoolAddress.split(',');
+      if (parts.length > 1) {
+        cityName = parts[parts.length - 2].trim().replace(/Kec\.|Kab\.|Kota/g, '').trim();
+      } else if (parts.length > 0) {
+        cityName = parts[0].trim();
+      }
+    }
+    if (!cityName || cityName.length > 20) {
+      cityName = 'Kota Sekolah';
+    }
+
+    const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Mohon izinkan popup untuk mencetak laporan.');
+      return;
+    }
+
+    // Generate sub-headers for Sumatif columns
+    const sumSubHeadersHtml = [];
+    for (let i = 1; i <= maxSums; i++) {
+      sumSubHeadersHtml.push(
+        `<th style="padding: 4px; border: 1px solid #94a3b8; text-align: center; font-size: 8px; width: 35px;">SUM ${i}</th>`
+      );
+    }
+
+    const rowsHtml = targetGrades.map((g, idx) => {
+      const sGender = students.find(s => s.nisn === g.nisn)?.gender;
+      const jk = sGender === 'Laki-laki' ? 'L' : 'P';
+
+      const sumsCellsHtml = [];
+      for (let i = 0; i < maxSums; i++) {
+        const val = g.sumatif && g.sumatif[i] !== undefined ? g.sumatif[i] : '-';
+        sumsCellsHtml.push(
+          `<td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 9px;">${val}</td>`
+        );
+      }
+
+      const sumAvg = g.sumatif && g.sumatif.length > 0 
+        ? Math.round((g.sumatif.reduce((a, b) => a + b, 0) / g.sumatif.length) * 10) / 10 
+        : 0;
+
+      const stsVal = g.sts ?? 0;
+      const sasVal = g.sas ?? 0;
+      const rAsas = Math.round(((stsVal + sasVal) / 2) * 10) / 10;
+
+      return `
+        <tr>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 9px;">${idx + 1}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; font-family: monospace; font-size: 9px;">${g.nisn}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 9px; text-align: left;">${g.studentName}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 9px;">${jk}</td>
+          ${sumsCellsHtml.join('')}
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; font-size: 9px; background-color: #f8fafc;">${sumAvg}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 9px;">${stsVal}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 9px;">${sasVal}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; font-size: 9px; background-color: #f0fdf4; color: #166534;">${rAsas}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Rekap Nilai Siswa</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+            @page {
+              size: A4 landscape;
+              margin: 8mm 8mm 12mm 8mm;
+            }
+            body {
+              font-family: 'Inter', sans-serif;
+              color: #1e293b;
+              margin: 0;
+              padding: 0;
+              background-color: #ffffff;
+              font-size: 10px;
+            }
+            .kop-container {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-bottom: 3px double #0f172a;
+              padding-bottom: 8px;
+              margin-bottom: 12px;
+            }
+            .kop-logo {
+              width: 55px;
+              height: 55px;
+              object-fit: contain;
+              margin-right: 15px;
+            }
+            .kop-text {
+              text-align: center;
+            }
+            .kop-school {
+              font-size: 14px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin: 0;
+              color: #0f172a;
+            }
+            .kop-sub {
+              font-size: 9px;
+              color: #475569;
+              margin: 3px 0 0 0;
+              line-height: 1.3;
+            }
+            .title-section {
+              text-align: center;
+              margin-bottom: 15px;
+            }
+            .title-main {
+              font-size: 11px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin: 0;
+            }
+            .title-sub {
+              font-size: 9px;
+              color: #475569;
+              margin: 3px 0 0 0;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+            }
+            th {
+              background-color: #f1f5f9;
+              color: #1e293b;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .signature-container {
+              margin-top: 15px;
+              display: flex;
+              justify-content: flex-end;
+              page-break-inside: avoid;
+            }
+            .signature-box {
+              text-align: center;
+              width: 220px;
+              font-size: 9px;
+            }
+            .signature-space {
+              height: 45px;
+            }
+            .document-footer {
+              position: fixed;
+              bottom: -5mm;
+              left: 0;
+              right: 0;
+              height: 15px;
+              display: flex;
+              justify-content: space-between;
+              font-size: 8px;
+              color: #94a3b8;
+              font-family: 'Inter', sans-serif;
+              border-top: 1px solid #cbd5e1;
+              padding-top: 4px;
+              z-index: 9999;
+            }
+            .document-footer-left {
+              font-weight: bold;
+            }
+            .document-footer-right::after {
+              content: "Halaman " counter(page);
+              font-weight: bold;
+            }
+          </style>
+        </head>
+        <body>
+          <!-- Footer on every page -->
+          <div class="document-footer">
+            <div class="document-footer-left">Aplikasi SIAP • Dokumen Resmi Madrasah</div>
+            <div class="document-footer-right"></div>
+          </div>
+
+          <div class="kop-container">
+            ${logoUrl ? `<img src="${logoUrl}" class="kop-logo" />` : ''}
+            <div class="kop-text">
+              <h1 class="kop-school">${schoolName}</h1>
+              <p class="kop-sub">${schoolAddress || 'Kementerian Agama Republik Indonesia'}</p>
+            </div>
+          </div>
+
+          <div class="title-section">
+            <h2 class="title-main">DAFTAR NILAI DAN HASIL ASESMEN AKADEMIK</h2>
+            <p class="title-sub">Kelas: <strong>${classFilter || 'SEMUA KELAS'}</strong> | Mapel: <strong>${subjectFilter || 'SEMUA MAPEL'}</strong> | TP: <strong>${academicYear}</strong></p>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px; width: 30px;">No</th>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px; width: 80px;">NISN</th>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: left; font-size: 9px; width: 180px;">Nama Siswa</th>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px; width: 40px;">JK</th>
+                <th colspan="${maxSums}" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px;">${subjectFilter || 'SUMATIF'}</th>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px; width: 80px;">Rata-Rata SUM</th>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px; width: 60px;">STS</th>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px; width: 60px;">ASAS</th>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px; width: 80px; background-color: #e2f0d9;">Rata-Rata ASAS</th>
+              </tr>
+              <tr>
+                ${sumSubHeadersHtml.join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <div class="signature-container">
+            <div class="signature-box">
+              <p>${cityName}, ${formattedDate}</p>
+              <p style="margin-top: 3px;">Mengetahui,</p>
+              <p style="font-weight: bold; margin-top: 2px;">Kepala Madrasah</p>
+              <div class="signature-space"></div>
+              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase;">${headmasterName}</p>
+              <p style="color: #64748b; margin: 2px 0 0 0;">NIP. 197812052005011002</p>
+            </div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   return (
@@ -741,7 +978,7 @@ export default function NilaiSec({
                 <button
                   onClick={handleExportExcel}
                   className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-emerald-400 border border-slate-700/60 rounded-xl transition duration-150"
-                  title="Ekspor Rekap Excel (CSV)"
+                  title="Ekspor Rekap Excel"
                 >
                   <FileSpreadsheet className="w-4.5 h-4.5" />
                 </button>

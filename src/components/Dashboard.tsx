@@ -238,69 +238,69 @@ export default function Dashboard({
         // --- ADMIN & GURU PORTAL VIEW ---
         <>
           {/* Key Metric Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-3 gap-1.5 sm:gap-4">
             {/* Siswa Card */}
-            <div className={`transition-all duration-300 p-4 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
             }`}>
-              <div className="flex justify-between items-start gap-2">
-                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Total Siswa Aktif</p>
-                <div className={`p-1.5 sm:p-2 rounded-xl shrink-0 transition-all duration-300 ${
+              <div className="flex justify-between items-start gap-1 sm:gap-2">
+                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[8px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Total Siswa Aktif</p>
+                <div className={`p-1 sm:p-2 rounded-lg sm:rounded-xl shrink-0 transition-all duration-300 ${
                   isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 }`}>
-                  <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Users className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-4">
-                <h3 className={`text-xl sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{totalStudents}</h3>
-                <p className={`text-[10px] md:text-xs mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
+              <div className="mt-2 sm:mt-4">
+                <h3 className={`text-sm sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{totalStudents}</h3>
+                <p className={`text-[7px] sm:text-[10px] md:text-xs mt-1 sm:mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
                   Terdistribusi dlm <span className={`${isDark ? 'text-emerald-400' : 'text-emerald-600'} font-bold font-mono`}>6</span> Kelas
                 </p>
               </div>
             </div>
 
             {/* Kehadiran Card */}
-            <div className={`transition-all duration-300 p-4 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
             }`}>
-              <div className="flex justify-between items-start gap-2">
-                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Kehadiran Hari Ini</p>
-                <div className={`p-1.5 sm:p-2 rounded-xl shrink-0 transition-all duration-300 ${
+              <div className="flex justify-between items-start gap-1 sm:gap-2">
+                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[8px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Kehadiran Hari Ini</p>
+                <div className={`p-1 sm:p-2 rounded-lg sm:rounded-xl shrink-0 transition-all duration-300 ${
                   isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 }`}>
-                  <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <CalendarCheck className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-4">
-                <h3 className={`text-xl sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{attendancePercentage}%</h3>
-                <p className={`text-[10px] md:text-xs mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
-                  Hadir hari ini: <span className={`${isDark ? 'text-emerald-400' : 'text-emerald-600'} font-bold font-mono`}>{todayAttendance.length || totalStudents}</span> anak
+              <div className="mt-2 sm:mt-4">
+                <h3 className={`text-sm sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{attendancePercentage}%</h3>
+                <p className={`text-[7px] sm:text-[10px] md:text-xs mt-1 sm:mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
+                  Hadir: <span className={`${isDark ? 'text-emerald-400' : 'text-emerald-600'} font-bold font-mono`}>{todayAttendance.length || totalStudents}</span> anak
                 </p>
               </div>
             </div>
 
             {/* Kasus Card */}
-            <div className={`transition-all duration-300 p-4 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
             }`}>
-              <div className="flex justify-between items-start gap-2">
-                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Laporan Kasus</p>
-                <div className={`p-1.5 sm:p-2 rounded-xl shrink-0 transition-all duration-300 ${
+              <div className="flex justify-between items-start gap-1 sm:gap-2">
+                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[8px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Laporan Kasus</p>
+                <div className={`p-1 sm:p-2 rounded-lg sm:rounded-xl shrink-0 transition-all duration-300 ${
                   isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 }`}>
-                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <AlertTriangle className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-4">
-                <h3 className={`text-xl sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{pendingCases}</h3>
-                <p className={`text-[10px] md:text-xs mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
-                  Butuh bimbingan <span className={`font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>BK</span>
+              <div className="mt-2 sm:mt-4">
+                <h3 className={`text-sm sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{pendingCases}</h3>
+                <p className={`text-[7px] sm:text-[10px] md:text-xs mt-1 sm:mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
+                  Butuh <span className={`font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>BK</span>
                 </p>
               </div>
             </div>
@@ -356,7 +356,7 @@ export default function Dashboard({
               <div>
                 <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Grafik Kehadiran Siswa ({academicYear})</h3>
                 <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" debounce={100}>
                     <BarChart data={attendanceChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e293b' : '#e2e8f0'} />
                       <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#475569'} fontSize={11} />
@@ -388,7 +388,7 @@ export default function Dashboard({
                 <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Kategori Notifikasi Email</h3>
                 <div className="h-48 w-full flex items-center justify-center">
                   {emailPieData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" debounce={100}>
                       <PieChart>
                         <Pie
                           data={emailPieData}
@@ -431,9 +431,7 @@ export default function Dashboard({
                 )}
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Chart 2: Grade Average */}
             <div className={`p-5 rounded-2xl flex flex-col justify-between transition-all duration-300 ${
               isDark ? 'bg-[#121e15] border border-[#17221c] nm-flat-dark-shallow' : 'bg-white border border-[#cbd5ce] nm-flat-light-shallow'
@@ -441,7 +439,7 @@ export default function Dashboard({
               <div>
                 <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Rata-rata Nilai Mapel</h3>
                 <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" debounce={100}>
                     <LineChart data={gradeChartData.length > 0 ? gradeChartData : defaultGradeChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e293b' : '#e2e8f0'} />
                       <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#475569'} fontSize={9} />
@@ -460,9 +458,11 @@ export default function Dashboard({
                 Visualisasi fluktuasi pencapaian nilai rata-rata mata pelajaran siswa.
               </p>
             </div>
+          </div>
 
+          <div className="w-full mt-6">
             {/* REAL-TIME EMAIL TRANSMISSION PANEL (CRITICAL FEATURE) */}
-            <div className={`lg:col-span-2 p-5 rounded-2xl flex flex-col justify-between transition-all duration-300 ${
+            <div className={`p-5 rounded-2xl flex flex-col justify-between transition-all duration-300 ${
               isDark ? 'bg-[#121e15] border border-[#17221c] nm-flat-dark-shallow' : 'bg-white border border-[#cbd5ce] nm-flat-light-shallow'
             }`}>
               <div>
@@ -573,68 +573,68 @@ export default function Dashboard({
         // --- SISWA PORTAL VIEW ---
         <>
           {/* Key Metric Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-3 gap-1.5 sm:gap-4">
             {/* Kehadiran Card */}
-            <div className={`transition-all duration-300 p-4 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
             }`}>
-              <div className="flex justify-between items-start gap-2">
-                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Persentase Kehadiran</p>
-                <div className={`p-1.5 sm:p-2 rounded-xl shrink-0 transition-all duration-300 ${
+              <div className="flex justify-between items-start gap-1 sm:gap-2">
+                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[8px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Persentase Kehadiran</p>
+                <div className={`p-1 sm:p-2 rounded-lg sm:rounded-xl shrink-0 transition-all duration-300 ${
                   isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 }`}>
-                  <CalendarCheck className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <CalendarCheck className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-4">
-                <h3 className={`text-xl sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{myAttendanceRate}%</h3>
-                <p className={`text-[10px] md:text-xs mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
-                  Hadir <span className={`${isDark ? 'text-emerald-400' : 'text-emerald-600'} font-bold font-mono`}>{myPresent}</span> dari {myAttendance.length} hari
+              <div className="mt-2 sm:mt-4">
+                <h3 className={`text-sm sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{myAttendanceRate}%</h3>
+                <p className={`text-[7px] sm:text-[10px] md:text-xs mt-1 sm:mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
+                  Hadir <span className={`${isDark ? 'text-emerald-400' : 'text-emerald-600'} font-bold font-mono`}>{myPresent}</span>/ {myAttendance.length} hr
                 </p>
               </div>
             </div>
 
             {/* Prestasi Card */}
-            <div className={`transition-all duration-300 p-4 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
             }`}>
-              <div className="flex justify-between items-start gap-2">
-                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Prestasi Anda</p>
-                <div className={`p-1.5 sm:p-2 rounded-xl shrink-0 transition-all duration-300 ${
+              <div className="flex justify-between items-start gap-1 sm:gap-2">
+                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[8px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Prestasi Anda</p>
+                <div className={`p-1 sm:p-2 rounded-lg sm:rounded-xl shrink-0 transition-all duration-300 ${
                   isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 }`}>
-                  <Trophy className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Trophy className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-4">
-                <h3 className={`text-xl sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{myAchievements.length}</h3>
-                <p className={`text-[10px] md:text-xs mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
+              <div className="mt-2 sm:mt-4">
+                <h3 className={`text-sm sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{myAchievements.length}</h3>
+                <p className={`text-[7px] sm:text-[10px] md:text-xs mt-1 sm:mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
                   Penghargaan Aktif
                 </p>
               </div>
             </div>
 
             {/* Catatan Kasus Card */}
-            <div className={`transition-all duration-300 p-4 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
             }`}>
-              <div className="flex justify-between items-start gap-2">
-                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Catatan Pelanggaran</p>
-                <div className={`p-1.5 sm:p-2 rounded-xl shrink-0 transition-all duration-300 ${
+              <div className="flex justify-between items-start gap-1 sm:gap-2">
+                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[8px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Catatan Pelanggaran</p>
+                <div className={`p-1 sm:p-2 rounded-lg sm:rounded-xl shrink-0 transition-all duration-300 ${
                   isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                 }`}>
-                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <AlertTriangle className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                 </div>
               </div>
-              <div className="mt-4">
-                <h3 className={`text-xl sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{myCases.length}</h3>
-                <p className={`text-[10px] md:text-xs mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
+              <div className="mt-2 sm:mt-4">
+                <h3 className={`text-sm sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{myCases.length}</h3>
+                <p className={`text-[7px] sm:text-[10px] md:text-xs mt-1 sm:mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
                   {myCases.length > 0 ? 'Perlu BK' : 'Sangat Baik!'}
                 </p>
               </div>
@@ -687,7 +687,7 @@ export default function Dashboard({
               <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Grafik Pencapaian Nilai Akademik Anda</h3>
               {myGradeChartData.length > 0 ? (
                 <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" debounce={100}>
                     <BarChart data={myGradeChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e293b' : '#e2e8f0'} />
                       <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#475569'} fontSize={11} />

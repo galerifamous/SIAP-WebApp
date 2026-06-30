@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { Student, Attendance, Holiday } from '../types';
 import { downloadFile, convertToCSV, printToPDF } from '../utils/export';
+import * as XLSX from 'xlsx';
 
 interface AbsensiSecProps {
   students: Student[];
@@ -157,7 +158,7 @@ export default function AbsensiSec({
             { facingMode: cameraMode },
             {
               fps: 10,
-              qrbox: { width: 220, height: 220 }
+              qrbox: { width: 300, height: 300 }
             },
             (decodedText: string) => {
               handleBarcodeScannedRef.current(decodedText);
@@ -240,7 +241,7 @@ export default function AbsensiSec({
     return null;
   };
 
-  // Monthly rekap CSV generator
+  // Monthly rekap Excel generator (highly structured dual-row merged format)
   const handleExportMonthlyCSV = () => {
     const yearNum = Number(monthlyYear);
     const monthNum = Number(monthlyMonth);
@@ -250,132 +251,377 @@ export default function AbsensiSec({
       ? students.filter(s => s.class === monthlyClass)
       : students;
 
-    const dateKeys: string[] = [];
-    for (let d = 1; d <= daysInMonth; d++) {
-      dateKeys.push(`${targetPrefix}-${String(d).padStart(2, '0')}`);
-    }
-
-    const headers = [
-      'NISN',
-      'Nama Siswa',
-      'Jenis Kelamin',
-      ...dateKeys.map((_, idx) => `Tanggal ${idx + 1}`),
-      'Total Hadir (H)',
-      'Total Sakit (S)',
-      'Total Izin (I)',
-      'Total Alpa (A)'
-    ];
-
-    const rows = targetStudents.map((student) => {
-      const studentAtts = attendance.filter(
-        att => att.nisn === student.nisn && att.date.startsWith(targetPrefix)
-      );
-
-      const dailyStatuses = dateKeys.map(dateKey => {
-        const att = studentAtts.find(a => a.date === dateKey);
-        if (!att) return '';
-        const statusCharMap: Record<string, string> = {
-          Hadir: 'H',
-          Sakit: 'S',
-          Izin: 'I',
-          Alpa: 'A'
-        };
-        return statusCharMap[att.status] || '';
-      });
-
-      const totalH = dailyStatuses.filter(s => s === 'H').length;
-      const totalS = dailyStatuses.filter(s => s === 'S').length;
-      const totalI = dailyStatuses.filter(s => s === 'I').length;
-      const totalA = dailyStatuses.filter(s => s === 'A').length;
-
-      return [
-        student.nisn,
-        student.name,
-        student.gender,
-        ...dailyStatuses,
-        String(totalH),
-        String(totalS),
-        String(totalI),
-        String(totalA)
-      ];
-    });
-
     const monthNames = [
       'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
-    const monthName = monthNames[monthlyMonth - 1];
+    const monthName = monthNames[monthNum - 1];
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(val => `"${val.replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
+    // Header 1
+    const row1 = ['No', 'NISN', 'Nama Siswa', 'JK (L/P)', `${monthName.toUpperCase()} ${monthlyYear}`];
+    for (let d = 1; d < daysInMonth; d++) {
+      row1.push(''); // spacing for monthly merge
+    }
+    row1.push('Jumlah', '', '', '');
 
-    downloadFile(
-      csvContent,
-      `Rekap_Bulanan_Absensi_${monthlyClass || 'Semua_Kelas'}_${monthName}_${monthlyYear}.csv`,
-      'text/csv;charset=utf-8;'
-    );
+    // Header 2
+    const row2 = ['', '', '', ''];
+    for (let d = 1; d <= daysInMonth; d++) {
+      row2.push(String(d));
+    }
+    row2.push('H', 'S', 'I', 'A');
+
+    // Rows data
+    const dataRows = targetStudents.map((student, idx) => {
+      const studentAtts = attendance.filter(
+        att => att.nisn === student.nisn && att.date.startsWith(targetPrefix)
+      );
+
+      let hCount = 0;
+      let sCount = 0;
+      let iCount = 0;
+      let aCount = 0;
+
+      const dailyStatuses = [];
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${targetPrefix}-${String(d).padStart(2, '0')}`;
+        const att = studentAtts.find(a => a.date === dateStr);
+        let char = '';
+        if (att) {
+          if (att.status === 'Hadir') { char = 'H'; hCount++; }
+          else if (att.status === 'Sakit') { char = 'S'; sCount++; }
+          else if (att.status === 'Izin') { char = 'I'; iCount++; }
+          else if (att.status === 'Alpa') { char = 'A'; aCount++; }
+        }
+        dailyStatuses.push(char);
+      }
+
+      return [
+        idx + 1,
+        student.nisn,
+        student.name,
+        student.gender === 'Laki-laki' ? 'L' : 'P',
+        ...dailyStatuses,
+        hCount,
+        sCount,
+        iCount,
+        aCount
+      ];
+    });
+
+    const aoa = [row1, row2, ...dataRows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Set merges
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // No
+      { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } }, // NISN
+      { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } }, // Nama Siswa
+      { s: { r: 0, c: 3 }, e: { r: 1, c: 3 } }, // JK
+      { s: { r: 0, c: 4 }, e: { r: 0, c: 4 + daysInMonth - 1 } }, // Bulan 1-31
+      { s: { r: 0, c: 4 + daysInMonth }, e: { r: 0, c: 4 + daysInMonth + 3 } } // Jumlah
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Presensi Bulanan');
+    XLSX.writeFile(wb, `Rekap_Presensi_Bulanan_${monthlyClass || 'Semua'}_${monthName}_${monthlyYear}.xlsx`);
   };
 
-  // Monthly rekap PDF generator
+  // Monthly rekap PDF generator (A4 landscape high fidelity printer)
   const handleExportMonthlyPDF = () => {
+    const yearNum = Number(monthlyYear);
+    const monthNum = Number(monthlyMonth);
+    const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
     const targetPrefix = `${monthlyYear}-${String(monthlyMonth).padStart(2, '0')}`;
     const targetStudents = monthlyClass 
       ? students.filter(s => s.class === monthlyClass)
       : students;
 
-    const headers = [
-      'No',
-      'NISN',
-      'Nama Siswa',
-      'Kelas',
-      'Hadir (H)',
-      'Sakit (S)',
-      'Izin (I)',
-      'Alpa (A)',
-      'Persentase Kehadiran'
-    ];
-
-    const rows = targetStudents.map((student, idx) => {
-      const studentAtts = attendance.filter(
-        att => att.nisn === student.nisn && att.date.startsWith(targetPrefix)
-      );
-
-      const hadir = studentAtts.filter(a => a.status === 'Hadir').length;
-      const sakit = studentAtts.filter(a => a.status === 'Sakit').length;
-      const izin = studentAtts.filter(a => a.status === 'Izin').length;
-      const alpa = studentAtts.filter(a => a.status === 'Alpa').length;
-      const total = hadir + sakit + izin + alpa;
-      const percentage = total > 0 ? `${Math.round((hadir / total) * 100)}%` : '100%';
-
-      return [
-        String(idx + 1),
-        student.nisn,
-        student.name,
-        student.class,
-        String(hadir),
-        String(sakit),
-        String(izin),
-        String(alpa),
-        percentage
-      ];
-    });
-
     const monthNames = [
       'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
-    const monthName = monthNames[monthlyMonth - 1];
+    const monthName = monthNames[monthNum - 1];
 
-    printToPDF(
-      `Rekap Absensi Bulanan - ${monthName} ${monthlyYear} (${monthlyClass || 'Semua Kelas'})`,
-      headers,
-      rows,
-      schoolName,
-      academicYear,
-      semester
-    );
+    // Retrieve headmaster and system variables
+    let schoolAddress = '';
+    let logoUrl = '';
+    let headmasterName = 'H. Mulyono, S.Pd., M.Pd.';
+    try {
+      const sysRaw = localStorage.getItem('siap_system');
+      if (sysRaw) {
+        const sys = JSON.parse(sysRaw);
+        if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
+        if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.headmasterName) headmasterName = sys.headmasterName;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    let cityName = 'Indonesia';
+    if (schoolAddress) {
+      const parts = schoolAddress.split(',');
+      if (parts.length > 1) {
+        cityName = parts[parts.length - 2].trim().replace(/Kec\.|Kab\.|Kota/g, '').trim();
+      } else if (parts.length > 0) {
+        cityName = parts[0].trim();
+      }
+    }
+    if (!cityName || cityName.length > 20) {
+      cityName = 'Kota Sekolah';
+    }
+
+    const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Mohon aktifkan popup untuk mencetak laporan.');
+      return;
+    }
+
+    const dateKeys: string[] = [];
+    const dateSubHeadersHtml: string[] = [];
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${targetPrefix}-${String(d).padStart(2, '0')}`;
+      dateKeys.push(dateStr);
+
+      const dateObj = new Date(yearNum, monthNum - 1, d);
+      const isSunday = dateObj.getDay() === 0;
+      const holiday = holidays.find(h => h.date === dateStr);
+      const isHoliday = isSunday || !!holiday;
+
+      const bgStyle = isHoliday ? 'background-color: #fee2e2; color: #dc2626; font-weight: bold;' : '';
+      dateSubHeadersHtml.push(
+        `<th style="padding: 4px; border: 1px solid #94a3b8; text-align: center; font-size: 8px; width: 18px; ${bgStyle}">${d}</th>`
+      );
+    }
+
+    const studentRowsHtml = targetStudents.map((student, sIdx) => {
+      const studentAtts = attendance.filter(
+        att => att.nisn === student.nisn && att.date.startsWith(targetPrefix)
+      );
+
+      let hCount = 0;
+      let sCount = 0;
+      let iCount = 0;
+      let aCount = 0;
+
+      const cellsHtml = dateKeys.map((dateStr, dIdx) => {
+        const dateObj = new Date(yearNum, monthNum - 1, dIdx + 1);
+        const isSunday = dateObj.getDay() === 0;
+        const holiday = holidays.find(h => h.date === dateStr);
+        const isHoliday = isSunday || !!holiday;
+
+        const att = studentAtts.find(a => a.date === dateStr);
+        let statusChar = '';
+        if (att) {
+          if (att.status === 'Hadir') { statusChar = 'H'; hCount++; }
+          else if (att.status === 'Sakit') { statusChar = 'S'; sCount++; }
+          else if (att.status === 'Izin') { statusChar = 'I'; iCount++; }
+          else if (att.status === 'Alpa') { statusChar = 'A'; aCount++; }
+        }
+
+        const bgStyle = isHoliday ? 'background-color: #fca5a5; color: #b91c1c; font-weight: bold;' : '';
+        return `<td style="padding: 4px; border: 1px solid #cbd5e1; text-align: center; font-size: 8px; ${bgStyle}">${statusChar}</td>`;
+      }).join('');
+
+      return `
+        <tr>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 9px;">${sIdx + 1}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; font-family: monospace; font-size: 9px;">${student.nisn}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; font-weight: bold; font-size: 9px; text-align: left;">${student.name}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 9px;">${student.gender === 'Laki-laki' ? 'L' : 'P'}</td>
+          ${cellsHtml}
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; font-size: 9px; background-color: #f8fafc;">${hCount}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; font-size: 9px; background-color: #f8fafc;">${sCount}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; font-size: 9px; background-color: #f8fafc;">${iCount}</td>
+          <td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold; font-size: 9px; background-color: #f8fafc;">${aCount}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Rekap Bulanan Absensi - ${monthName} ${monthlyYear}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+            @page {
+              size: A4 landscape;
+              margin: 8mm 8mm 12mm 8mm;
+            }
+            body {
+              font-family: 'Inter', sans-serif;
+              color: #1e293b;
+              margin: 0;
+              padding: 0;
+              background-color: #ffffff;
+              font-size: 10px;
+            }
+            .kop-container {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border-bottom: 3px double #0f172a;
+              padding-bottom: 8px;
+              margin-bottom: 12px;
+            }
+            .kop-logo {
+              width: 55px;
+              height: 55px;
+              object-fit: contain;
+              margin-right: 15px;
+            }
+            .kop-text {
+              text-align: center;
+            }
+            .kop-school {
+              font-size: 14px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin: 0;
+              color: #0f172a;
+            }
+            .kop-sub {
+              font-size: 9px;
+              color: #475569;
+              margin: 3px 0 0 0;
+              line-height: 1.3;
+            }
+            .title-section {
+              text-align: center;
+              margin-bottom: 15px;
+            }
+            .title-main {
+              font-size: 11px;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin: 0;
+            }
+            .title-sub {
+              font-size: 9px;
+              color: #475569;
+              margin: 3px 0 0 0;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+            }
+            th {
+              background-color: #f1f5f9;
+              color: #1e293b;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .signature-container {
+              margin-top: 15px;
+              display: flex;
+              justify-content: flex-end;
+              page-break-inside: avoid;
+            }
+            .signature-box {
+              text-align: center;
+              width: 220px;
+              font-size: 9px;
+            }
+            .signature-space {
+              height: 45px;
+            }
+            .document-footer {
+              position: fixed;
+              bottom: -5mm;
+              left: 0;
+              right: 0;
+              height: 15px;
+              display: flex;
+              justify-content: space-between;
+              font-size: 8px;
+              color: #94a3b8;
+              font-family: 'Inter', sans-serif;
+              border-top: 1px solid #cbd5e1;
+              padding-top: 4px;
+              z-index: 9999;
+            }
+            .document-footer-left {
+              font-weight: bold;
+            }
+            .document-footer-right::after {
+              content: "Halaman " counter(page);
+              font-weight: bold;
+            }
+          </style>
+        </head>
+        <body>
+          <!-- Footer on every page -->
+          <div class="document-footer">
+            <div class="document-footer-left">Aplikasi SIAP • Dokumen Resmi Madrasah</div>
+            <div class="document-footer-right"></div>
+          </div>
+
+          <div class="kop-container">
+            ${logoUrl ? `<img src="${logoUrl}" class="kop-logo" />` : ''}
+            <div class="kop-text">
+              <h1 class="kop-school">${schoolName}</h1>
+              <p class="kop-sub">${schoolAddress || 'Kementerian Agama Republik Indonesia'}</p>
+            </div>
+          </div>
+
+          <div class="title-section">
+            <h2 class="title-main">REKAPITULASI PRESENSI BULANAN SISWA</h2>
+            <p class="title-sub">Bulan: <strong>${monthName.toUpperCase()} ${monthlyYear}</strong> | Kelas: <strong>${monthlyClass || 'SEMUA KELAS'}</strong> | TP: <strong>${academicYear}</strong></p>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px; width: 30px;">No</th>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px; width: 75px;">NISN</th>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: left; font-size: 9px; width: 180px;">Nama Siswa</th>
+                <th rowspan="2" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px; width: 40px;">JK</th>
+                <th colspan="${daysInMonth}" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px;">Tanggal</th>
+                <th colspan="4" style="padding: 6px; border: 1px solid #94a3b8; text-align: center; font-size: 9px; width: 80px;">Jumlah</th>
+              </tr>
+              <tr>
+                ${dateSubHeadersHtml.join('')}
+                <th style="padding: 4px; border: 1px solid #94a3b8; text-align: center; font-size: 8px; width: 20px; background-color: #f8fafc;">H</th>
+                <th style="padding: 4px; border: 1px solid #94a3b8; text-align: center; font-size: 8px; width: 20px; background-color: #f8fafc;">S</th>
+                <th style="padding: 4px; border: 1px solid #94a3b8; text-align: center; font-size: 8px; width: 20px; background-color: #f8fafc;">I</th>
+                <th style="padding: 4px; border: 1px solid #94a3b8; text-align: center; font-size: 8px; width: 20px; background-color: #f8fafc;">A</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${studentRowsHtml}
+            </tbody>
+          </table>
+
+          <div class="signature-container">
+            <div class="signature-box">
+              <p>${cityName}, ${formattedDate}</p>
+              <p style="margin-top: 3px;">Mengetahui,</p>
+              <p style="font-weight: bold; margin-top: 2px;">Kepala Madrasah</p>
+              <div class="signature-space"></div>
+              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase;">${headmasterName}</p>
+              <p style="color: #64748b; margin: 2px 0 0 0;">NIP. 197812052005011002</p>
+            </div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() { window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   // Audio simulation (Beep!)
@@ -489,7 +735,7 @@ export default function AbsensiSec({
               </div>
               
               {/* Animated Scan Stage */}
-              <div className="relative my-8 mx-auto w-full max-w-[320px] aspect-square rounded-2xl border border-slate-700/60 overflow-hidden bg-slate-900 shadow-2xl flex flex-col items-center justify-center">
+              <div className="relative my-8 mx-auto w-full max-w-[420px] aspect-square rounded-2xl border border-slate-700/60 overflow-hidden bg-slate-900 shadow-2xl flex flex-col items-center justify-center">
                 {/* Real HTML5 QR Scanner Container */}
                 <div 
                   id="real-camera-reader" 
@@ -879,7 +1125,7 @@ export default function AbsensiSec({
                         className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-1.5 rounded-lg text-[10px] uppercase flex items-center justify-center gap-1.5 transition shadow-lg shadow-emerald-500/10"
                       >
                         <FileSpreadsheet className="w-3.5 h-3.5" />
-                        <span>Unduh CSV</span>
+                        <span>Unduh Excel</span>
                       </button>
                       <button
                         type="button"

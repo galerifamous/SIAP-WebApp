@@ -1,6 +1,11 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
 const PORT = 3000;
@@ -85,6 +90,55 @@ app.post("/api/save-gas-url", (req, res) => {
     res.json({ success: true });
   } else {
     res.status(500).json({ success: false, message: "Failed to save gasUrl." });
+  }
+});
+
+// API: Send Email via SMTP or simulated fallback
+app.post("/api/send-email", async (req, res) => {
+  const { recipient, subject, content, senderName, senderEmail } = req.body;
+
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpSecure = process.env.SMTP_SECURE === "true";
+  const smtpFrom = process.env.SMTP_FROM || smtpUser || "noreply@madrasah.sch.id";
+
+  if (smtpHost && smtpUser && smtpPass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpSecure,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      });
+
+      const info = await transporter.sendMail({
+        from: `"${senderName || "SIAP Akademik"}" <${senderEmail || smtpFrom}>`,
+        to: recipient,
+        replyTo: senderEmail || undefined,
+        subject: subject,
+        text: content,
+        html: content.replace(/\n/g, "<br>"), // basic plaintext to HTML wrapper
+      });
+
+      console.log("Real SMTP Email Sent successfully:", info.messageId);
+      res.json({ success: true, simulated: false, messageId: info.messageId });
+    } catch (err: any) {
+      console.error("SMTP sending failed:", err);
+      res.status(500).json({ success: false, message: `Gagal mengirim email riil: ${err.message}` });
+    }
+  } else {
+    // Simulated fallback
+    console.log(`[SIMULATION] Sending email to ${recipient}: ${subject}`);
+    res.json({ 
+      success: true, 
+      simulated: true, 
+      message: "SMTP belum dikonfigurasi di .env. Pengiriman email disimulasikan." 
+    });
   }
 });
 
