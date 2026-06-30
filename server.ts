@@ -64,8 +64,33 @@ let db: any = null;
 
 function initFirebase() {
   if (db) return db;
+
+  // 1. Try initializing via Environment Variables (standard & highly recommended for Vercel/Production)
+  const envProjectId = process.env.FIREBASE_PROJECT_ID;
+  const envApiKey = process.env.FIREBASE_API_KEY;
+  if (envProjectId && envApiKey) {
+    try {
+      const firebaseConfig = {
+        apiKey: envApiKey,
+        authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+        projectId: envProjectId,
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.FIREBASE_APP_ID
+      };
+      const appObj = initializeApp(firebaseConfig);
+      db = getFirestore(appObj, process.env.FIREBASE_DATABASE_ID || "(default)");
+      console.log("Firebase Firestore initialized successfully via Environment Variables. Project ID:", envProjectId);
+      return db;
+    } catch (error) {
+      console.error("Firebase init via Environment Variables failed:", error);
+    }
+  }
+
+  // 2. Fallback to local config file
   const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
   if (!fs.existsSync(configPath)) {
+    console.warn("Firebase config file not found at:", configPath, "and env variables are not fully configured. Using offline JSON database fallback.");
     return null;
   }
   try {
