@@ -1,0 +1,178 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Student record including savings, fees, and photo",
+      "type": "object",
+      "properties": {
+        "nisn": { "type": "string", "description": "National Student Identifier Number" },
+        "name": { "type": "string", "description": "Full name of the student" },
+        "class": { "type": "string", "description": "Assigned class name" },
+        "pob": { "type": "string", "description": "Place of birth" },
+        "dob": { "type": "string", "description": "Date of birth" },
+        "gender": { "type": "string", "description": "Gender of the student" },
+        "parentName": { "type": "string", "description": "Name of the parent or guardian" },
+        "parentEmail": { "type": "string", "description": "Contact email of the parent" },
+        "address": { "type": "string", "description": "Residential address" },
+        "photoUrl": { "type": "string", "description": "Base64 string or URL of student photo" },
+        "savings": { "type": "number", "description": "Total savings balance" },
+        "cashBill": { "type": "number", "description": "Pending class cash fees/bill" }
+      },
+      "required": ["nisn", "name", "class"]
+    },
+    "Teacher": {
+      "title": "Teacher",
+      "description": "Teacher account with credentials and assignment",
+      "type": "object",
+      "properties": {
+        "nuptk": { "type": "string", "description": "Teacher National ID" },
+        "name": { "type": "string", "description": "Full name with academic degree" },
+        "subject": { "type": "string", "description": "Primary teaching subject" },
+        "email": { "type": "string", "description": "Email address" },
+        "username": { "type": "string", "description": "System login username" },
+        "password": { "type": "string", "description": "System login password" }
+      },
+      "required": ["nuptk", "name", "username", "password"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily student attendance log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nisn": { "type": "string" },
+        "studentName": { "type": "string" },
+        "class": { "type": "string" },
+        "date": { "type": "string" },
+        "status": { "type": "string", "enum": ["Hadir", "Sakit", "Izin", "Alpa"] },
+        "academicYear": { "type": "string" },
+        "semester": { "type": "string" },
+        "timestamp": { "type": "string" }
+      }
+    },
+    "Grade": {
+      "title": "Grade",
+      "description": "Academic scores for a subject and semester",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nisn": { "type": "string" },
+        "studentName": { "type": "string" },
+        "class": { "type": "string" },
+        "subject": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "semester": { "type": "string" },
+        "sumatif": { "type": "array" },
+        "sts": { "type": "number" },
+        "sas": { "type": "number" },
+        "finalScore": { "type": "number" },
+        "timestamp": { "type": "string" }
+      }
+    },
+    "CaseReport": {
+      "title": "CaseReport",
+      "description": "Student discipline and counseling cases",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nisn": { "type": "string" },
+        "studentName": { "type": "string" },
+        "class": { "type": "string" },
+        "date": { "type": "string" },
+        "caseName": { "type": "string" },
+        "category": { "type": "string" },
+        "resolution": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "semester": { "type": "string" }
+      }
+    },
+    "Achievement": {
+      "title": "Achievement",
+      "description": "Student academic or non-academic achievements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nisn": { "type": "string" },
+        "studentName": { "type": "string" },
+        "class": { "type": "string" },
+        "date": { "type": "string" },
+        "achievementName": { "type": "string" },
+        "level": { "type": "string" },
+        "description": { "type": "string" },
+        "academicYear": { "type": "string" },
+        "semester": { "type": "string" }
+      }
+    },
+    "EmailLog": {
+      "title": "EmailLog",
+      "description": "Logs of system-generated parent emails",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "recipient": { "type": "string" },
+        "subject": { "type": "string" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    },
+    "Holiday": {
+      "title": "Holiday",
+      "description": "Academic holiday logs",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "name": { "type": "string" }
+      }
+    },
+    "ClassStaff": {
+      "title": "ClassStaff",
+      "description": "Class counselor/staff assignments",
+      "type": "object",
+      "properties": {
+        "classId": { "type": "string" },
+        "waliKelasNuptk": { "type": "string" },
+        "guruKelasNuptk": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/students/{nisn}": {
+      "schema": "Student",
+      "description": "Collection of student academic and financial records"
+    },
+    "/teachers/{nuptk}": {
+      "schema": "Teacher",
+      "description": "Collection of teacher logins and profiles"
+    },
+    "/attendance/{id}": {
+      "schema": "Attendance",
+      "description": "Collection of daily attendance logs"
+    },
+    "/grades/{id}": {
+      "schema": "Grade",
+      "description": "Collection of student academic grades"
+    },
+    "/cases/{id}": {
+      "schema": "CaseReport",
+      "description": "Collection of student counseling cases"
+    },
+    "/achievements/{id}": {
+      "schema": "Achievement",
+      "description": "Collection of student achievements"
+    },
+    "/emails/{id}": {
+      "schema": "EmailLog",
+      "description": "Collection of sent parent notifications"
+    },
+    "/holidays/{id}": {
+      "schema": "Holiday",
+      "description": "Collection of custom calendar holidays"
+    },
+    "/class_staffs/{classId}": {
+      "schema": "ClassStaff",
+      "description": "Collection of teacher assignments to class counselor roles"
+    }
+  }
+}

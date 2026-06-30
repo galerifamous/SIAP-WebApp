@@ -889,12 +889,40 @@ export default function NilaiSec({
                 </div>
               )}
 
-              <button
-                type="submit"
-                className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-lg shadow-lg shadow-emerald-500/10 transition"
-              >
-                Simpan & Catat Nilai
-              </button>
+              {(() => {
+                const existingGrade = selectedStudentNisn 
+                  ? grades.find(g => g.nisn === selectedStudentNisn && g.subject === inputSubject && g.academicYear === academicYear && g.semester === semester) 
+                  : null;
+                return (
+                  <div className="flex gap-3">
+                    <button
+                      type="submit"
+                      className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-lg shadow-lg shadow-emerald-500/10 transition cursor-pointer"
+                    >
+                      {existingGrade ? 'Perbarui & Simpan Nilai' : 'Simpan & Catat Nilai'}
+                    </button>
+                    {existingGrade && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Apakah Anda yakin ingin menghapus data nilai ${existingGrade.studentName} untuk Mata Pelajaran ${inputSubject}?`)) {
+                            onDeleteGrade(existingGrade.id);
+                            // Reset form fields
+                            setSumatifDetails([{ name: 'Sumatif 1', harian: [] }]);
+                            setStsVal('');
+                            setSasVal('');
+                            setSelectedStudentNisn('');
+                            setSuccessMsg('Data nilai siswa berhasil dihapus dari sistem!');
+                          }
+                        }}
+                        className="bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/30 font-bold py-2.5 px-4 rounded-lg transition cursor-pointer"
+                      >
+                        Hapus Nilai
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
             </form>
           </div>
 

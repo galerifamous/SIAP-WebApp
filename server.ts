@@ -3,6 +3,8 @@ import path from "path";
 import fs from "fs";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 
 // Load environment variables
 dotenv.config();
@@ -57,10 +59,330 @@ const saveDb = (data: any) => {
   }
 };
 
+// --- FIREBASE FIRESTORE UTILITIES ---
+let db: any = null;
+
+function initFirebase() {
+  if (db) return db;
+  const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+  if (!fs.existsSync(configPath)) {
+    return null;
+  }
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    if (!config.projectId || !config.apiKey) return null;
+
+    const firebaseConfig = {
+      apiKey: config.apiKey,
+      authDomain: config.authDomain,
+      projectId: config.projectId,
+      storageBucket: config.storageBucket,
+      messagingSenderId: config.messagingSenderId,
+      appId: config.appId
+    };
+    const appObj = initializeApp(firebaseConfig);
+    db = getFirestore(appObj, config.firestoreDatabaseId || "(default)");
+    console.log("Firebase Firestore initialized successfully with Project ID:", config.projectId);
+    return db;
+  } catch (error) {
+    console.error("Firebase init failed:", error);
+    return null;
+  }
+}
+
+// Save a large string by chunking it into multiple documents in a "chunks" subcollection
+async function saveLargeField(firebaseDb: any, docPath: { col: string, id: string }, value: string) {
+  try {
+    const { col, id } = docPath;
+    if (!value) {
+      // Clear any existing chunked data
+      const chunksColRef = collection(firebaseDb, col, id, "chunks");
+      const existingChunks = await getDocs(chunksColRef);
+      const deletePromises: Promise<any>[] = [];
+      existingChunks.forEach(docSnap => {
+        deletePromises.push(deleteDoc(docSnap.ref));
+      });
+      await Promise.all(deletePromises);
+
+      await setDoc(doc(firebaseDb, col, id), { type: "simple", value: "" });
+      return;
+    }
+
+    // If string is small (< 500KB), save it directly
+    if (value.length < 500000) {
+      await setDoc(doc(firebaseDb, col, id), { type: "simple", value });
+      return;
+    }
+
+    // Otherwise, chunk it into ~800KB blocks
+    const CHUNK_SIZE = 800000;
+    const chunks: string[] = [];
+    for (let i = 0; i < value.length; i += CHUNK_SIZE) {
+      chunks.push(value.substring(i, i + CHUNK_SIZE));
+    }
+
+    // Clear existing chunks first
+    const chunksColRef = collection(firebaseDb, col, id, "chunks");
+    const existingChunks = await getDocs(chunksColRef);
+    const deletePromises: Promise<any>[] = [];
+    existingChunks.forEach(docSnap => {
+      deletePromises.push(deleteDoc(docSnap.ref));
+    });
+    await Promise.all(deletePromises);
+
+    // Save new chunks
+    const writePromises = chunks.map((chunk, idx) => {
+      return setDoc(doc(firebaseDb, col, id, "chunks", `c_${idx}`), { chunk, idx });
+    });
+    await Promise.all(writePromises);
+
+    // Update the parent document
+    await setDoc(doc(firebaseDb, col, id), { type: "chunked", count: chunks.length });
+    console.log(`Successfully saved chunked asset to ${col}/${id} with ${chunks.length} chunks.`);
+  } catch (err) {
+    console.error(`Error saving large field at ${docPath.col}/${docPath.id}:`, err);
+  }
+}
+
+// Load a potentially chunked large string
+async function loadLargeField(firebaseDb: any, col: string, id: string): Promise<string> {
+  try {
+    const docRef = doc(firebaseDb, col, id);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return "";
+    const data = docSnap.data();
+    if (data.type === "simple") {
+      return data.value || "";
+    }
+    if (data.type === "chunked") {
+      const count = data.count || 0;
+      const chunksColRef = collection(firebaseDb, col, id, "chunks");
+      const snapshot = await getDocs(chunksColRef);
+      const chunkMap: { [key: number]: string } = {};
+      snapshot.forEach(docSnap => {
+        const cData = docSnap.data();
+        chunkMap[cData.idx] = cData.chunk || "";
+      });
+      let fullStr = "";
+      for (let i = 0; i < count; i++) {
+        fullStr += chunkMap[i] || "";
+      }
+      return fullStr;
+    }
+    return "";
+  } catch (err) {
+    console.error(`Error loading large field ${col}/${id}:`, err);
+    return "";
+  }
+}
+
+// Delete large field and its chunks
+async function deleteLargeField(firebaseDb: any, col: string, id: string) {
+  try {
+    const chunksColRef = collection(firebaseDb, col, id, "chunks");
+    const snapshot = await getDocs(chunksColRef);
+    const deletePromises: Promise<any>[] = [];
+    snapshot.forEach(docSnap => {
+      deletePromises.push(deleteDoc(docSnap.ref));
+    });
+    await Promise.all(deletePromises);
+    await deleteDoc(doc(firebaseDb, col, id));
+  } catch (err) {
+    console.error(`Error deleting large field ${col}/${id}:`, err);
+  }
+}
+
+async function loadCollection(firebaseDb: any, colName: string): Promise<any[]> {
+  try {
+    const colRef = collection(firebaseDb, colName);
+    const snapshot = await getDocs(colRef);
+    const result: any[] = [];
+    snapshot.forEach(docSnap => {
+      result.push(docSnap.data());
+    });
+
+    // If loading students, transparently fetch externalized student photoUrls if they are externalized
+    if (colName === "students") {
+      const fetchPhotoPromises = result.map(async (student) => {
+        if (student.photoUrl === "__EXTERNAL_FIRESTORE_PHOTO__") {
+          student.photoUrl = await loadLargeField(firebaseDb, "student_photos", student.nisn);
+        }
+      });
+      await Promise.all(fetchPhotoPromises);
+    }
+
+    return result;
+  } catch (err) {
+    console.error(`Error loading collection ${colName}:`, err);
+    return [];
+  }
+}
+
+async function loadSettings(firebaseDb: any): Promise<any> {
+  try {
+    const colRef = collection(firebaseDb, "settings");
+    const snapshot = await getDocs(colRef);
+    const settings: any = {};
+    snapshot.forEach(docSnap => {
+      settings[docSnap.id] = docSnap.data();
+    });
+    return settings;
+  } catch (err) {
+    console.error("Error loading settings:", err);
+    return {};
+  }
+}
+
+async function syncCollection(firebaseDb: any, colName: string, list: any[] | undefined, getId: (item: any) => string) {
+  if (!list || !Array.isArray(list)) return;
+
+  try {
+    const colRef = collection(firebaseDb, colName);
+    const snapshot = await getDocs(colRef);
+    const existingIds = new Set<string>();
+
+    snapshot.forEach(docSnap => {
+      existingIds.add(docSnap.id);
+    });
+
+    const currentIds = new Set(list.map(getId).filter(id => id !== undefined && id !== null && id !== ''));
+
+    // Save all current items
+    const savePromises = list.map(async (item) => {
+      const id = getId(item);
+      if (!id) return;
+
+      let finalItem = { ...item };
+      // Transparently externalize and chunk very large student photos
+      if (colName === "students" && item.photoUrl && item.photoUrl.length > 200000) {
+        await saveLargeField(firebaseDb, { col: "student_photos", id }, item.photoUrl);
+        finalItem.photoUrl = "__EXTERNAL_FIRESTORE_PHOTO__";
+      }
+
+      const docRef = doc(firebaseDb, colName, id);
+      await setDoc(docRef, finalItem);
+    });
+
+    // Delete missing items
+    const deletePromises: Promise<any>[] = [];
+    existingIds.forEach(id => {
+      if (!currentIds.has(id)) {
+        const docRef = doc(firebaseDb, colName, id);
+        deletePromises.push(deleteDoc(docRef));
+
+        // If a student is deleted, clean up their external photo as well
+        if (colName === "students") {
+          deletePromises.push(deleteLargeField(firebaseDb, "student_photos", id));
+        }
+      }
+    });
+
+    await Promise.all([...savePromises, ...deletePromises]);
+  } catch (err) {
+    console.error(`Error syncing collection ${colName}:`, err);
+  }
+}
+
+async function saveToFirestore(firebaseDb: any, payload: any) {
+  try {
+    await Promise.all([
+      syncCollection(firebaseDb, "students", payload.siap_students, item => item.nisn),
+      syncCollection(firebaseDb, "teachers", payload.siap_teachers, item => item.nuptk),
+      syncCollection(firebaseDb, "attendance", payload.siap_attendance, item => item.id),
+      syncCollection(firebaseDb, "grades", payload.siap_grades, item => item.id),
+      syncCollection(firebaseDb, "cases", payload.siap_cases, item => item.id),
+      syncCollection(firebaseDb, "achievements", payload.siap_achievements, item => item.id),
+      syncCollection(firebaseDb, "emails", payload.siap_emails, item => item.id),
+      syncCollection(firebaseDb, "holidays", payload.siap_holidays, item => item.id),
+      syncCollection(firebaseDb, "class_staffs", payload.siap_class_staffs, item => item.classId),
+      payload.siap_academic ? setDoc(doc(firebaseDb, "settings", "academic"), payload.siap_academic) : Promise.resolve(),
+      payload.siap_system ? setDoc(doc(firebaseDb, "settings", "system"), payload.siap_system) : Promise.resolve(),
+      setDoc(doc(firebaseDb, "settings", "meta"), {
+        siap_gas_url: payload.siap_gas_url || ""
+      }),
+      saveLargeField(firebaseDb, { col: "settings", id: "signature" }, payload.siap_card_signature_img || ""),
+      saveLargeField(firebaseDb, { col: "settings", id: "stamp" }, payload.siap_card_stamp_img || "")
+    ]);
+  } catch (err) {
+    console.error("Error saving state to Firestore:", err);
+  }
+}
+
 // API: Load State
-app.get("/api/load", (req, res) => {
+app.get("/api/load", async (req, res) => {
+  const firebaseDb = initFirebase();
+  if (firebaseDb) {
+    try {
+      console.log("Loading database from Firebase Firestore...");
+      const [
+        students,
+        teachers,
+        attendance,
+        grades,
+        cases,
+        achievements,
+        emails,
+        holidays,
+        classStaffs,
+        settingsMap,
+        signatureImg,
+        stampImg
+      ] = await Promise.all([
+        loadCollection(firebaseDb, "students"),
+        loadCollection(firebaseDb, "teachers"),
+        loadCollection(firebaseDb, "attendance"),
+        loadCollection(firebaseDb, "grades"),
+        loadCollection(firebaseDb, "cases"),
+        loadCollection(firebaseDb, "achievements"),
+        loadCollection(firebaseDb, "emails"),
+        loadCollection(firebaseDb, "holidays"),
+        loadCollection(firebaseDb, "class_staffs"),
+        loadSettings(firebaseDb),
+        loadLargeField(firebaseDb, "settings", "signature"),
+        loadLargeField(firebaseDb, "settings", "stamp")
+      ]);
+
+      if (students.length > 0 || teachers.length > 0) {
+        const assembledData = {
+          siap_students: students,
+          siap_teachers: teachers,
+          siap_attendance: attendance,
+          siap_grades: grades,
+          siap_cases: cases,
+          siap_achievements: achievements,
+          siap_emails: emails,
+          siap_holidays: holidays,
+          siap_class_staffs: classStaffs,
+          siap_academic: settingsMap["academic"] || null,
+          siap_system: settingsMap["system"] || null,
+          siap_gas_url: settingsMap["meta"]?.siap_gas_url || "",
+          siap_card_signature_img: signatureImg,
+          siap_card_stamp_img: stampImg
+        };
+        console.log("Database successfully loaded from Firestore.");
+        return res.json({ success: true, data: assembledData });
+      } else {
+        console.log("Firestore is empty. Loading local database.json and seeding to Firestore...");
+      }
+    } catch (err) {
+      console.error("Failed to load from Firestore, falling back to local JSON database:", err);
+    }
+  }
+
   const data = loadDb();
   if (data) {
+    if (firebaseDb) {
+      try {
+        console.log("Auto-seeding local database data to Firestore...");
+        saveToFirestore(firebaseDb, data).then(() => {
+          console.log("Auto-seeding complete!");
+        }).catch(err => {
+          console.error("Auto-seeding failed:", err);
+        });
+      } catch (err) {
+        console.error("Error launching auto-seed:", err);
+      }
+    }
     res.json({ success: true, data });
   } else {
     res.json({ success: false, message: "No data stored yet on server." });
@@ -68,11 +390,23 @@ app.get("/api/load", (req, res) => {
 });
 
 // API: Save State
-app.post("/api/save", (req, res) => {
+app.post("/api/save", async (req, res) => {
   const payload = req.body;
   const current = loadDb() || {};
   const updated = { ...current, ...payload };
   const success = saveDb(updated);
+
+  const firebaseDb = initFirebase();
+  if (firebaseDb) {
+    try {
+      console.log("Saving state to Firebase Firestore...");
+      await saveToFirestore(firebaseDb, payload);
+      console.log("State successfully synced to Firestore.");
+    } catch (err) {
+      console.error("Failed to sync state to Firebase Firestore:", err);
+    }
+  }
+
   if (success) {
     res.json({ success: true });
   } else {
@@ -81,11 +415,24 @@ app.post("/api/save", (req, res) => {
 });
 
 // API: Save GAS URL directly
-app.post("/api/save-gas-url", (req, res) => {
+app.post("/api/save-gas-url", async (req, res) => {
   const { gasUrl } = req.body;
   const current = loadDb() || {};
   current.siap_gas_url = gasUrl;
   const success = saveDb(current);
+
+  const firebaseDb = initFirebase();
+  if (firebaseDb) {
+    try {
+      console.log("Saving GAS URL to Firebase Firestore...");
+      const docRef = doc(firebaseDb, "settings", "meta");
+      await setDoc(docRef, { siap_gas_url: gasUrl }, { merge: true });
+      console.log("GAS URL successfully synced to Firestore.");
+    } catch (err) {
+      console.error("Failed to sync GAS URL to Firestore:", err);
+    }
+  }
+
   if (success) {
     res.json({ success: true });
   } else {

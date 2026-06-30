@@ -228,6 +228,10 @@ export default function App() {
           if (d.siap_card_stamp_img) {
             localStorage.setItem('siap_card_stamp_img', d.siap_card_stamp_img);
           }
+          
+          setTimeout(() => {
+            isLoadedRef.current = true;
+          }, 800);
         } else {
           console.log("No data found on backend. Seeding backend with initial datasets.");
           const stateObj = {
@@ -250,16 +254,17 @@ export default function App() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(stateObj)
-          }).catch(err => console.warn("Failed to seed backend:", err));
+          })
+          .then(() => {
+            setTimeout(() => {
+              isLoadedRef.current = true;
+            }, 800);
+          })
+          .catch(err => console.warn("Failed to seed backend:", err));
         }
       })
       .catch(err => {
         console.warn("Express API load failed or server is booting up:", err);
-      })
-      .finally(() => {
-        setTimeout(() => {
-          isLoadedRef.current = true;
-        }, 800);
       });
   }, []);
 
@@ -851,6 +856,34 @@ export default function App() {
     saveState('siap_academic', updated);
   };
 
+  const handleDeletePeriodData = (year: string, semester: 'Ganjil' | 'Genap') => {
+    // Purge attendance
+    setAttendance(prev => {
+      const filtered = prev.filter(a => !(a.academicYear === year && a.semester === semester));
+      saveState('siap_attendance', filtered);
+      return filtered;
+    });
+    // Purge grades
+    setGrades(prev => {
+      const filtered = prev.filter(g => !(g.academicYear === year && g.semester === semester));
+      saveState('siap_grades', filtered);
+      return filtered;
+    });
+    // Purge cases
+    setCases(prev => {
+      const filtered = prev.filter(c => !(c.academicYear === year && c.semester === semester));
+      saveState('siap_cases', filtered);
+      return filtered;
+    });
+    // Purge achievements
+    setAchievements(prev => {
+      const filtered = prev.filter(ac => !(ac.academicYear === year && ac.semester === semester));
+      saveState('siap_achievements', filtered);
+      return filtered;
+    });
+    alert(`Semua data (Absensi, Nilai, Kasus, Prestasi) untuk Tahun Pelajaran ${year} Semester ${semester} berhasil dihapus dari sistem dan disinkronkan ke cloud database!`);
+  };
+
   const handleUpdateClassStaffs = (updated: ClassStaff[]) => {
     setClassStaffs(updated);
     saveState('siap_class_staffs', updated);
@@ -1181,6 +1214,7 @@ export default function App() {
             onDeleteTeacher={handleDeleteTeacher}
             availableSubjects={academicSetting.subjects}
             activeMenu={activeMenu}
+            onDeletePeriodData={handleDeletePeriodData}
           />
         );
 

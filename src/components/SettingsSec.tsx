@@ -37,6 +37,7 @@ interface SettingsSecProps {
   onDeleteTeacher: (nuptk: string) => void;
   availableSubjects: string[];
   activeMenu?: string;
+  onDeletePeriodData?: (year: string, semester: 'Ganjil' | 'Genap') => void;
 }
 
 export default function SettingsSec({
@@ -51,7 +52,8 @@ export default function SettingsSec({
   onUpdateTeacher,
   onDeleteTeacher,
   availableSubjects,
-  activeMenu
+  activeMenu,
+  onDeletePeriodData
 }: SettingsSecProps) {
   const activeTab = activeMenu === 'set-sistem' ? 'sistem' : activeMenu === 'set-guru' ? 'guru' : 'akademik';
 
@@ -724,6 +726,62 @@ export default function SettingsSec({
             <p className="text-[10px] text-slate-500 italic mt-1 leading-normal">
               * Guru kelas di atas terdaftar sebagai penanggung jawab utama pembelajaran umum kelas selain dari guru mata pelajaran spesifik yang telah ditentukan. Perubahan disimpan otomatis ke penyimpanan lokal sistem.
             </p>
+          </div>
+
+          {/* 6. Purge Data per Semester (Tahun & Semester) */}
+          <div className="p-5 bg-slate-950/40 border border-slate-800 rounded-2xl shadow-xl space-y-4">
+            <div className="border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-rose-500" /> Pembersihan & Hapus Data Semesteran (Firebase Sync)
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Gunakan fitur ini untuk menghapus seluruh data catatan akademik (Absensi, Nilai, Kasus, Prestasi) untuk semester dan tahun pelajaran tertentu secara permanen dari sistem dan cloud Firestore.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+              {academicSetting.years.flatMap(year => 
+                (['Ganjil', 'Genap'] as const).map(sem => {
+                  const isActive = academicSetting.activeYear === year && academicSetting.activeSemester === sem;
+                  return (
+                    <div 
+                      key={`${year}-${sem}`} 
+                      className={`flex justify-between items-center p-3 text-xs bg-slate-900 rounded-xl border ${
+                        isActive ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-slate-800/60'
+                      }`}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 font-bold text-slate-200">
+                          <span>TP {year}</span>
+                          <span className="text-[10px] font-semibold text-slate-400">({sem})</span>
+                        </div>
+                        <p className="text-[9px] text-slate-500">
+                          {isActive ? 'Periode Aktif Berjalan' : 'Arsip Riwayat Akademik'}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onDeletePeriodData) {
+                            if (confirm(`PERINGATAN KRITIS!\nApakah Anda yakin ingin menghapus seluruh data (Absensi, Nilai, Kasus, Prestasi) untuk Tahun Pelajaran ${year} Semester ${sem}?\n\nTindakan ini menghapus data secara permanen dari Firebase database dan tidak dapat dibatalkan!`)) {
+                              onDeletePeriodData(year, sem);
+                            }
+                          } else {
+                            alert('Aksi hapus data semester tidak dikonfigurasi dengan benar.');
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-rose-950 hover:text-rose-400 text-rose-500 border border-slate-750 hover:border-rose-900/50 rounded-lg transition text-[10px] font-bold uppercase active:scale-95 cursor-pointer"
+                        title="Hapus Seluruh Data Periode Ini"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus Data</span>
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       )}

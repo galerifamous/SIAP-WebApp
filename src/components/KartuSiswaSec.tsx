@@ -86,6 +86,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
   const [customNotes, setCustomNotes] = useState(
     '1. Kartu ini wajib dibawa setiap hari untuk presensi masuk/pulang.\n2. Tidak boleh dicoret-coret, kotor, atau dipindahtangankan.\n3. Jika menemukan kartu ini, mohon kembalikan ke tata usaha madrasah.'
   );
+  const [cardBgMode, setCardBgMode] = useState<'dark' | 'light'>('light');
 
   // Filter students
   const filteredStudents = students.filter(student => {
@@ -202,6 +203,12 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
       amber: '#78350f'
     }[theme];
 
+    const isCardDark = cardBgMode === 'dark';
+    const cardBgHex = isCardDark ? '#0f172a' : '#ffffff';
+    const cardInnerBgHex = isCardDark ? '#090d16' : '#ffffff';
+    const cardTextPrimaryHex = isCardDark ? '#f8fafc' : '#0f172a';
+    const cardTextSecondaryHex = isCardDark ? '#94a3b8' : '#475569';
+
     const studentPhotoHtml = student.photoUrl
       ? `<img src="${student.photoUrl}" class="photo" />`
       : `<div class="photo-placeholder">
@@ -269,13 +276,13 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               justify-content: center;
             }
 
-            /* Exact CR-80 standard size: 54mm x 85.6mm */
+            /* Exact Card standard size: 79mm x 126mm */
             .card-wrapper {
-              width: 54mm;
-              height: 85.6mm;
-              background: #ffffff;
-              border-radius: 3.18mm;
-              border: 0.4mm solid #cbd5e1;
+              width: 79mm;
+              height: 126mm;
+              background: ${cardBgHex};
+              border-radius: 4mm;
+              border: 0.5mm solid ${isCardDark ? '#1e293b' : '#cbd5e1'};
               overflow: hidden;
               position: relative;
               box-sizing: border-box;
@@ -285,34 +292,33 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
             }
 
-            /* Front Card Styling */
             .card-front {
-              background-color: #ffffff;
+              background-color: ${cardBgHex};
             }
 
             .header-strip {
               background: linear-gradient(135deg, ${themeColorHex}, ${themeColorHexDark});
               color: #ffffff;
-              padding: 2.2mm 2mm;
+              padding: 3mm 3mm;
               display: flex;
               align-items: center;
-              gap: 1.5mm;
-              border-bottom: 0.8mm solid #f59e0b;
+              gap: 2.5mm;
+              border-bottom: 1.2mm solid #f59e0b;
               position: relative;
-              height: 12mm;
+              height: 18mm;
               box-sizing: border-box;
             }
 
             .logo-container {
-              width: 8.5mm;
-              height: 8.5mm;
+              width: 12mm;
+              height: 12mm;
               background-color: rgba(255,255,255,0.15);
-              border-radius: 1.2mm;
+              border-radius: 1.5mm;
               display: flex;
               align-items: center;
               justify-content: center;
-              padding: 0.2mm;
-              border: 0.2mm solid rgba(255,255,255,0.2);
+              padding: 0.4mm;
+              border: 0.3mm solid rgba(255,255,255,0.2);
               flex-shrink: 0;
             }
             .logo-img {
@@ -327,8 +333,8 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               justify-content: center;
             }
             .logo-fallback svg {
-              width: 4.5mm;
-              height: 4.5mm;
+              width: 6mm;
+              height: 6mm;
             }
 
             .school-meta {
@@ -338,43 +344,45 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               justify-content: center;
             }
             .school-name {
-              font-size: 5.5px;
+              font-size: 8.5px;
               font-weight: 800;
-              letter-spacing: 0.2px;
+              letter-spacing: 0.3px;
               margin: 0;
               text-transform: uppercase;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
               line-height: 1.2;
+              color: #ffffff;
             }
             .school-addr {
-              font-size: 4px;
+              font-size: 6px;
               opacity: 0.85;
-              margin: 0.5mm 0 0 0;
+              margin: 0.8mm 0 0 0;
               font-weight: 500;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
               line-height: 1.2;
+              color: #ffffff;
             }
 
             .card-title-bar {
               text-align: center;
-              background-color: #f8fafc;
-              border-bottom: 0.2mm solid #f1f5f9;
-              padding: 1mm 0;
-              height: 4mm;
+              background-color: ${isCardDark ? '#1e293b' : '#f8fafc'};
+              border-bottom: 0.2mm solid ${isCardDark ? '#334155' : '#f1f5f9'};
+              padding: 1.5mm 0;
+              height: 6mm;
               box-sizing: border-box;
               display: flex;
               align-items: center;
               justify-content: center;
             }
             .card-title-text {
-              font-size: 5.2px;
+              font-size: 8px;
               font-weight: 800;
-              letter-spacing: 1px;
-              color: #475569;
+              letter-spacing: 1.2px;
+              color: ${isCardDark ? '#cbd5e1' : '#475569'};
               text-transform: uppercase;
               margin: 0;
             }
@@ -385,20 +393,21 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               display: flex;
               flex-direction: column;
               align-items: center;
-              padding: 2.5mm 3.5mm;
+              padding: 3mm 4mm;
               box-sizing: border-box;
               overflow: hidden;
+              background-color: ${cardInnerBgHex};
             }
 
             .photo-frame {
-              width: 18mm;
-              height: 24mm;
-              border-radius: 1.5mm;
-              border: 0.6mm solid ${themeColorHex};
+              width: 26mm;
+              height: 34mm;
+              border-radius: 2mm;
+              border: 0.8mm solid ${themeColorHex};
               box-shadow: 0 2px 4px rgba(0,0,0,0.08);
               overflow: hidden;
               background-color: #f8fafc;
-              margin-bottom: 1.5mm;
+              margin-bottom: 2mm;
               display: flex;
               align-items: center;
               justify-content: center;
@@ -419,20 +428,20 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               background-color: #f1f5f9;
             }
             .photo-placeholder svg {
-              width: 8mm;
-              height: 8mm;
+              width: 12mm;
+              height: 12mm;
             }
 
             .student-name-box {
               text-align: center;
-              margin-bottom: 1.2mm;
+              margin-bottom: 2mm;
               width: 100%;
               flex-shrink: 0;
             }
             .student-name {
-              font-size: 8px;
+              font-size: 11px;
               font-weight: 800;
-              color: #0f172a;
+              color: ${cardTextPrimaryHex};
               margin: 0;
               text-transform: uppercase;
               letter-spacing: -0.1px;
@@ -443,14 +452,14 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
             .student-class-badge {
               display: inline-block;
-              font-size: 5px;
+              font-size: 8px;
               font-weight: 700;
               color: ${themeColorHex};
-              background-color: rgba(0, 0, 0, 0.04);
-              border: 0.2mm solid rgba(0, 0, 0, 0.05);
-              padding: 0.4mm 1.6mm;
+              background-color: ${isCardDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'};
+              border: 0.2mm solid ${isCardDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
+              padding: 0.6mm 2mm;
               border-radius: 4mm;
-              margin-top: 0.5mm;
+              margin-top: 0.8mm;
               text-transform: uppercase;
               line-height: 1;
             }
@@ -460,31 +469,31 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               width: 100%;
               border-collapse: collapse;
               margin-bottom: 0;
-              font-size: 5.5px;
+              font-size: 8.5px;
               flex-shrink: 0;
             }
             .details-table td {
-              padding: 0.6mm 0;
+              padding: 0.8mm 0;
               vertical-align: top;
               line-height: 1.2;
             }
             .details-label {
-              color: #64748b;
+              color: ${cardTextSecondaryHex};
               font-weight: 600;
-              width: 14mm;
+              width: 22mm;
             }
             .details-colon {
-              color: #cbd5e1;
-              width: 2mm;
+              color: ${isCardDark ? '#475569' : '#cbd5e1'};
+              width: 3mm;
             }
             .details-value {
-              color: #1e293b;
+              color: ${cardTextPrimaryHex};
               font-weight: 700;
               word-break: break-all;
             }
 
             .front-footer-strip {
-              height: 2mm;
+              height: 3mm;
               background-color: ${themeColorHex};
               margin-top: auto;
               flex-shrink: 0;
@@ -492,55 +501,56 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
             /* Back Card Styling */
             .card-back {
-              background-color: #ffffff;
+              background-color: ${cardBgHex};
               display: flex;
               flex-direction: column;
             }
 
             .back-accent-stripe {
-              height: 2mm;
+              height: 3mm;
               background: linear-gradient(90deg, ${themeColorHex}, #cbd5e1, ${themeColorHexDark});
               flex-shrink: 0;
             }
 
             .back-content {
               flex: 1;
-              padding: 3mm 4mm;
+              padding: 4mm 4mm;
               display: flex;
               flex-direction: column;
               align-items: center;
               box-sizing: border-box;
               overflow: hidden;
+              background-color: ${cardInnerBgHex};
             }
 
             .rules-title-box {
               width: 100%;
-              margin-bottom: 1mm;
+              margin-bottom: 1.5mm;
               flex-shrink: 0;
             }
             .rules-title {
-              font-size: 5.5px;
+              font-size: 9px;
               font-weight: 800;
               color: ${themeColorHex};
               letter-spacing: 0.5px;
               text-transform: uppercase;
               margin: 0;
-              border-bottom: 0.3mm solid #e2e8f0;
+              border-bottom: 0.3mm solid ${isCardDark ? '#1e293b' : '#e2e8f0'};
               padding-bottom: 0.6mm;
             }
 
             .rules-list {
-              font-size: 4.8px;
-              color: #475569;
-              padding-left: 3mm;
-              margin: 0 0 2mm 0;
+              font-size: 7.5px;
+              color: ${cardTextSecondaryHex};
+              padding-left: 4mm;
+              margin: 0 0 3mm 0;
               line-height: 1.4;
               font-weight: 500;
               width: 100%;
               flex-shrink: 0;
             }
             .rules-list li {
-              margin-bottom: 0.6mm;
+              margin-bottom: 0.8mm;
             }
 
             /* ENLARGED QR Code / Barcode styling */
@@ -549,31 +559,31 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               flex-direction: column;
               align-items: center;
               justify-content: center;
-              margin: 1mm 0 2mm 0;
-              background-color: #f8fafc;
-              border: 0.3mm solid #cbd5e1;
+              margin: 1.5mm 0 3mm 0;
+              background-color: ${isCardDark ? '#020617' : '#f8fafc'};
+              border: 0.3mm solid ${isCardDark ? '#1e293b' : '#cbd5e1'};
               border-radius: 2mm;
-              padding: 1.5mm 2mm;
-              width: 38mm;
+              padding: 2mm;
+              width: 48mm;
               box-shadow: inset 0 0.2mm 0.6mm rgba(0,0,0,0.02);
               flex-shrink: 0;
               box-sizing: border-box;
             }
             .center-qr-image {
-              width: 32mm;
-              height: 32mm;
-              margin-bottom: 1.2mm;
+              width: 40mm;
+              height: 40mm;
+              margin-bottom: 1.5mm;
               background: white;
-              padding: 0.8mm;
-              border-radius: 1.5mm;
+              padding: 1.2mm;
+              border-radius: 2mm;
               border: 0.2mm solid #e2e8f0;
               box-sizing: border-box;
             }
             .center-qr-caption {
               font-family: 'JetBrains Mono', monospace;
-              font-size: 5.5px;
+              font-size: 8px;
               font-weight: 700;
-              color: #475569;
+              color: ${cardTextSecondaryHex};
               letter-spacing: 0.5px;
             }
 
@@ -595,24 +605,24 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
             .signature-box {
               text-align: center;
-              width: 28mm;
+              width: 40mm;
               position: relative;
               display: flex;
               flex-direction: column;
               align-items: center;
             }
             .sig-date {
-              font-size: 5px;
-              color: #475569;
-              margin-bottom: 6mm;
+              font-size: 8px;
+              color: ${cardTextSecondaryHex};
+              margin-bottom: 10mm;
               text-transform: uppercase;
               letter-spacing: 0.3px;
               line-height: 1.1;
             }
             .sig-image {
               position: absolute;
-              top: 2.5mm;
-              height: 7mm;
+              top: 3.5mm;
+              height: 12mm;
               width: auto;
               object-fit: contain;
               z-index: 10;
@@ -620,20 +630,20 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
             .stamp-seal-img {
               position: absolute;
-              top: 1mm;
-              left: -2mm;
-              width: 8mm;
-              height: 8mm;
+              top: 1.5mm;
+              left: -4mm;
+              width: 16mm;
+              height: 16mm;
               object-fit: contain;
               z-index: 5;
               opacity: 0.8;
               pointer-events: none;
             }
             .sig-name {
-              font-size: 5.5px;
+              font-size: 9px;
               font-weight: 800;
-              color: #0f172a;
-              border-bottom: 0.4mm solid #1e293b;
+              color: ${cardTextPrimaryHex};
+              border-bottom: 0.4mm solid ${isCardDark ? '#cbd5e1' : '#1e293b'};
               padding-bottom: 0.3mm;
               margin: 0;
               text-transform: uppercase;
@@ -642,8 +652,8 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               line-height: 1.2;
             }
             .sig-nip, .sig-title {
-              font-size: 4.5px;
-              color: #64748b;
+              font-size: 7px;
+              color: ${cardTextSecondaryHex};
               margin-top: 0.5mm;
               font-family: monospace;
               white-space: nowrap;
@@ -653,11 +663,11 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             /* Stamp Effect */
             .stamp-seal {
               position: absolute;
-              top: 1mm;
-              left: -2mm;
-              width: 8mm;
-              height: 8mm;
-              border: 0.3mm dashed rgba(225, 29, 72, 0.4);
+              top: 1.5mm;
+              left: -4mm;
+              width: 16mm;
+              height: 16mm;
+              border: 0.5mm dashed rgba(225, 29, 72, 0.4);
               border-radius: 50%;
               display: flex;
               align-items: center;
@@ -667,7 +677,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               z-index: 5;
             }
             .stamp-text {
-              font-size: 2px;
+              font-size: 4px;
               font-weight: 800;
               color: rgba(225, 29, 72, 0.5);
               text-transform: uppercase;
@@ -677,16 +687,16 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
 
             .card-back-footer {
-              background-color: #fafafa;
-              border-top: 0.3mm solid #e2e8f0;
-              padding: 1.5mm 3mm;
+              background-color: ${isCardDark ? '#1e293b' : '#fafafa'};
+              border-top: 0.3mm solid ${isCardDark ? '#334155' : '#e2e8f0'};
+              padding: 2mm 4mm;
               display: flex;
               justify-content: space-between;
               align-items: center;
-              font-size: 5px;
-              color: #94a3b8;
+              font-size: 7.5px;
+              color: ${cardTextSecondaryHex};
               font-weight: 600;
-              height: 4mm;
+              height: 6mm;
               box-sizing: border-box;
               flex-shrink: 0;
             }
@@ -701,7 +711,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               }
               .card-wrapper {
                 box-shadow: none;
-                border: 0.4mm solid #94a3b8;
+                border: 0.5mm solid ${isCardDark ? '#1e293b' : '#cbd5e1'};
                 page-break-inside: avoid;
               }
             }
@@ -710,7 +720,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
         <body>
           <div class="no-print-bar">
             <div>
-              <strong style="font-size: 15px;">Mode Cetak Kartu Siswa SIAP</strong>
+              <strong style="font-size: 15px;">Mode Cetak Kartu Siswa SIAP (79 mm x 126 mm)</strong>
               <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Silakan klik tombol cetak. Disarankan menyetel mode "Portrait", ukuran kertas "A4", margin "None", dan centang opsi "Background graphics" agar warna latar tercetak sempurna.</div>
             </div>
             <button class="btn-print" onclick="window.print()">Mulai Cetak Kartu</button>
@@ -878,6 +888,12 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
       amber: '#78350f'
     }[theme];
 
+    const isCardDark = cardBgMode === 'dark';
+    const cardBgHex = isCardDark ? '#0f172a' : '#ffffff';
+    const cardInnerBgHex = isCardDark ? '#090d16' : '#ffffff';
+    const cardTextPrimaryHex = isCardDark ? '#f8fafc' : '#0f172a';
+    const cardTextSecondaryHex = isCardDark ? '#94a3b8' : '#475569';
+
     // Helper functions inside the printing scope
     const getFrontCardHtml = (student: Student | undefined) => {
       if (!student) {
@@ -1010,45 +1026,33 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
       `;
     };
 
-    // Chunk students into groups of 10 to fit A4 landscape beautifully (5 columns x 2 rows = 10 cards)
+    // Chunk students into groups of 4 to fit F4 Portrait beautifully (2 columns x 2 rows = 4 cards)
     const chunks: Student[][] = [];
-    for (let i = 0; i < sortedStudents.length; i += 10) {
-      chunks.push(sortedStudents.slice(i, i + 10));
+    for (let i = 0; i < sortedStudents.length; i += 4) {
+      chunks.push(sortedStudents.slice(i, i + 4));
     }
 
     let pagesHtml = '';
     chunks.forEach((chunk) => {
-      // 1. FRONT PAGE (Odd Page) - Standard 5x2 grid order (0 to 9)
+      // 1. FRONT PAGE (Odd Page) - Standard 2x2 grid order (0 to 3)
       pagesHtml += `
-        <div class="a4-page">
+        <div class="f4-page">
           ${getFrontCardHtml(chunk[0])}
           ${getFrontCardHtml(chunk[1])}
           ${getFrontCardHtml(chunk[2])}
           ${getFrontCardHtml(chunk[3])}
-          ${getFrontCardHtml(chunk[4])}
-          ${getFrontCardHtml(chunk[5])}
-          ${getFrontCardHtml(chunk[6])}
-          ${getFrontCardHtml(chunk[7])}
-          ${getFrontCardHtml(chunk[8])}
-          ${getFrontCardHtml(chunk[9])}
         </div>
       `;
 
       // 2. BACK PAGE (Even Page) - Horizontally mirrored order per row to line up front and back cards beautifully in double-sided printing!
-      // Row 1 (0-4) fronts mirror to (4,3,2,1,0) back
-      // Row 2 (5-9) fronts mirror to (9,8,7,6,5) back
+      // Row 1 (0-1) fronts mirror to (1, 0) back
+      // Row 2 (2-3) fronts mirror to (3, 2) back
       pagesHtml += `
-        <div class="a4-page">
-          ${getBackCardHtml(chunk[4])}
-          ${getBackCardHtml(chunk[3])}
-          ${getBackCardHtml(chunk[2])}
+        <div class="f4-page">
           ${getBackCardHtml(chunk[1])}
           ${getBackCardHtml(chunk[0])}
-          ${getBackCardHtml(chunk[9])}
-          ${getBackCardHtml(chunk[8])}
-          ${getBackCardHtml(chunk[7])}
-          ${getBackCardHtml(chunk[6])}
-          ${getBackCardHtml(chunk[5])}
+          ${getBackCardHtml(chunk[3])}
+          ${getBackCardHtml(chunk[2])}
         </div>
       `;
     });
@@ -1079,7 +1083,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               align-items: center;
               justify-content: space-between;
               box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-              max-width: 1123px;
+              max-width: 800px;
               box-sizing: border-box;
             }
 
@@ -1097,21 +1101,21 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             .btn-print:hover { opacity: 0.9; }
 
             @page {
-              size: A4 landscape;
+              size: 215mm 330mm portrait;
               margin: 0;
             }
 
-            /* Optimized Landscape A4 grid layout for 10 CR80 cards (5 columns x 2 rows) */
-            .a4-page {
-              width: 297mm;
-              height: 210mm;
+            /* Optimized Portrait F4 grid layout for 4 ID Cards (2 columns x 2 rows) */
+            .f4-page {
+              width: 215mm;
+              height: 330mm;
               box-sizing: border-box;
               background-color: #ffffff;
               display: grid;
-              grid-template-columns: repeat(5, 54mm);
-              grid-template-rows: repeat(2, 85.6mm);
-              gap: 3mm 4mm;
-              padding: 15mm 10mm;
+              grid-template-columns: repeat(2, 79mm);
+              grid-template-rows: repeat(2, 126mm);
+              gap: 12mm 15mm;
+              padding: 33mm 21mm;
               justify-content: center;
               align-content: center;
               page-break-after: always;
@@ -1122,13 +1126,12 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             }
 
-            /* CR-80 standard card size */
             .card-wrapper {
-              width: 54mm;
-              height: 85.6mm;
-              background: #ffffff;
-              border-radius: 3.18mm;
-              border: 0.4mm solid #cbd5e1;
+              width: 79mm;
+              height: 126mm;
+              background: ${cardBgHex};
+              border-radius: 4mm;
+              border: 0.5mm solid ${isCardDark ? '#1e293b' : '#cbd5e1'};
               overflow: hidden;
               position: relative;
               box-sizing: border-box;
@@ -1138,39 +1141,38 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
 
             .card-placeholder-empty {
-              width: 54mm;
-              height: 85.6mm;
+              width: 79mm;
+              height: 126mm;
               visibility: hidden;
             }
 
-            /* Front Card Styling */
             .card-front {
-              background-color: #ffffff;
+              background-color: ${cardBgHex};
             }
 
             .header-strip {
               background: linear-gradient(135deg, ${themeColorHex}, ${themeColorHexDark});
               color: #ffffff;
-              padding: 2.2mm 2mm;
+              padding: 3mm 3mm;
               display: flex;
               align-items: center;
-              gap: 1.5mm;
-              border-bottom: 0.8mm solid #f59e0b;
+              gap: 2.5mm;
+              border-bottom: 1.2mm solid #f59e0b;
               position: relative;
-              height: 12mm;
+              height: 18mm;
               box-sizing: border-box;
             }
 
             .logo-container {
-              width: 8.5mm;
-              height: 8.5mm;
+              width: 12mm;
+              height: 12mm;
               background-color: rgba(255,255,255,0.15);
-              border-radius: 1.2mm;
+              border-radius: 1.5mm;
               display: flex;
               align-items: center;
               justify-content: center;
-              padding: 0.2mm;
-              border: 0.2mm solid rgba(255,255,255,0.2);
+              padding: 0.4mm;
+              border: 0.3mm solid rgba(255,255,255,0.2);
               flex-shrink: 0;
             }
             .logo-img {
@@ -1185,8 +1187,8 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               justify-content: center;
             }
             .logo-fallback svg {
-              width: 4.5mm;
-              height: 4.5mm;
+              width: 6mm;
+              height: 6mm;
             }
 
             .school-meta {
@@ -1196,67 +1198,69 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               justify-content: center;
             }
             .school-name {
-              font-size: 5.5px;
+              font-size: 8.5px;
               font-weight: 800;
-              letter-spacing: 0.2px;
+              letter-spacing: 0.3px;
               margin: 0;
               text-transform: uppercase;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
               line-height: 1.2;
+              color: #ffffff;
             }
             .school-addr {
-              font-size: 4px;
+              font-size: 6px;
               opacity: 0.85;
-              margin: 0.5mm 0 0 0;
+              margin: 0.8mm 0 0 0;
               font-weight: 500;
               white-space: nowrap;
               overflow: hidden;
               text-overflow: ellipsis;
               line-height: 1.2;
+              color: #ffffff;
             }
 
             .card-title-bar {
               text-align: center;
-              background-color: #f8fafc;
-              border-bottom: 0.2mm solid #f1f5f9;
-              padding: 1mm 0;
-              height: 4mm;
+              background-color: ${isCardDark ? '#1e293b' : '#f8fafc'};
+              border-bottom: 0.2mm solid ${isCardDark ? '#334155' : '#f1f5f9'};
+              padding: 1.5mm 0;
+              height: 6mm;
               box-sizing: border-box;
               display: flex;
               align-items: center;
               justify-content: center;
             }
             .card-title-text {
-              font-size: 5.2px;
+              font-size: 8px;
               font-weight: 800;
-              letter-spacing: 1px;
-              color: #475569;
+              letter-spacing: 1.2px;
+              color: ${isCardDark ? '#cbd5e1' : '#475569'};
               text-transform: uppercase;
               margin: 0;
             }
 
-            /* Card Content Area */
             .content-area {
               flex: 1;
               display: flex;
               flex-direction: column;
               align-items: center;
-              padding: 2.5mm 3.5mm;
+              padding: 3mm 4mm;
               box-sizing: border-box;
               overflow: hidden;
+              background-color: ${cardInnerBgHex};
             }
 
             .photo-frame {
-              width: 18mm;
-              height: 24mm;
-              border-radius: 1.5mm;
-              border: 0.6mm solid ${themeColorHex};
+              width: 26mm;
+              height: 34mm;
+              border-radius: 2mm;
+              border: 0.8mm solid ${themeColorHex};
               box-shadow: 0 2px 4px rgba(0,0,0,0.08);
               overflow: hidden;
               background-color: #f8fafc;
-              margin-bottom: 1.5mm;
+              margin-bottom: 2mm;
               display: flex;
               align-items: center;
               justify-content: center;
@@ -1277,20 +1281,20 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               background-color: #f1f5f9;
             }
             .photo-placeholder svg {
-              width: 8mm;
-              height: 8mm;
+              width: 12mm;
+              height: 12mm;
             }
 
             .student-name-box {
               text-align: center;
-              margin-bottom: 1.2mm;
+              margin-bottom: 2mm;
               width: 100%;
               flex-shrink: 0;
             }
             .student-name {
-              font-size: 8px;
+              font-size: 11px;
               font-weight: 800;
-              color: #0f172a;
+              color: ${cardTextPrimaryHex};
               margin: 0;
               text-transform: uppercase;
               letter-spacing: -0.1px;
@@ -1301,137 +1305,135 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
             .student-class-badge {
               display: inline-block;
-              font-size: 5px;
+              font-size: 8px;
               font-weight: 700;
               color: ${themeColorHex};
-              background-color: rgba(0, 0, 0, 0.04);
-              border: 0.2mm solid rgba(0, 0, 0, 0.05);
-              padding: 0.4mm 1.6mm;
+              background-color: ${isCardDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'};
+              border: 0.2mm solid ${isCardDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
+              padding: 0.6mm 2mm;
               border-radius: 4mm;
-              margin-top: 0.5mm;
+              margin-top: 0.8mm;
               text-transform: uppercase;
               line-height: 1;
             }
 
-            /* Detail Table */
             .details-table {
               width: 100%;
               border-collapse: collapse;
               margin-bottom: 0;
-              font-size: 5.5px;
+              font-size: 8.5px;
               flex-shrink: 0;
             }
             .details-table td {
-              padding: 0.6mm 0;
+              padding: 0.8mm 0;
               vertical-align: top;
               line-height: 1.2;
             }
             .details-label {
-              color: #64748b;
+              color: ${cardTextSecondaryHex};
               font-weight: 600;
-              width: 14mm;
+              width: 22mm;
             }
             .details-colon {
-              color: #cbd5e1;
-              width: 2mm;
+              color: ${isCardDark ? '#475569' : '#cbd5e1'};
+              width: 3mm;
             }
             .details-value {
-              color: #1e293b;
+              color: ${cardTextPrimaryHex};
               font-weight: 700;
               word-break: break-all;
             }
 
             .front-footer-strip {
-              height: 2mm;
+              height: 3mm;
               background-color: ${themeColorHex};
               margin-top: auto;
               flex-shrink: 0;
             }
 
-            /* Back Card Styling */
             .card-back {
-              background-color: #ffffff;
+              background-color: ${cardBgHex};
               display: flex;
               flex-direction: column;
             }
 
             .back-accent-stripe {
-              height: 2mm;
+              height: 3mm;
               background: linear-gradient(90deg, ${themeColorHex}, #cbd5e1, ${themeColorHexDark});
               flex-shrink: 0;
             }
 
             .back-content {
               flex: 1;
-              padding: 3mm 4mm;
+              padding: 4mm 4mm;
               display: flex;
               flex-direction: column;
               align-items: center;
               box-sizing: border-box;
               overflow: hidden;
+              background-color: ${cardInnerBgHex};
             }
 
             .rules-title-box {
               width: 100%;
-              margin-bottom: 1mm;
+              margin-bottom: 1.5mm;
               flex-shrink: 0;
             }
             .rules-title {
-              font-size: 5.5px;
+              font-size: 9px;
               font-weight: 800;
               color: ${themeColorHex};
               letter-spacing: 0.5px;
               text-transform: uppercase;
               margin: 0;
-              border-bottom: 0.3mm solid #e2e8f0;
+              border-bottom: 0.3mm solid ${isCardDark ? '#1e293b' : '#e2e8f0'};
               padding-bottom: 0.6mm;
             }
 
             .rules-list {
-              font-size: 4.8px;
-              color: #475569;
-              padding-left: 3mm;
-              margin: 0 0 2mm 0;
+              font-size: 7.5px;
+              color: ${cardTextSecondaryHex};
+              padding-left: 4mm;
+              margin: 0 0 3mm 0;
               line-height: 1.4;
               font-weight: 500;
               width: 100%;
               flex-shrink: 0;
             }
             .rules-list li {
-              margin-bottom: 0.6mm;
+              margin-bottom: 0.8mm;
             }
 
-            /* ENLARGED QR Code / Barcode styling */
             .center-qr-container {
               display: flex;
               flex-direction: column;
               align-items: center;
               justify-content: center;
-              margin: 1mm 0 2mm 0;
-              background-color: #f8fafc;
-              border: 0.3mm solid #cbd5e1;
+              margin: 1.5mm 0 3mm 0;
+              background-color: ${isCardDark ? '#020617' : '#f8fafc'};
+              border: 0.3mm solid ${isCardDark ? '#1e293b' : '#cbd5e1'};
               border-radius: 2mm;
-              padding: 1.5mm 2mm;
-              width: 38mm;
+              padding: 2mm;
+              width: 48mm;
               box-shadow: inset 0 0.2mm 0.6mm rgba(0,0,0,0.02);
               flex-shrink: 0;
               box-sizing: border-box;
             }
             .center-qr-image {
-              width: 32mm;
-              height: 32mm;
-              margin-bottom: 1.2mm;
+              width: 40mm;
+              height: 40mm;
+              margin-bottom: 1.5mm;
               background: white;
-              padding: 0.8mm;
-              border-radius: 1.5mm;
+              padding: 1.2mm;
+              border-radius: 2mm;
               border: 0.2mm solid #e2e8f0;
               box-sizing: border-box;
             }
             .center-qr-caption {
               font-family: 'JetBrains Mono', monospace;
-              font-size: 5.5px;
+              font-size: 8px;
               font-weight: 700;
-              color: #475569;
+              color: ${cardTextSecondaryHex};
               letter-spacing: 0.5px;
             }
 
@@ -1453,24 +1455,24 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
 
             .signature-box {
               text-align: center;
-              width: 28mm;
+              width: 40mm;
               position: relative;
               display: flex;
               flex-direction: column;
               align-items: center;
             }
             .sig-date {
-              font-size: 5px;
-              color: #475569;
-              margin-bottom: 6mm;
+              font-size: 8px;
+              color: ${cardTextSecondaryHex};
+              margin-bottom: 10mm;
               text-transform: uppercase;
               letter-spacing: 0.3px;
               line-height: 1.1;
             }
             .sig-image {
               position: absolute;
-              top: 2.5mm;
-              height: 7mm;
+              top: 3.5mm;
+              height: 12mm;
               width: auto;
               object-fit: contain;
               z-index: 10;
@@ -1478,20 +1480,20 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
             .stamp-seal-img {
               position: absolute;
-              top: 1mm;
-              left: -2mm;
-              width: 8mm;
-              height: 8mm;
+              top: 1.5mm;
+              left: -4mm;
+              width: 16mm;
+              height: 16mm;
               object-fit: contain;
               z-index: 5;
               opacity: 0.8;
               pointer-events: none;
             }
             .sig-name {
-              font-size: 5.5px;
+              font-size: 9px;
               font-weight: 800;
-              color: #0f172a;
-              border-bottom: 0.4mm solid #1e293b;
+              color: ${cardTextPrimaryHex};
+              border-bottom: 0.4mm solid ${isCardDark ? '#cbd5e1' : '#1e293b'};
               padding-bottom: 0.3mm;
               margin: 0;
               text-transform: uppercase;
@@ -1500,22 +1502,21 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               line-height: 1.2;
             }
             .sig-nip, .sig-title {
-              font-size: 4.5px;
-              color: #64748b;
+              font-size: 7px;
+              color: ${cardTextSecondaryHex};
               margin-top: 0.5mm;
               font-family: monospace;
               white-space: nowrap;
               line-height: 1.1;
             }
 
-            /* Stamp Effect */
             .stamp-seal {
               position: absolute;
-              top: 1mm;
-              left: -2mm;
-              width: 8mm;
-              height: 8mm;
-              border: 0.3mm dashed rgba(225, 29, 72, 0.4);
+              top: 1.5mm;
+              left: -4mm;
+              width: 16mm;
+              height: 16mm;
+              border: 0.5mm dashed rgba(225, 29, 72, 0.4);
               border-radius: 50%;
               display: flex;
               align-items: center;
@@ -1525,7 +1526,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               z-index: 5;
             }
             .stamp-text {
-              font-size: 2px;
+              font-size: 4px;
               font-weight: 800;
               color: rgba(225, 29, 72, 0.5);
               text-transform: uppercase;
@@ -1535,16 +1536,16 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
             }
 
             .card-back-footer {
-              background-color: #fafafa;
-              border-top: 0.3mm solid #e2e8f0;
-              padding: 1.5mm 3mm;
+              background-color: ${isCardDark ? '#1e293b' : '#fafafa'};
+              border-top: 0.3mm solid ${isCardDark ? '#334155' : '#e2e8f0'};
+              padding: 2mm 4mm;
               display: flex;
               justify-content: space-between;
               align-items: center;
-              font-size: 5px;
-              color: #94a3b8;
+              font-size: 7.5px;
+              color: ${cardTextSecondaryHex};
               font-weight: 600;
-              height: 4mm;
+              height: 6mm;
               box-sizing: border-box;
               flex-shrink: 0;
             }
@@ -1558,7 +1559,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
               .no-print-bar {
                 display: none;
               }
-              .a4-page {
+              .f4-page {
                 page-break-after: always;
                 page-break-inside: avoid;
                 margin: 0;
@@ -1571,9 +1572,9 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
         <body>
           <div class="no-print-bar">
             <div>
-              <strong style="font-size: 15px;">Mode Cetak Massal Kartu Siswa SIAP</strong>
+              <strong style="font-size: 15px;">Mode Cetak Massal Kartu Siswa SIAP (79 mm x 126 mm - Kertas F4)</strong>
               <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
-                Silakan klik tombol cetak. <strong>PANDUAN DUPLEX (BOLAK-BALIK):</strong> Setel orientasi pencetakan ke <strong>"Landscape"</strong>, ukuran kertas <strong>"A4"</strong>, margin <strong>"None"</strong>, centang opsi <strong>"Background graphics"</strong>, dan pilih pencetakan dua sisi (duplex) dengan opsi <strong>"Flip on short edge"</strong> (atau short-edge binding) agar bagian depan (halaman ganjil) dan belakang (halaman genap) sejajar, presisi, tegak, dan siap untuk dipotong langsung!
+                Silakan klik tombol cetak. <strong>PANDUAN DUPLEX (BOLAK-BALIK):</strong> Setel orientasi pencetakan ke <strong>"Portrait"</strong>, ukuran kertas <strong>"F4 / Folio"</strong> (atau ukuran kustom 215 mm x 330 mm), margin <strong>"None"</strong>, centang opsi <strong>"Background graphics"</strong>, dan pilih pencetakan dua sisi (duplex) dengan opsi <strong>"Flip on long edge"</strong> (atau long-edge binding) agar bagian depan (halaman ganjil) dan belakang (halaman genap) sejajar, presisi, tegak, dan siap untuk dipotong langsung!
               </div>
             </div>
             <button class="btn-print" onclick="window.print()">Mulai Cetak Kartu Massal</button>
@@ -1999,7 +2000,7 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
         </div>
 
         {/* RIGHT COLUMN: Visual Live Card Preview */}
-        <div className={`xl:col-span-7 flex flex-col items-center justify-center p-6 border rounded-2xl min-h-[500px] transition-all duration-300 ${
+        <div className={`xl:col-span-7 flex flex-col items-center justify-center p-3 sm:p-6 border rounded-2xl min-h-[500px] transition-all duration-300 ${
           isDark 
             ? 'bg-slate-950/20 border-slate-800/80' 
             : 'bg-[#ebf1ec] border-[#cbd5ce] shadow-[1px_1px_3px_#cbd5ce]'
@@ -2033,8 +2034,11 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                     <Eye className="w-3.5 h-3.5 text-emerald-400" /> Tampak Depan
                   </div>
                   
-                  {/* Front Card Container */}
-                  <div className="mx-auto w-[270px] h-[420px] bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl relative select-none">
+                  {/* Responsive scale wrapper to prevent mobile overflow */}
+                  <div className="w-full flex justify-center items-start overflow-hidden h-[345px] min-[375px]:h-[380px] sm:h-[420px] py-1">
+                    <div className="transform origin-top scale-[0.82] min-[375px]:scale-[0.9] sm:scale-100 transition-transform duration-300">
+                      {/* Front Card Container */}
+                      <div className="mx-auto w-[270px] h-[420px] bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl relative select-none">
                     
                     {/* Header Strip */}
                     <div className={`p-3 text-white flex items-center gap-2 border-b-2 border-amber-400 bg-gradient-to-br ${activeTheme.bgGrad}`}>
@@ -2128,6 +2132,8 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                     <div className={`h-2 bg-emerald-500 ${activeTheme.primary}`} />
 
                   </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* 2. BACK PREVIEW */}
@@ -2136,8 +2142,11 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                     <Eye className="w-3.5 h-3.5 text-amber-400" /> Tampak Belakang
                   </div>
 
-                  {/* Back Card Container */}
-                  <div className="mx-auto w-[270px] h-[420px] bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl relative select-none">
+                  {/* Responsive scale wrapper to prevent mobile overflow */}
+                  <div className="w-full flex justify-center items-start overflow-hidden h-[345px] min-[375px]:h-[380px] sm:h-[420px] py-1">
+                    <div className="transform origin-top scale-[0.82] min-[375px]:scale-[0.9] sm:scale-100 transition-transform duration-300">
+                      {/* Back Card Container */}
+                      <div className="mx-auto w-[270px] h-[420px] bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl relative select-none">
                     <div className={`h-2 bg-gradient-to-r ${activeTheme.bgGrad}`} />
 
                     <div className="flex-1 p-4.5 flex flex-col justify-between text-slate-300 bg-slate-950/95">
@@ -2219,6 +2228,8 @@ export default function KartuSiswaSec({ students, availableClasses, systemSettin
                       <span>Diterbit oleh {customSchoolName}</span>
                     </div>
 
+                  </div>
+                    </div>
                   </div>
                 </div>
 
