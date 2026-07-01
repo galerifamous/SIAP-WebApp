@@ -89,8 +89,8 @@ function initFirebase() {
         messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
         appId: process.env.FIREBASE_APP_ID
       };
-      // Serverless-safe initialization: check if default app already exists
-      const appObj = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+      // Serverless-safe initialization with named app 'siap-app'
+      const appObj = getApps().find(a => a.name === "siap-app") || initializeApp(firebaseConfig, "siap-app");
       db = getFirestore(appObj, process.env.FIREBASE_DATABASE_ID || "(default)");
       console.log("Firebase Firestore initialized successfully via Environment Variables. Project ID:", envProjectId);
       return db;
@@ -111,8 +111,8 @@ function initFirebase() {
         messagingSenderId: firebaseConfigLocal.messagingSenderId,
         appId: firebaseConfigLocal.appId
       };
-      // Serverless-safe initialization: check if default app already exists
-      const appObj = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+      // Serverless-safe initialization with named app 'siap-app'
+      const appObj = getApps().find(a => a.name === "siap-app") || initializeApp(firebaseConfig, "siap-app");
       db = getFirestore(appObj, firebaseConfigLocal.firestoreDatabaseId || "(default)");
       console.log("Firebase Firestore initialized successfully via Bundled Config. Project ID:", firebaseConfigLocal.projectId);
       return db;
@@ -140,8 +140,8 @@ function initFirebase() {
       messagingSenderId: config.messagingSenderId,
       appId: config.appId
     };
-    // Serverless-safe initialization: check if default app already exists
-    const appObj = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    // Serverless-safe initialization with named app 'siap-app'
+    const appObj = getApps().find(a => a.name === "siap-app") || initializeApp(firebaseConfig, "siap-app");
     db = getFirestore(appObj, config.firestoreDatabaseId || "(default)");
     console.log("Firebase Firestore initialized successfully with Project ID:", config.projectId);
     return db;
