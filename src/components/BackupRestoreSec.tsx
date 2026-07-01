@@ -378,6 +378,8 @@ export default function BackupRestoreSec({
     projectId: string | null;
     storageMode: string;
     vercelEnv: boolean;
+    lastInitError?: string | null;
+    envKeysDetected?: Record<string, { exists: boolean, length: number }>;
   } | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
 
@@ -747,9 +749,49 @@ export default function BackupRestoreSec({
 
         {/* Manual Configuration Instructions collapsible for Vercel */}
         {!checkingStatus && !dbStatus?.firebaseInitialized && (
-          <div className="mt-4 pt-4 border-t border-slate-800/80">
-            <p className="font-bold text-slate-300 text-[11px] mb-2">Cara Menghubungkan Firebase Manual ke Vercel agar Data Sinkron:</p>
-            <ol className="list-decimal list-inside text-slate-400 space-y-1.5 leading-relaxed text-[11px] pl-1">
+          <div className="mt-4 pt-4 border-t border-slate-800/80 space-y-4">
+            {/* Direct Diagnostic Feedback */}
+            {dbStatus?.envKeysDetected && (
+              <div className="bg-slate-900/90 border border-slate-800 rounded-lg p-4 animate-fadeIn">
+                <div className="flex items-center gap-2 mb-2 text-rose-400 font-bold text-[11px] uppercase tracking-wider">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  Pemeriksaan Diagnostik Variabel Lingkungan di Vercel:
+                </div>
+                <p className="text-[10px] text-slate-400 mb-3 leading-relaxed">
+                  Berikut adalah status variabel lingkungan yang terdeteksi secara real-time di server Vercel Anda saat ini. Pastikan seluruh variabel di bawah terisi dengan benar (tidak ada yang <span className="text-rose-400 font-bold">KOSONG</span>):
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] font-mono">
+                  {Object.entries(dbStatus.envKeysDetected).map(([key, info]) => (
+                    <div key={key} className="flex justify-between items-center bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800/60">
+                      <span className="text-slate-300 font-bold">{key}</span>
+                      {info.exists && info.length > 0 ? (
+                        <span className="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/15">
+                          Terbaca ({info.length} Karakter)
+                        </span>
+                      ) : (
+                        <span className="text-rose-400 font-bold bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/15 animate-pulse">
+                          BELUM DISET / KOSONG
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Error Message log (If Any) */}
+            {dbStatus?.lastInitError && (
+              <div className="bg-rose-950/20 border border-rose-500/30 text-rose-300 rounded-lg p-3 text-[11px] font-mono leading-relaxed animate-fadeIn">
+                <div className="font-bold text-rose-400 mb-1 flex items-center gap-1.5">
+                  <span className="w-1 h-3 bg-rose-500 rounded" />
+                  Firebase Error Log dari Server:
+                </div>
+                {dbStatus.lastInitError}
+              </div>
+            )}
+
+            <p className="font-bold text-slate-300 text-[11px]">Cara Menghubungkan Firebase Manual ke Vercel agar Data Sinkron:</p>
+            <ol className="list-decimal list-inside text-slate-400 space-y-2 leading-relaxed text-[11px] pl-1">
               <li>Buka dashboard <strong className="text-slate-200">Vercel</strong> Anda, masuk ke proyek <strong className="text-slate-200">siap-web-app</strong>.</li>
               <li>Pilih tab <strong className="text-slate-200">Settings</strong> &gt; <strong className="text-slate-200">Environment Variables</strong> di sisi kiri.</li>
               <li>Masukkan variabel lingkungan berikut satu per satu sesuai dengan konfigurasi Firebase Anda:
@@ -757,9 +799,9 @@ export default function BackupRestoreSec({
                   <div>• <span className="text-emerald-400 font-bold">FIREBASE_PROJECT_ID</span></div>
                   <div>• <span className="text-emerald-400 font-bold">FIREBASE_API_KEY</span></div>
                   <div>• <span className="text-emerald-400 font-bold">FIREBASE_APP_ID</span></div>
-                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_AUTH_DOMAIN</span></div>
-                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_DATABASE_ID</span> (Isi <code className="text-slate-400">ai-studio-siapsisteminform-98b91134-b343-4698-875c-b15b9dd57fd1</code>)</div>
-                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_STORAGE_BUCKET</span></div>
+                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_AUTH_DOMAIN</span> <span className="text-[8px] text-slate-400">(contoh: project-id.firebaseapp.com)</span></div>
+                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_DATABASE_ID</span> <span className="text-[8px] text-slate-400">(Isi <code className="text-slate-300">ai-studio-siapsisteminform-98b91134-b343-4698-875c-b15b9dd57fd1</code>)</span></div>
+                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_STORAGE_BUCKET</span> <span className="text-[8px] text-slate-400">(contoh: project-id.appspot.com)</span></div>
                   <div>• <span className="text-emerald-400 font-bold">FIREBASE_MESSAGING_SENDER_ID</span></div>
                 </div>
               </li>

@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 
 // Load environment variables
@@ -61,6 +61,7 @@ const saveDb = (data: any) => {
 
 // --- FIREBASE FIRESTORE UTILITIES ---
 let db: any = null;
+let lastInitError: string | null = null;
 
 function initFirebase() {
   if (db) return db;
@@ -78,12 +79,14 @@ function initFirebase() {
         messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
         appId: process.env.FIREBASE_APP_ID
       };
-      const appObj = initializeApp(firebaseConfig);
+      // Serverless-safe initialization: check if default app already exists
+      const appObj = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
       db = getFirestore(appObj, process.env.FIREBASE_DATABASE_ID || "(default)");
       console.log("Firebase Firestore initialized successfully via Environment Variables. Project ID:", envProjectId);
       return db;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Firebase init via Environment Variables failed:", error);
+      lastInitError = error instanceof Error ? error.message : String(error);
     }
   }
 
@@ -105,12 +108,14 @@ function initFirebase() {
       messagingSenderId: config.messagingSenderId,
       appId: config.appId
     };
-    const appObj = initializeApp(firebaseConfig);
+    // Serverless-safe initialization: check if default app already exists
+    const appObj = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     db = getFirestore(appObj, config.firestoreDatabaseId || "(default)");
     console.log("Firebase Firestore initialized successfully with Project ID:", config.projectId);
     return db;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Firebase init failed:", error);
+    lastInitError = error instanceof Error ? error.message : String(error);
     return null;
   }
 }
@@ -422,12 +427,33 @@ app.get("/api/status", (req, res) => {
   const envProjectId = process.env.FIREBASE_PROJECT_ID;
   const envApiKey = process.env.FIREBASE_API_KEY;
   
+  const detectedEnvKeys: Record<string, { exists: boolean, length: number }> = {};
+  const firebaseVars = [
+    "FIREBASE_PROJECT_ID",
+    "FIREBASE_API_KEY",
+    "FIREBASE_APP_ID",
+    "FIREBASE_AUTH_DOMAIN",
+    "FIREBASE_DATABASE_ID",
+    "FIREBASE_STORAGE_BUCKET",
+    "FIREBASE_MESSAGING_SENDER_ID"
+  ];
+  
+  firebaseVars.forEach(key => {
+    const val = process.env[key];
+    detectedEnvKeys[key] = {
+      exists: typeof val !== "undefined",
+      length: val ? val.length : 0
+    };
+  });
+
   res.json({
     firebaseInitialized: !!firebaseDb,
     usingEnvVariables: !!(envProjectId && envApiKey),
     projectId: envProjectId || null,
     storageMode: firebaseDb ? "firestore" : "local_file_only",
-    vercelEnv: !!process.env.VERCEL
+    vercelEnv: !!process.env.VERCEL,
+    lastInitError: lastInitError,
+    envKeysDetected: detectedEnvKeys
   });
 });
 
