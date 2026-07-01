@@ -385,7 +385,7 @@ app.get("/api/load", async (req, res) => {
           siap_card_stamp_img: stampImg
         };
         console.log("Database successfully loaded from Firestore.");
-        return res.json({ success: true, data: assembledData });
+        return res.json({ success: true, data: assembledData, storageMode: "firestore" });
       } else {
         console.log("Firestore is empty. Loading local database.json and seeding to Firestore...");
       }
@@ -396,7 +396,9 @@ app.get("/api/load", async (req, res) => {
 
   const data = loadDb();
   if (data) {
+    let mode = "local";
     if (firebaseDb) {
+      mode = "firestore-seeding";
       try {
         console.log("Auto-seeding local database data to Firestore...");
         saveToFirestore(firebaseDb, data).then(() => {
@@ -408,10 +410,25 @@ app.get("/api/load", async (req, res) => {
         console.error("Error launching auto-seed:", err);
       }
     }
-    res.json({ success: true, data });
+    res.json({ success: true, data, storageMode: mode });
   } else {
-    res.json({ success: false, message: "No data stored yet on server." });
+    res.json({ success: false, message: "No data stored yet on server.", storageMode: firebaseDb ? "firestore-empty" : "local" });
   }
+});
+
+// API: Check Database & Firebase connection status
+app.get("/api/status", (req, res) => {
+  const firebaseDb = initFirebase();
+  const envProjectId = process.env.FIREBASE_PROJECT_ID;
+  const envApiKey = process.env.FIREBASE_API_KEY;
+  
+  res.json({
+    firebaseInitialized: !!firebaseDb,
+    usingEnvVariables: !!(envProjectId && envApiKey),
+    projectId: envProjectId || null,
+    storageMode: firebaseDb ? "firestore" : "local_file_only",
+    vercelEnv: !!process.env.VERCEL
+  });
 });
 
 // API: Save State

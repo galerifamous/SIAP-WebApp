@@ -372,6 +372,29 @@ export default function BackupRestoreSec({
   const [isRestoringCloud, setIsRestoringCloud] = useState(false);
   const [showScriptGuide, setShowScriptGuide] = useState(false);
 
+  const [dbStatus, setDbStatus] = useState<{
+    firebaseInitialized: boolean;
+    usingEnvVariables: boolean;
+    projectId: string | null;
+    storageMode: string;
+    vercelEnv: boolean;
+  } | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
+  React.useEffect(() => {
+    setCheckingStatus(true);
+    fetch('/api/status')
+      .then(res => res.json())
+      .then(data => {
+        setDbStatus(data);
+        setCheckingStatus(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch database status:", err);
+        setCheckingStatus(false);
+      });
+  }, []);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Download Backup File
@@ -672,6 +695,84 @@ export default function BackupRestoreSec({
             Ekspor seluruh basis data ke file JSON lokal, pulihkan data sebelumnya, atau kembalikan setelan sistem ke kondisi awal.
           </p>
         </div>
+      </div>
+
+      {/* Firebase Cloud Sync Status Monitor */}
+      <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-5 mb-6 animate-fadeIn">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className={`p-2.5 rounded-xl border ${
+              checkingStatus 
+                ? 'bg-slate-800/50 border-slate-700 text-slate-400' 
+                : dbStatus?.firebaseInitialized 
+                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                  : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+            }`}>
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                Status Koneksi Cloud Database
+                {checkingStatus && <span className="text-[10px] text-slate-400 font-normal animate-pulse">(Memeriksa...)</span>}
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                {checkingStatus ? (
+                  "Sedang mendeteksi konfigurasi database..."
+                ) : dbStatus?.firebaseInitialized ? (
+                  <span>
+                    Terhubung secara Realtime ke Cloud Firestore Project: <strong className="text-emerald-400 font-mono font-bold">{dbStatus.projectId}</strong>. Data Anda aman dan otomatis sinkron ke seluruh perangkat!
+                  </span>
+                ) : (
+                  <span>
+                    Database Offline (Local Mode). <strong className="text-rose-400 font-bold">PENTING:</strong> Di Vercel, server bersifat <em className="underline">stateless (sementara)</em>. Tanpa Firebase, data akan selalu kembali ke awal ketika server idle atau dibuka di perangkat baru.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+          <div>
+            {dbStatus?.firebaseInitialized ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg font-bold text-[10px] uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Firebase Aktif
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg font-bold text-[10px] uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                Database Lokal (Sementera)
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Manual Configuration Instructions collapsible for Vercel */}
+        {!checkingStatus && !dbStatus?.firebaseInitialized && (
+          <div className="mt-4 pt-4 border-t border-slate-800/80">
+            <p className="font-bold text-slate-300 text-[11px] mb-2">Cara Menghubungkan Firebase Manual ke Vercel agar Data Sinkron:</p>
+            <ol className="list-decimal list-inside text-slate-400 space-y-1.5 leading-relaxed text-[11px] pl-1">
+              <li>Buka dashboard <strong className="text-slate-200">Vercel</strong> Anda, masuk ke proyek <strong className="text-slate-200">siap-web-app</strong>.</li>
+              <li>Pilih tab <strong className="text-slate-200">Settings</strong> &gt; <strong className="text-slate-200">Environment Variables</strong> di sisi kiri.</li>
+              <li>Masukkan variabel lingkungan berikut satu per satu sesuai dengan konfigurasi Firebase Anda:
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-900/80 p-3 rounded-lg border border-slate-800 font-mono text-[9px] text-slate-300 my-2">
+                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_PROJECT_ID</span></div>
+                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_API_KEY</span></div>
+                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_APP_ID</span></div>
+                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_AUTH_DOMAIN</span></div>
+                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_DATABASE_ID</span> (Isi <code className="text-slate-400">ai-studio-siapsisteminform-98b91134-b343-4698-875c-b15b9dd57fd1</code>)</div>
+                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_STORAGE_BUCKET</span></div>
+                  <div>• <span className="text-emerald-400 font-bold">FIREBASE_MESSAGING_SENDER_ID</span></div>
+                </div>
+              </li>
+              <li>Centang opsi <strong className="text-slate-200">Production</strong> dan <strong className="text-slate-200">Preview</strong> saat membuat variabel (biarkan "Development" kosong/uncheck jika terkunci, ini aman).</li>
+              <li>
+                <strong className="text-rose-400 font-bold">LANGKAH CRITICAL (WAJIB):</strong> Setelah semua variabel ditambahkan, buka tab <strong className="text-slate-200">Deployments</strong> di Vercel, pilih deployment teratas, klik tombol titik tiga <strong className="text-slate-200">(...)</strong>, lalu pilih <strong className="text-rose-400 font-bold">Redeploy</strong>.
+                <p className="text-slate-400 text-[10px] mt-1 pl-4">
+                  *Tanpa melakukan <em className="underline">Redeploy</em>, Vercel tidak akan pernah memasukkan variabel baru tersebut ke server web yang sedang berjalan!
+                </p>
+              </li>
+            </ol>
+          </div>
+        )}
       </div>
 
       {successMsg && (
