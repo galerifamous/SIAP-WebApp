@@ -5,6 +5,7 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
+import firebaseConfigLocal from "./firebase-applet-config.json";
 
 // Load environment variables
 dotenv.config();
@@ -90,7 +91,29 @@ function initFirebase() {
     }
   }
 
-  // 2. Fallback to local config file
+  // 2. Fallback to statically imported firebaseConfigLocal (extremely reliable for Vercel/bundlers)
+  if (firebaseConfigLocal && firebaseConfigLocal.projectId && firebaseConfigLocal.apiKey) {
+    try {
+      const firebaseConfig = {
+        apiKey: firebaseConfigLocal.apiKey,
+        authDomain: firebaseConfigLocal.authDomain,
+        projectId: firebaseConfigLocal.projectId,
+        storageBucket: firebaseConfigLocal.storageBucket,
+        messagingSenderId: firebaseConfigLocal.messagingSenderId,
+        appId: firebaseConfigLocal.appId
+      };
+      // Serverless-safe initialization: check if default app already exists
+      const appObj = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+      db = getFirestore(appObj, firebaseConfigLocal.firestoreDatabaseId || "(default)");
+      console.log("Firebase Firestore initialized successfully via Bundled Config. Project ID:", firebaseConfigLocal.projectId);
+      return db;
+    } catch (error: any) {
+      console.error("Firebase init via Bundled Config failed:", error);
+      lastInitError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  // 3. Last resort fallback to local config file read (if bundled config was missing)
   const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
   if (!fs.existsSync(configPath)) {
     console.warn("Firebase config file not found at:", configPath, "and env variables are not fully configured. Using offline JSON database fallback.");

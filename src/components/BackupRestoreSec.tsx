@@ -761,20 +761,23 @@ export default function BackupRestoreSec({
                   Berikut adalah status variabel lingkungan yang terdeteksi secara real-time di server Vercel Anda saat ini. Pastikan seluruh variabel di bawah terisi dengan benar (tidak ada yang <span className="text-rose-400 font-bold">KOSONG</span>):
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] font-mono">
-                  {Object.entries(dbStatus.envKeysDetected).map(([key, info]) => (
-                    <div key={key} className="flex justify-between items-center bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800/60">
-                      <span className="text-slate-300 font-bold">{key}</span>
-                      {info.exists && info.length > 0 ? (
-                        <span className="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/15">
-                          Terbaca ({info.length} Karakter)
-                        </span>
-                      ) : (
-                        <span className="text-rose-400 font-bold bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/15 animate-pulse">
-                          BELUM DISET / KOSONG
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                  {Object.entries(dbStatus.envKeysDetected).map(([key, info]) => {
+                    const valInfo = info as { exists: boolean; length: number };
+                    return (
+                      <div key={key} className="flex justify-between items-center bg-slate-950 px-2.5 py-1.5 rounded border border-slate-800/60">
+                        <span className="text-slate-300 font-bold">{key}</span>
+                        {valInfo.exists && valInfo.length > 0 ? (
+                          <span className="text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/15">
+                            Terbaca ({valInfo.length} Karakter)
+                          </span>
+                        ) : (
+                          <span className="text-rose-400 font-bold bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/15 animate-pulse">
+                            BELUM DISET / KOSONG
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
