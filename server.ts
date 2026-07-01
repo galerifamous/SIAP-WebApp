@@ -5,7 +5,14 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
-import firebaseConfigLocal from "./firebase-applet-config.json";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+let firebaseConfigLocal: any = null;
+try {
+  firebaseConfigLocal = require("./firebase-applet-config.json");
+} catch (e) {
+  console.warn("Failed to load firebase-applet-config.json via require:", e);
+}
 
 // Load environment variables
 dotenv.config();
