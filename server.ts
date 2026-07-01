@@ -70,11 +70,29 @@ const saveDb = (data: any) => {
 };
 
 // --- FIREBASE FIRESTORE UTILITIES ---
-let db: any = null;
-let lastInitError: string | null = null;
+let db: any = (global as any).firebaseDb || null;
+let lastInitError: string | null = (global as any).firebaseInitError || null;
+
+// Helper to initialize and retrieve Firestore instance safely, bypassing already-initialized errors
+const getFirestoreSafely = (appObj: any, databaseId: string | undefined) => {
+  const dbId = (!databaseId || databaseId === "(default)" || databaseId.trim() === "") ? undefined : databaseId;
+  try {
+    return getFirestore(appObj, dbId);
+  } catch (e: any) {
+    if (e.code === 'failed-precondition' || (e.message && (e.message.includes('already-initialized') || e.message.includes('already exists')))) {
+      console.log(`Firestore already initialized on App 'siap-app' for database: ${dbId || "(default)"}. Retrieving existing instance.`);
+      return getFirestore(appObj, dbId);
+    }
+    throw e;
+  }
+};
 
 function initFirebase() {
   if (db) return db;
+  if ((global as any).firebaseDb) {
+    db = (global as any).firebaseDb;
+    return db;
+  }
 
   // 1. Try initializing via Environment Variables (standard & highly recommended for Vercel/Production)
   const envProjectId = process.env.FIREBASE_PROJECT_ID;
@@ -91,12 +109,16 @@ function initFirebase() {
       };
       // Serverless-safe initialization with named app 'siap-app'
       const appObj = getApps().find(a => a.name === "siap-app") || initializeApp(firebaseConfig, "siap-app");
-      db = getFirestore(appObj, process.env.FIREBASE_DATABASE_ID || "(default)");
+      db = getFirestoreSafely(appObj, process.env.FIREBASE_DATABASE_ID);
+      (global as any).firebaseDb = db;
+      (global as any).firebaseInitError = null;
+      lastInitError = null;
       console.log("Firebase Firestore initialized successfully via Environment Variables. Project ID:", envProjectId);
       return db;
     } catch (error: any) {
       console.error("Firebase init via Environment Variables failed:", error);
       lastInitError = error instanceof Error ? error.message : String(error);
+      (global as any).firebaseInitError = lastInitError;
     }
   }
 
@@ -113,12 +135,16 @@ function initFirebase() {
       };
       // Serverless-safe initialization with named app 'siap-app'
       const appObj = getApps().find(a => a.name === "siap-app") || initializeApp(firebaseConfig, "siap-app");
-      db = getFirestore(appObj, firebaseConfigLocal.firestoreDatabaseId || "(default)");
+      db = getFirestoreSafely(appObj, firebaseConfigLocal.firestoreDatabaseId);
+      (global as any).firebaseDb = db;
+      (global as any).firebaseInitError = null;
+      lastInitError = null;
       console.log("Firebase Firestore initialized successfully via Bundled Config. Project ID:", firebaseConfigLocal.projectId);
       return db;
     } catch (error: any) {
       console.error("Firebase init via Bundled Config failed:", error);
       lastInitError = error instanceof Error ? error.message : String(error);
+      (global as any).firebaseInitError = lastInitError;
     }
   }
 
@@ -142,12 +168,16 @@ function initFirebase() {
     };
     // Serverless-safe initialization with named app 'siap-app'
     const appObj = getApps().find(a => a.name === "siap-app") || initializeApp(firebaseConfig, "siap-app");
-    db = getFirestore(appObj, config.firestoreDatabaseId || "(default)");
+    db = getFirestoreSafely(appObj, config.firestoreDatabaseId);
+    (global as any).firebaseDb = db;
+    (global as any).firebaseInitError = null;
+    lastInitError = null;
     console.log("Firebase Firestore initialized successfully with Project ID:", config.projectId);
     return db;
   } catch (error: any) {
     console.error("Firebase init failed:", error);
     lastInitError = error instanceof Error ? error.message : String(error);
+    (global as any).firebaseInitError = lastInitError;
     return null;
   }
 }
