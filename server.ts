@@ -5,14 +5,16 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-let firebaseConfigLocal: any = null;
-try {
-  firebaseConfigLocal = require("./firebase-applet-config.json");
-} catch (e) {
-  console.warn("Failed to load firebase-applet-config.json via require:", e);
-}
+let firebaseConfigLocal: any = {
+  projectId: "isentropic-adviser-t6tp2",
+  appId: "1:903439451433:web:d400f2b6d8f63575cda338",
+  apiKey: "AIzaSyCUMUh7cmCPHKzquH5OtwQl4U37o3Vvmb4",
+  authDomain: "isentropic-adviser-t6tp2.firebaseapp.com",
+  firestoreDatabaseId: "ai-studio-siapsisteminform-98b91134-b343-4698-875c-b15b9dd57fd1",
+  storageBucket: "isentropic-adviser-t6tp2.firebasestorage.app",
+  messagingSenderId: "903439451433",
+  measurementId: ""
+};
 
 // Load environment variables
 dotenv.config();
