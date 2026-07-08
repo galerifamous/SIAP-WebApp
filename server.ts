@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 
@@ -901,55 +900,203 @@ app.post("/api/save-gas-url", async (req, res) => {
   }
 });
 
+// API: Sync/Backup State to GAS URL (Server-side proxy to bypass CORS)
+app.post("/api/sync-to-gas", async (req, res) => {
+  const backupObj = req.body;
+
+  let gasUrl = "";
+  const supabase = initSupabase(req);
+  if (supabase) {
+    try {
+      const settingsMap = await loadSettings(supabase);
+      gasUrl = settingsMap["meta"]?.siap_gas_url || "";
+    } catch (err) {
+      console.error("[sync-to-gas] Failed to load settings from Supabase:", err);
+    }
+  }
+
+  if (!gasUrl) {
+    try {
+      const current = loadDb() || {};
+      gasUrl = current.siap_gas_url || "";
+    } catch (err) {}
+  }
+
+  if (!gasUrl) {
+    return res.status(400).json({ success: false, message: "URL Google Apps Script belum dikonfigurasi." });
+  }
+
+  try {
+    console.log(`[sync-to-gas] Proxying backup upload to GAS URL: ${gasUrl}`);
+    const response = await fetch(gasUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body: JSON.stringify(backupObj),
+    });
+
+    const responseText = await response.text();
+    let responseJson: any = {};
+    try {
+      responseJson = JSON.parse(responseText);
+    } catch (e) {
+      responseJson = { success: true, message: responseText };
+    }
+
+    if (response.ok && (responseJson.success || responseText.includes('"success":true'))) {
+      res.json({
+        success: true,
+        message: responseJson.message || "Data berhasil disinkronkan ke Google Sheets."
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: responseJson.message || responseText || "Gagal sinkronisasi via Google Apps Script."
+      });
+    }
+  } catch (err: any) {
+    console.error("Failed to sync to GAS URL:", err);
+    res.status(500).json({
+      success: false,
+      message: `Gagal koneksi ke Google Apps Script: ${err.message}`
+    });
+  }
+});
+
+// API: Load/Restore State from GAS URL (Server-side proxy to bypass CORS)
+app.get("/api/load-from-gas", async (req, res) => {
+  let gasUrl = "";
+  const supabase = initSupabase(req);
+  if (supabase) {
+    try {
+      const settingsMap = await loadSettings(supabase);
+      gasUrl = settingsMap["meta"]?.siap_gas_url || "";
+    } catch (err) {
+      console.error("[load-from-gas] Failed to load settings from Supabase:", err);
+    }
+  }
+
+  if (!gasUrl) {
+    try {
+      const current = loadDb() || {};
+      gasUrl = current.siap_gas_url || "";
+    } catch (err) {}
+  }
+
+  if (!gasUrl) {
+    return res.status(400).json({ success: false, message: "URL Google Apps Script belum dikonfigurasi." });
+  }
+
+  try {
+    console.log(`[load-from-gas] Proxying fetch from GAS URL: ${gasUrl}`);
+    const urlWithCacheBuster = gasUrl + (gasUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
+    const response = await fetch(urlWithCacheBuster);
+    
+    if (!response.ok) {
+      throw new Error(`Google Apps Script responded with HTTP ${response.status}`);
+    }
+
+    const dataText = await response.text();
+    let dataJson: any;
+    try {
+      dataJson = JSON.parse(dataText);
+    } catch (e) {
+      throw new Error("Respons dari Google Apps Script bukan format JSON yang valid.");
+    }
+
+    res.json(dataJson);
+  } catch (err: any) {
+    console.error("Failed to fetch from GAS URL:", err);
+    res.status(500).json({ success: false, message: err.message || "Gagal mengambil data dari Google Apps Script." });
+  }
+});
 
 
-// API: Send Email via SMTP or simulated fallback
+
+// API: Send Email strictly via Google Apps Script (GAS) Web App (MailApp / GmailApp)
 app.post("/api/send-email", async (req, res) => {
   const { recipient, subject, content, senderName, senderEmail } = req.body;
 
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-  const smtpSecure = process.env.SMTP_SECURE === "true";
-  const smtpFrom = process.env.SMTP_FROM || smtpUser || "noreply@madrasah.sch.id";
-
-  if (smtpHost && smtpUser && smtpPass) {
+  let gasUrl = "";
+  const supabase = initSupabase(req);
+  if (supabase) {
     try {
-      const transporter = nodemailer.createTransport({
-        host: smtpHost,
-        port: smtpPort,
-        secure: smtpSecure,
-        auth: {
-          user: smtpUser,
-          pass: smtpPass,
-        },
-      });
-
-      const info = await transporter.sendMail({
-        from: `"${senderName || "SIAP Akademik"}" <${senderEmail || smtpFrom}>`,
-        to: recipient,
-        replyTo: senderEmail || undefined,
-        subject: subject,
-        text: content,
-        html: content.replace(/\n/g, "<br>"), // basic plaintext to HTML wrapper
-      });
-
-      console.log("Real SMTP Email Sent successfully:", info.messageId);
-      res.json({ success: true, simulated: false, messageId: info.messageId });
-    } catch (err: any) {
-      console.error("SMTP sending failed:", err);
-      res.status(500).json({ success: false, message: `Gagal mengirim email riil: ${err.message}` });
+      const settingsMap = await loadSettings(supabase);
+      gasUrl = settingsMap["meta"]?.siap_gas_url || "";
+      if (gasUrl) {
+        console.log("[send-email] Loaded GAS URL from Supabase settingsMap:", gasUrl);
+      }
+    } catch (err) {
+      console.error("[send-email] Failed to load settings from Supabase:", err);
     }
-  } else {
-    // Simulated fallback
-    console.log(`[SIMULATION] Sending email to ${recipient}: ${subject}`);
-    res.json({ 
-      success: true, 
-      simulated: true, 
-      message: "SMTP belum dikonfigurasi di .env. Pengiriman email disimulasikan." 
-    });
   }
+
+  if (!gasUrl) {
+    try {
+      const current = loadDb() || {};
+      gasUrl = current.siap_gas_url || "";
+      if (gasUrl) {
+        console.log("[send-email] Loaded GAS URL from local DB:", gasUrl);
+      }
+    } catch (err) {}
+  }
+
+  if (gasUrl) {
+    try {
+      console.log(`[send-email] Routing real email to GAS URL: ${gasUrl}`);
+      const response = await fetch(gasUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8",
+        },
+        body: JSON.stringify({
+          action: "send_email",
+          recipient,
+          subject,
+          content,
+          senderName,
+          senderEmail,
+        }),
+      });
+
+      const responseText = await response.text();
+      let responseJson: any = {};
+      try {
+        responseJson = JSON.parse(responseText);
+      } catch (e) {}
+
+      if (response.ok && (responseJson.success || responseText.includes('"success":true'))) {
+        console.log("Email sent successfully via Google Apps Script (MailApp).");
+        return res.json({ 
+          success: true, 
+          simulated: false, 
+          viaGas: true, 
+          message: responseJson.message || "Email terkirim melalui Google Apps Script." 
+        });
+      } else {
+        console.warn("GAS URL responded with error:", responseText);
+        return res.status(500).json({
+          success: false,
+          message: `Gagal mengirim email via Google Apps Script: ${responseJson.message || responseText || 'Respon tidak valid'}`
+        });
+      }
+    } catch (err: any) {
+      console.error("Failed to send email via GAS URL:", err);
+      return res.status(500).json({
+        success: false,
+        message: `Gagal koneksi ke Google Apps Script: ${err.message}`
+      });
+    }
+  }
+
+  // Fallback if GAS is not configured at all
+  console.log(`[SIMULATION] GAS URL is not configured. Simulating email to ${recipient}: ${subject}`);
+  res.json({ 
+    success: true, 
+    simulated: true, 
+    message: "Aplikasi belum terhubung ke Google Apps Script. Pengiriman disimulasikan." 
+  });
 });
 
 // Setup dev/prod static serving conditionally

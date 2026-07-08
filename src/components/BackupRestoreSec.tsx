@@ -93,6 +93,7 @@ function doPost(e) {
           to: payload.recipient,
           subject: payload.subject,
           body: payload.content,
+          htmlBody: payload.content.replace(/\n/g, "<br>"),
           name: payload.senderName || "Sistem Informasi SIAP"
         };
         
@@ -101,11 +102,21 @@ function doPost(e) {
           emailOptions.replyTo = payload.senderEmail;
         }
         
-        MailApp.sendEmail(emailOptions);
+        // Coba kirim via GmailApp agar tersimpan di folder "Sent" (Terkirim),
+        // jika gagal, otomatis gunakan MailApp sebagai fallback
+        try {
+          GmailApp.sendEmail(payload.recipient, payload.subject, payload.content, {
+            htmlBody: emailOptions.htmlBody,
+            name: emailOptions.name,
+            replyTo: emailOptions.replyTo
+          });
+        } catch (gmailErr) {
+          MailApp.sendEmail(emailOptions);
+        }
         
         return ContentService.createTextOutput(JSON.stringify({
           success: true,
-          message: "Email berhasil terkirim via Google MailApp dengan reply-to dialihkan ke: " + (payload.senderEmail || "default")
+          message: "Email berhasil terkirim via Google Workspace dengan reply-to dialihkan ke: " + (payload.senderEmail || "default")
         })).setMimeType(ContentService.MimeType.JSON);
       } catch (mailErr) {
         return ContentService.createTextOutput(JSON.stringify({
@@ -569,7 +580,10 @@ export default function BackupRestoreSec({
     // Sync gasUrl to backend server
     fetch('/api/save-gas-url', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...getClientSupabaseHeaders()
+      },
       body: JSON.stringify({ gasUrl })
     }).catch(err => console.warn("Failed to sync GAS URL to server:", err));
 
@@ -586,31 +600,25 @@ export default function BackupRestoreSec({
         siap_system: systemSetting
       };
 
-      const response = await fetch(gasUrl, {
+      const response = await fetch('/api/sync-to-gas', {
         method: 'POST',
         headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
+          'Content-Type': 'application/json',
+          ...getClientSupabaseHeaders()
         },
         body: JSON.stringify(backupObj)
       });
 
-      const resText = await response.text();
-      let resJson;
-      try {
-        resJson = JSON.parse(resText);
-      } catch (e) {
-        resJson = { success: true, message: "Sinkronisasi selesai (Respons: " + resText.slice(0, 50) + ")." };
-      }
+      const resJson = await response.json();
 
-      if (resJson && (resJson.success || response.ok)) {
+      if (response.ok && resJson.success) {
         setSuccessMsg(resJson.message || "Sinkronisasi cloud berhasil! Seluruh data telah diperbarui ke Spreadsheet dan Google Drive Anda.");
       } else {
         setErrorMsg("Sinkronisasi gagal: " + (resJson?.message || "Respons server tidak sesuai. Periksa deployment Web App Anda."));
       }
     } catch (err: any) {
       console.error(err);
-      // Fallback message for successful triggers that encounter browser redirection/CORS limits
-      setSuccessMsg("Permintaan sinkronisasi terkirim ke cloud! Harap periksa lembar Spreadsheet Anda beberapa saat lagi untuk memastikan pembaruan data.");
+      setErrorMsg("Sinkronisasi gagal: " + err.message);
     } finally {
       setIsSyncing(false);
       setTimeout(() => setSuccessMsg(null), 7000);
@@ -640,13 +648,19 @@ export default function BackupRestoreSec({
     // Sync gasUrl to backend server
     fetch('/api/save-gas-url', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...getClientSupabaseHeaders()
+      },
       body: JSON.stringify({ gasUrl })
     }).catch(err => console.warn("Failed to sync GAS URL to server:", err));
 
     try {
-      const urlWithCacheBuster = gasUrl + (gasUrl.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
-      const response = await fetch(urlWithCacheBuster);
+      const response = await fetch('/api/load-from-gas', {
+        headers: {
+          ...getClientSupabaseHeaders()
+        }
+      });
       const resJson = await response.json();
 
       if (resJson && resJson.success && resJson.data) {

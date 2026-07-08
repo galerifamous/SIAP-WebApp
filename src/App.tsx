@@ -815,11 +815,12 @@ export default function App() {
       return updated;
     });
 
-    // Send securely via Node.js backend endpoint which handles real SMTP
+    // Send securely via Node.js backend endpoint which routes to Google Apps Script
     fetch("/api/send-email", {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...getClientSupabaseHeaders()
       },
       body: JSON.stringify({
         recipient,
@@ -838,7 +839,7 @@ export default function App() {
               return { 
                 ...log, 
                 status: 'Success' as const,
-                notes: json.simulated ? "Simulated (SMTP not set)" : undefined
+                notes: json.simulated ? "Simulasi (Google Apps Script belum aktif)" : undefined
               };
             }
             return log;
