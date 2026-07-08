@@ -93,7 +93,7 @@ function doPost(e) {
           to: payload.recipient,
           subject: payload.subject,
           body: payload.content,
-          htmlBody: payload.content.replace(/\n/g, "<br>"),
+          htmlBody: payload.content.replace(/\\n/g, "<br>"),
           name: payload.senderName || "Sistem Informasi SIAP"
         };
         
@@ -197,6 +197,26 @@ function doPost(e) {
       ], payload.siap_emails.map(item => [
         item.id, item.timestamp, item.recipient, item.role, item.subject, item.content, item.status, item.type, item.senderName || item.sender || ""
       ]));
+    }
+
+    // 9. Sync Pengaturan Akademik
+    if (payload.siap_academic) {
+      const acad = payload.siap_academic;
+      writeToSheet(ss, "Pengaturan_Akademik", [
+        "Tahun Ajaran Aktif", "Semester Aktif", "Kepala Sekolah", "NIP Kepala Sekolah", "Tanggal Rapor"
+      ], [[
+        acad.activeYear || "", acad.activeSemester || "", acad.headmaster || "", acad.headmasterNip || "", acad.reportDate || ""
+      ]]);
+    }
+
+    // 10. Sync Pengaturan Sistem
+    if (payload.siap_system) {
+      const sys = payload.siap_system;
+      writeToSheet(ss, "Pengaturan_Sistem", [
+        "Nama Sekolah", "NPSN", "Alamat Sekolah", "Logo Base64", "Warna Tema"
+      ], [[
+        sys.schoolName || "", sys.npsn || "", sys.address || "", sys.logoImg || "", sys.themeColor || ""
+      ]]);
     }
     
     // Simpan file backup JSON ke folder Google Drive jika ID Folder dikonfigurasi
@@ -303,6 +323,26 @@ function doGet(e) {
     ], [
       "string", "string", "string", "string", "string", "string", "string", "string", "string"
     ]);
+
+    // Read Pengaturan Akademik
+    const rawAcademic = readFromSheet(ss, "Pengaturan_Akademik", [
+      "activeYear", "activeSemester", "headmaster", "headmasterNip", "reportDate"
+    ], [
+      "string", "string", "string", "string", "string"
+    ]);
+    if (rawAcademic && rawAcademic.length > 0) {
+      payload.siap_academic = rawAcademic[0];
+    }
+
+    // Read Pengaturan Sistem
+    const rawSystem = readFromSheet(ss, "Pengaturan_Sistem", [
+      "schoolName", "npsn", "address", "logoImg", "themeColor"
+    ], [
+      "string", "string", "string", "string", "string"
+    ]);
+    if (rawSystem && rawSystem.length > 0) {
+      payload.siap_system = rawSystem[0];
+    }
     
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
@@ -673,6 +713,8 @@ export default function BackupRestoreSec({
           cases?: CaseReport[];
           achievements?: Achievement[];
           emails?: EmailLog[];
+          academicSetting?: AcademicSetting;
+          systemSetting?: SystemSetting;
         } = {};
 
         if (Array.isArray(cloudData.siap_students)) payload.students = cloudData.siap_students;
@@ -682,6 +724,8 @@ export default function BackupRestoreSec({
         if (Array.isArray(cloudData.siap_cases)) payload.cases = cloudData.siap_cases;
         if (Array.isArray(cloudData.siap_achievements)) payload.achievements = cloudData.siap_achievements;
         if (Array.isArray(cloudData.siap_emails)) payload.emails = cloudData.siap_emails;
+        if (cloudData.siap_academic) payload.academicSetting = cloudData.siap_academic;
+        if (cloudData.siap_system) payload.systemSetting = cloudData.siap_system;
 
         onRestoreData(payload);
         setSuccessMsg("Pemulihan data cloud berhasil! Seluruh komponen data telah sinkron dengan Spreadsheet Google.");
@@ -1090,6 +1134,142 @@ create policy "Allow public delete access" on public.siap_store for delete using
           </div>
         </div>
       )}
+
+      {/* Google Apps Script (GAS) Cloud Integration */}
+      <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-6 mb-6 animate-fadeIn">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/60 pb-5 mb-5">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl">
+              <UploadCloud className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                Sinkronisasi Cloud Google Workspace (Google Sheets & Drive)
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                Gunakan Google Apps Script sebagai server proxy sinkronisasi tangguh untuk menyimpan & memulihkan database secara terpusat langsung ke lembar Spreadsheet dan folder Google Drive pribadi Anda.
+              </p>
+            </div>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowScriptGuide(!showScriptGuide)}
+              className="px-3.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/20 rounded-lg font-bold text-[10px] uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Globe className="w-3.5 h-3.5" />
+              {showScriptGuide ? "Sembunyikan Kode Apps Script" : "Ambil Kode Apps Script"}
+            </button>
+          </div>
+        </div>
+
+        {/* GAS Guide / Code Block Panel */}
+        {showScriptGuide && (
+          <div className="mb-5 p-5 bg-slate-900 border border-slate-800 rounded-xl space-y-4 animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+              <span className="font-bold text-indigo-400 text-xs uppercase tracking-wider">Panduan Instalasi Google Apps Script (GAS)</span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(GOOGLE_APPS_SCRIPT_CODE);
+                  toast.success("Kode Apps Script berhasil disalin ke clipboard!");
+                }}
+                className="px-3 py-1.5 text-[10px] font-bold bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/20 rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                Salin Kode Apps Script
+              </button>
+            </div>
+            <div className="text-slate-300 text-xs leading-relaxed space-y-2.5 font-medium">
+              <p>
+                Aplikasi SIAP menggunakan <strong>Aplikasi Web Google Apps Script (Web App)</strong> agar dapat mengirim email secara resmi melalui akun Gmail Anda tanpa kendala limit/kredensial SMTP, sekaligus mencadangkan seluruh data sekolah ke Google Sheets Anda secara real-time.
+              </p>
+              <ol className="list-decimal list-inside space-y-1.5 pl-1 text-slate-400 text-[11px]">
+                <li>Buka Google Drive Anda, lalu buat sebuah Spreadsheet baru dengan nama <strong className="text-white">SIAP Database</strong>.</li>
+                <li>Di dalam Spreadsheet, buka menu <strong className="text-white">Ekstensi (Extensions)</strong> &gt; <strong className="text-white">Apps Script</strong>.</li>
+                <li>Hapus semua kode bawaan di editor, lalu klik tombol <strong className="text-indigo-400 font-bold">Salin Kode Apps Script</strong> di atas dan tempelkan (paste) seluruh kodenya ke editor Apps Script Anda.</li>
+                <li>Klik tombol <strong className="text-white">Simpan</strong> (ikon disket).</li>
+                <li>Klik tombol <strong className="text-indigo-400 font-bold">Terapkan (Deploy)</strong> di kanan atas &gt; pilih <strong className="text-white">Penerapan baru (New deployment)</strong>.</li>
+                <li>Klik ikon roda gigi pengaturan di sebelah "Pilih jenis", pilih <strong className="text-emerald-400 font-bold">Aplikasi web (Web app)</strong>.</li>
+                <li>Konfigurasikan setelan berikut:
+                  <ul className="list-disc list-inside pl-5 mt-1 text-[10.5px] space-y-0.5 text-slate-400">
+                    <li>Jalankan sebagai (Execute as): <strong className="text-indigo-300">Saya (email@gmail.com)</strong></li>
+                    <li>Siapa yang memiliki akses (Who has access): <strong className="text-emerald-300 font-bold">Siapa saja (Anyone)</strong> (Pilihan wajib agar dapat berkomunikasi dengan aman)</li>
+                  </ul>
+                </li>
+                <li>Klik <strong className="text-indigo-400 font-bold">Terapkan</strong>. Izinkan akses (klik akun Google Anda &gt; Advanced &gt; Go to Untitled project (unsafe) &gt; Allow).</li>
+                <li>Salin <strong className="text-white">URL Aplikasi Web (Web App URL)</strong> yang berakhiran dengan <strong className="text-emerald-400 font-mono text-[11px]">/exec</strong>. Tempelkan URL tersebut ke kolom input di bawah ini!</li>
+              </ol>
+            </div>
+            <div className="pt-2">
+              <label className="text-[10px] uppercase tracking-widest font-bold text-slate-400 block mb-1.5">Kode Google Apps Script Lengkap:</label>
+              <pre className="p-3.5 bg-slate-950 rounded-lg border border-slate-950 font-mono text-[9px] text-slate-300 overflow-x-auto whitespace-pre max-h-[220px] select-all leading-relaxed">
+                {GOOGLE_APPS_SCRIPT_CODE}
+              </pre>
+            </div>
+          </div>
+        )}
+
+        {/* GAS Configuration Form */}
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row md:items-end gap-3 bg-slate-900/40 p-4 rounded-xl border border-slate-800/80">
+            <div className="flex-1 space-y-1.5">
+              <label className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
+                URL Google Apps Script Web App (Diakhiri /exec)
+              </label>
+              <input
+                type="url"
+                value={gasUrl}
+                onChange={(e) => {
+                  const url = e.target.value.trim();
+                  setGasUrl(url);
+                  localStorage.setItem('siap_gas_url', url);
+                }}
+                placeholder="https://script.google.com/macros/s/AKfycb..._abc123/exec"
+                className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-500 transition-colors font-mono"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem('siap_gas_url', gasUrl.trim());
+                // Sync to backend
+                fetch('/api/save-gas-url', {
+                  method: 'POST',
+                  headers: { 
+                    'Content-Type': 'application/json',
+                    ...getClientSupabaseHeaders()
+                  },
+                  body: JSON.stringify({ gasUrl: gasUrl.trim() })
+                })
+                  .then(() => toast.success("URL Google Apps Script berhasil disimpan!"))
+                  .catch(err => console.warn("Failed to sync GAS URL:", err));
+              }}
+              className="py-2 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition duration-150 flex items-center justify-center gap-1.5 cursor-pointer self-stretch md:self-auto"
+            >
+              Simpan URL
+            </button>
+          </div>
+
+          {/* Cloud Action Buttons */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button
+              onClick={handleCloudBackup}
+              disabled={isSyncing || !gasUrl}
+              className="flex items-center justify-center gap-2 py-2.5 px-4 bg-indigo-600/15 hover:bg-indigo-600/25 disabled:bg-slate-800/40 disabled:text-slate-500 disabled:border-transparent text-indigo-300 font-bold rounded-xl border border-indigo-500/15 transition-all text-xs cursor-pointer"
+            >
+              <UploadCloud className={`w-4 h-4 ${isSyncing ? "animate-bounce" : ""}`} />
+              <span>{isSyncing ? "Sedang Menyinkronkan..." : "Cadangkan Sekarang ke Google Sheets"}</span>
+            </button>
+            <button
+              onClick={handleCloudRestore}
+              disabled={isRestoringCloud || !gasUrl}
+              className="flex items-center justify-center gap-2 py-2.5 px-4 bg-sky-600/15 hover:bg-sky-600/25 disabled:bg-slate-800/40 disabled:text-slate-500 disabled:border-transparent text-sky-300 font-bold rounded-xl border border-sky-500/15 transition-all text-xs cursor-pointer"
+            >
+              <RefreshCcw className={`w-4 h-4 ${isRestoringCloud ? "animate-spin" : ""}`} />
+              <span>{isRestoringCloud ? "Sedang Memulihkan..." : "Pulihkan Sekarang dari Google Sheets"}</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Box Left: Ekspor Backup */}
