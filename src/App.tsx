@@ -130,6 +130,7 @@ export default function App() {
 
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [syncEnabled, setSyncEnabled] = useState(false);
 
   // --- AUTOMATIC HANDSHAKE WITH SERVER TO SYNC SUPABASE CONNECTION ---
   useEffect(() => {
@@ -149,10 +150,14 @@ export default function App() {
             supabaseUrl: resJson.supabaseUrl,
             supabaseAnonKey: resJson.supabaseAnonKey
           };
-          if (!local || local.supabaseUrl !== serverConfig.supabaseUrl || local.supabaseAnonKey !== serverConfig.supabaseAnonKey) {
-            console.log("[Supabase Handshake] Received config from server:", serverConfig.supabaseUrl);
-            localStorage.setItem('siap_supabase_config', JSON.stringify(serverConfig));
-            setSupabaseConfig(serverConfig);
+          // Only overwrite if there is no manual custom user configuration in localStorage
+          const hasCustomLocal = !!localStorage.getItem('siap_supabase_config');
+          if (!hasCustomLocal) {
+            if (!local || local.supabaseUrl !== serverConfig.supabaseUrl || local.supabaseAnonKey !== serverConfig.supabaseAnonKey) {
+              console.log("[Supabase Handshake] Received config from server:", serverConfig.supabaseUrl);
+              localStorage.setItem('siap_supabase_config', JSON.stringify(serverConfig));
+              setSupabaseConfig(serverConfig);
+            }
           }
         }
       })
@@ -578,9 +583,46 @@ export default function App() {
               localStorage.setItem('siap_card_stamp_img', d.siap_card_stamp_img);
             }
             
+            setSyncEnabled(true);
             setTimeout(() => {
               setIsLoaded(true);
             }, 800);
+          } else if (resJson && resJson.success && resJson.storageMode === "supabase-empty") {
+            console.log("Supabase is connected but empty. Seeding Supabase with client-side local data.");
+            const stateObj = {
+              siap_students: getLocalOrSeed<Student[]>('siap_students', INITIAL_STUDENTS),
+              siap_teachers: getLocalOrSeed<Teacher[]>('siap_teachers', INITIAL_TEACHERS),
+              siap_attendance: getLocalOrSeed<Attendance[]>('siap_attendance', INITIAL_ATTENDANCE(acad.activeYear, acad.activeSemester)),
+              siap_grades: getLocalOrSeed<Grade[]>('siap_grades', INITIAL_GRADES(acad.activeYear, acad.activeSemester)),
+              siap_cases: getLocalOrSeed<CaseReport[]>('siap_cases', INITIAL_CASES(acad.activeYear, acad.activeSemester)),
+              siap_achievements: getLocalOrSeed<Achievement[]>('siap_achievements', INITIAL_ACHIEVEMENTS(acad.activeYear, acad.activeSemester)),
+              siap_emails: getLocalOrSeed<EmailLog[]>('siap_emails', INITIAL_EMAILS),
+              siap_academic: acad,
+              siap_system: sys,
+              siap_holidays: getLocalOrSeed<Holiday[]>('siap_holidays', []),
+              siap_class_staffs: getLocalOrSeed<ClassStaff[]>('siap_class_staffs', INITIAL_CLASS_STAFFS),
+              siap_gas_url: localStorage.getItem('siap_gas_url') || '',
+              siap_card_signature_img: localStorage.getItem('siap_card_signature_img') || '',
+              siap_card_stamp_img: localStorage.getItem('siap_card_stamp_img') || ''
+            };
+            fetch('/api/save', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...getClientSupabaseHeaders()
+              },
+              body: JSON.stringify(stateObj)
+            })
+            .then(() => {
+              setSyncEnabled(true);
+              setTimeout(() => {
+                setIsLoaded(true);
+              }, 800);
+            })
+            .catch(err => {
+              console.warn("Failed to seed empty Supabase with client-side data:", err);
+              setIsLoaded(true);
+            });
           } else {
             console.log("No data found on backend. Seeding backend with initial datasets.");
             const stateObj = {
@@ -608,6 +650,7 @@ export default function App() {
               body: JSON.stringify(stateObj)
             })
             .then(() => {
+              setSyncEnabled(true);
               setTimeout(() => {
                 setIsLoaded(true);
               }, 800);
@@ -628,7 +671,7 @@ export default function App() {
 
   // --- AUTOMATIC LOCAL EXPRESS SERVER SYNC ---
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !syncEnabled) return;
 
     const stateObj = {
       siap_students: students,
@@ -661,7 +704,7 @@ export default function App() {
     .catch((err) => {
       console.warn('Failed to sync to database server:', err);
     });
-  }, [isLoaded, students, teachers, attendance, grades, cases, achievements, emails, academicSetting, systemSetting, holidays, classStaffs]);
+  }, [isLoaded, syncEnabled, students, teachers, attendance, grades, cases, achievements, emails, academicSetting, systemSetting, holidays, classStaffs]);
 
   // --- LOCAL PERSISTENCE WRITERS ---
   const saveState = (key: string, data: any) => {

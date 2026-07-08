@@ -611,7 +611,8 @@ app.get("/api/load", async (req, res) => {
         console.log("Database successfully loaded from Supabase.");
         return res.json({ success: true, data: assembledData, storageMode: "supabase" });
       } else {
-        console.log("Supabase is empty. Loading local database.json and seeding to Supabase...");
+        console.log("Supabase is empty. Returning empty status so client can seed.");
+        return res.json({ success: true, data: null, storageMode: "supabase-empty" });
       }
     } catch (err) {
       console.error("Failed to load from Supabase, falling back to local JSON database:", err);

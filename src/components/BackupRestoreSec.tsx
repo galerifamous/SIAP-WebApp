@@ -825,7 +825,7 @@ export default function BackupRestoreSec({
             <div className={`p-2.5 rounded-xl border ${
               checkingStatus 
                 ? 'bg-slate-800/50 border-slate-700 text-slate-400' 
-                : (dbStatus?.supabaseInitialized || isClientSupabaseActive())
+                : dbStatus?.supabaseInitialized
                   ? (dbStatus?.tableExists === false 
                     ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' 
                     : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400')
@@ -841,7 +841,7 @@ export default function BackupRestoreSec({
               <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                 {checkingStatus ? (
                   "Sedang mendeteksi konfigurasi database..."
-                ) : (dbStatus?.supabaseInitialized || isClientSupabaseActive()) ? (
+                ) : dbStatus?.supabaseInitialized ? (
                   dbStatus?.tableExists === false ? (
                     <span className="text-amber-400 font-semibold">
                       Terhubung ke Supabase, namun tabel <code className="text-white px-1 py-0.5 bg-slate-900 rounded font-mono text-[10px]">siap_store</code> belum dibuat. Silakan jalankan script SQL di bawah ini di SQL Editor Supabase Anda!
@@ -853,14 +853,14 @@ export default function BackupRestoreSec({
                   )
                 ) : (
                   <span>
-                    Database Offline (Local Mode). <strong className="text-rose-400 font-bold">PENTING:</strong> Di serverless hosting (seperti Netlify/Vercel), server bersifat <em className="underline">stateless (sementara)</em>. Tanpa Supabase, data akan selalu kembali ke awal ketika server idle atau dibuka di perangkat baru.
+                    Database Offline (Local Mode) atau Konfigurasi Salah. <strong className="text-rose-400 font-bold">PENTING:</strong> Di serverless hosting (seperti Netlify/Vercel), server bersifat <em className="underline">stateless (sementara)</em>. Tanpa Supabase, data akan selalu kembali ke awal ketika server idle atau dibuka di perangkat baru.
                   </span>
                 )}
               </p>
             </div>
           </div>
           <div>
-            {checkingStatus ? null : (dbStatus?.supabaseInitialized || isClientSupabaseActive()) ? (
+            {checkingStatus ? null : dbStatus?.supabaseInitialized ? (
               dbStatus?.tableExists === false ? (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-lg font-bold text-[10px] uppercase tracking-wider">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
