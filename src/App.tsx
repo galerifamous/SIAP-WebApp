@@ -623,6 +623,12 @@ export default function App() {
               console.warn("Failed to seed empty Supabase with client-side data:", err);
               setIsLoaded(true);
             });
+          } else if (resJson && resJson.storageMode === "supabase-error") {
+            console.warn("Supabase connection or table error detected on backend:", resJson.message);
+            setSyncEnabled(false);
+            setTimeout(() => {
+              setIsLoaded(true);
+            }, 800);
           } else {
             console.log("No data found on backend. Seeding backend with initial datasets.");
             const stateObj = {

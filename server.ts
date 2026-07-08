@@ -140,6 +140,14 @@ function initSupabase(req?: any) {
 const app = express();
 const PORT = 3000;
 
+// Middleware to normalize Netlify/serverless request paths so they map cleanly to "/api/*" routes
+app.use((req, res, next) => {
+  if (req.url.startsWith('/.netlify/functions/api')) {
+    req.url = req.url.replace('/.netlify/functions/api', '/api');
+  }
+  next();
+});
+
 // Set large JSON limits to support base64 images (student photos, card signatures, stamps)
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
@@ -552,6 +560,13 @@ app.get("/api/load", async (req, res) => {
   if (supabase) {
     try {
       console.log("Loading database from Supabase...");
+      
+      // Safety check: verify connectivity and table existence
+      const { error: tableCheckError } = await supabase.from('siap_store').select('id').limit(1);
+      if (tableCheckError) {
+        throw new Error(`Koneksi Supabase gagal atau tabel 'siap_store' belum dibuat: ${tableCheckError.message} (code: ${tableCheckError.code})`);
+      }
+
       const [
         students,
         teachers,
@@ -614,8 +629,13 @@ app.get("/api/load", async (req, res) => {
         console.log("Supabase is empty. Returning empty status so client can seed.");
         return res.json({ success: true, data: null, storageMode: "supabase-empty" });
       }
-    } catch (err) {
-      console.error("Failed to load from Supabase, falling back to local JSON database:", err);
+    } catch (err: any) {
+      console.error("Failed to load from Supabase:", err);
+      return res.json({
+        success: false,
+        message: `Gagal memuat dari Supabase: ${err.message || err}`,
+        storageMode: "supabase-error"
+      });
     }
   }
 
