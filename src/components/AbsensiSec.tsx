@@ -701,6 +701,15 @@ export default function AbsensiSec({
     const matchesDate = dateFilter ? att.date === dateFilter : true;
 
     return matchesSearch && matchesClass && matchesStatus && matchesDate;
+  }).sort((a, b) => {
+    const classA = (a.class || '').toLowerCase();
+    const classB = (b.class || '').toLowerCase();
+    if (classA !== classB) {
+      return classA.localeCompare(classB, 'id');
+    }
+    const nameA = (a.studentName || '').toLowerCase();
+    const nameB = (b.studentName || '').toLowerCase();
+    return nameA.localeCompare(nameB, 'id');
   });
 
   // Export to Excel (CSV)
@@ -880,7 +889,7 @@ export default function AbsensiSec({
           <div className="p-5 bg-slate-950/20 border border-slate-800 rounded-2xl flex flex-col justify-between">
             <div>
               <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-1">Daftar Pintasan Absen</h3>
-              <p className="text-[10px] text-slate-500 mb-4">Klik tombol H, S, I, atau A untuk mencatat status siswa secara manual</p>
+              <p className="text-[10px] text-slate-500 mb-4">Klik tombol H, S, I, atau A untuk mencatat status siswa secara manual. Data otomatis sinkron real-time di semua akun Guru Kelas, Guru Mapel, & Admin.</p>
 
               <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
                 {students.map((student) => {
@@ -1334,7 +1343,7 @@ export default function AbsensiSec({
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <h3 className="font-bold text-white text-sm">Absensi Kelas Konvensional</h3>
-                    <p className="text-slate-500 text-xs mt-0.5">Pilih kelas dan tanggal (bisa tanggal yang telah lalu) untuk mengisi & mengedit absensi secara massal.</p>
+                    <p className="text-slate-500 text-xs mt-0.5">Pilih kelas dan tanggal untuk mengisi & mengedit absensi secara massal. Semua perubahan langsung sinkron di akun Guru Kelas, Guru Mapel, & Admin.</p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">

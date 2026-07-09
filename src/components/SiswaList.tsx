@@ -99,6 +99,15 @@ export default function SiswaList({
                           parentName.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesClass = classFilter ? student.class === classFilter : true;
     return matchesSearch && matchesClass;
+  }).sort((a, b) => {
+    const classA = (a.class || '').toLowerCase();
+    const classB = (b.class || '').toLowerCase();
+    if (classA !== classB) {
+      return classA.localeCompare(classB, 'id');
+    }
+    const nameA = (a.name || '').toLowerCase();
+    const nameB = (b.name || '').toLowerCase();
+    return nameA.localeCompare(nameB, 'id');
   });
 
   // Export all students to Excel (CSV)

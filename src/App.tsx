@@ -32,7 +32,7 @@ import UangKasSec from './components/UangKasSec';
 import BackupRestoreSec from './components/BackupRestoreSec';
 import KartuSiswaSec from './components/KartuSiswaSec';
 import UnduhAplikasiSec from './components/UnduhAplikasiSec';
-import { ArrowLeft, Sun, Moon } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, RefreshCw } from 'lucide-react';
 import NaikKelasSec from './components/NaikKelasSec';
 import PremiumDialog from './components/PremiumDialog';
 import {
@@ -116,7 +116,28 @@ export default function App() {
   };
 
   // --- DATABASE STATES ---
-  const [students, setStudents] = useState<Student[]>([]);
+  const sortStudentsAlphabetically = (list: Student[]): Student[] => {
+    if (!list || !Array.isArray(list)) return [];
+    return [...list].sort((a, b) => {
+      const classA = (a.class || '').toLowerCase();
+      const classB = (b.class || '').toLowerCase();
+      if (classA !== classB) {
+        return classA.localeCompare(classB, 'id');
+      }
+      const nameA = (a.name || '').toLowerCase();
+      const nameB = (b.name || '').toLowerCase();
+      return nameA.localeCompare(nameB, 'id');
+    });
+  };
+
+  const [students, rawSetStudents] = useState<Student[]>([]);
+  const setStudents = (val: Student[] | ((prev: Student[]) => Student[])) => {
+    rawSetStudents(prev => {
+      const resolved = typeof val === 'function' ? val(prev) : val;
+      return sortStudentsAlphabetically(resolved);
+    });
+  };
+
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [academicSetting, setAcademicSetting] = useState<AcademicSetting>(INITIAL_ACADEMIC);
   const [systemSetting, setSystemSetting] = useState<SystemSetting>(INITIAL_SYSTEM);
@@ -131,6 +152,8 @@ export default function App() {
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [syncEnabled, setSyncEnabled] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const isPullingRef = React.useRef(false);
 
   // --- AUTOMATIC HANDSHAKE WITH SERVER TO SYNC SUPABASE CONNECTION ---
   useEffect(() => {
@@ -165,6 +188,24 @@ export default function App() {
         console.warn("[Supabase Handshake] Server does not expose Supabase config:", err);
       });
   }, []);
+
+  // --- DYNAMIC WEBAPP TITLE & FAVICON LOGO ---
+  useEffect(() => {
+    // Update tab title dynamically
+    const baseTitle = "SIAP - Sistem Informasi Akademik Pelajar";
+    document.title = systemSetting.schoolName ? `${baseTitle} - ${systemSetting.schoolName}` : baseTitle;
+
+    // Update tab icon (favicon) based on uploaded system logo
+    if (systemSetting.logoUrl) {
+      let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = systemSetting.logoUrl;
+    }
+  }, [systemSetting.logoUrl, systemSetting.schoolName]);
 
   // --- SUPABASE REALTIME SUBSCRIPTION ---
   useEffect(() => {
@@ -787,9 +828,157 @@ export default function App() {
     loadFromExpress();
   }, []);
 
-  // --- AUTOMATIC LOCAL EXPRESS SERVER SYNC ---
+  const pullStateFromServer = async (silent = true) => {
+    if (isPullingRef.current) return;
+    isPullingRef.current = true;
+    if (!silent) setIsSyncing(true);
+
+    try {
+      const res = await fetch('/api/load', {
+        headers: getClientSupabaseHeaders()
+      });
+      const text = await res.text();
+      let resJson: any;
+      try {
+        resJson = JSON.parse(text);
+      } catch (e) {
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+
+      if (resJson && resJson.success && resJson.data) {
+        const d = resJson.data;
+        console.log("Successfully pulled persistent data from Express backend:", d);
+
+        if (d.siap_system) {
+          setSystemSetting(d.siap_system);
+          localStorage.setItem('siap_system', JSON.stringify(d.siap_system));
+        }
+        if (d.siap_academic) {
+          setAcademicSetting(d.siap_academic);
+          localStorage.setItem('siap_academic', JSON.stringify(d.siap_academic));
+        }
+        if (d.siap_students) {
+          setStudents(d.siap_students);
+          localStorage.setItem('siap_students', JSON.stringify(d.siap_students));
+        }
+        if (d.siap_teachers) {
+          setTeachers(d.siap_teachers);
+          localStorage.setItem('siap_teachers', JSON.stringify(d.siap_teachers));
+        }
+        if (d.siap_attendance) {
+          setAttendance(d.siap_attendance);
+          localStorage.setItem('siap_attendance', JSON.stringify(d.siap_attendance));
+        }
+        if (d.siap_grades) {
+          setGrades(d.siap_grades);
+          localStorage.setItem('siap_grades', JSON.stringify(d.siap_grades));
+        }
+        if (d.siap_cases) {
+          setCases(d.siap_cases);
+          localStorage.setItem('siap_cases', JSON.stringify(d.siap_cases));
+        }
+        if (d.siap_achievements) {
+          setAchievements(d.siap_achievements);
+          localStorage.setItem('siap_achievements', JSON.stringify(d.siap_achievements));
+        }
+        if (d.siap_emails) {
+          setEmails(d.siap_emails);
+          localStorage.setItem('siap_emails', JSON.stringify(d.siap_emails));
+        }
+        if (d.siap_holidays) {
+          setHolidays(d.siap_holidays);
+          localStorage.setItem('siap_holidays', JSON.stringify(d.siap_holidays));
+        }
+        if (d.siap_class_staffs) {
+          setClassStaffs(d.siap_class_staffs);
+          localStorage.setItem('siap_class_staffs', JSON.stringify(d.siap_class_staffs));
+        }
+      } else {
+        // Fallback to direct client-side Supabase if config available
+        const config = getClientSupabaseConfig();
+        if (config.supabaseUrl && config.supabaseAnonKey) {
+          const clientSupabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+          const { data: rows, error } = await clientSupabase.from('siap_store').select('*');
+          if (!error && rows && rows.length > 0) {
+            const studentsList: Student[] = [];
+            const teachersList: Teacher[] = [];
+            const attendanceList: Attendance[] = [];
+            const gradesList: Grade[] = [];
+            const casesList: CaseReport[] = [];
+            const achievementsList: Achievement[] = [];
+            const emailsList: EmailLog[] = [];
+            const holidaysList: Holiday[] = [];
+            const classStaffsList: ClassStaff[] = [];
+            let academicSetObj: AcademicSetting | null = null;
+            let systemSetObj: SystemSetting | null = null;
+            
+            rows.forEach((row: any) => {
+              const col = row.collection;
+              const itemData = row.data;
+              if (!itemData) return;
+              if (col === "students") studentsList.push(itemData);
+              else if (col === "teachers") teachersList.push(itemData);
+              else if (col === "attendance") attendanceList.push(itemData);
+              else if (col === "grades") gradesList.push(itemData);
+              else if (col === "cases") casesList.push(itemData);
+              else if (col === "achievements") achievementsList.push(itemData);
+              else if (col === "emails") emailsList.push(itemData);
+              else if (col === "holidays") holidaysList.push(itemData);
+              else if (col === "class_staffs") classStaffsList.push(itemData);
+              else if (col === "settings" && row.id === "academic") academicSetObj = itemData;
+              else if (col === "settings" && row.id === "system") systemSetObj = itemData;
+            });
+            
+            if (systemSetObj) setSystemSetting(systemSetObj);
+            if (academicSetObj) setAcademicSetting(academicSetObj);
+            if (studentsList.length > 0) setStudents(studentsList);
+            if (teachersList.length > 0) setTeachers(teachersList);
+            if (attendanceList.length > 0) setAttendance(attendanceList);
+            if (gradesList.length > 0) setGrades(gradesList);
+            if (casesList.length > 0) setCases(casesList);
+            if (achievementsList.length > 0) setAchievements(achievementsList);
+            if (emailsList.length > 0) setEmails(emailsList);
+            if (holidaysList.length > 0) setHolidays(holidaysList);
+            if (classStaffsList.length > 0) setClassStaffs(classStaffsList);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Pull background sync failed:", err);
+    } finally {
+      isPullingRef.current = false;
+      if (!silent) setIsSyncing(false);
+    }
+  };
+
+  // --- PERIODIC BACKGROUND REFRESH SYNC ---
   useEffect(() => {
     if (!isLoaded || !syncEnabled) return;
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        pullStateFromServer(true);
+      }
+    }, 12000); // Sync every 12 seconds in background if active tab
+
+    return () => clearInterval(interval);
+  }, [isLoaded, syncEnabled]);
+
+  // --- RE-FETCH ON MENU SWITCH / NAVIGATION ---
+  useEffect(() => {
+    if (isLoaded && syncEnabled) {
+      pullStateFromServer(true);
+    }
+  }, [activeMenu]);
+
+  // --- MANUAL SYNC HANDLER ---
+  const handleManualSync = () => {
+    pullStateFromServer(false);
+  };
+
+  // --- AUTOMATIC LOCAL EXPRESS SERVER SYNC ---
+  useEffect(() => {
+    if (!isLoaded || !syncEnabled || isPullingRef.current) return;
 
     const stateObj = {
       siap_students: students,
@@ -907,6 +1096,7 @@ export default function App() {
         const userObj = { id: 'admin-1', name: 'Administrator SIAP', username: targetUsername, role: 'ADMIN' as Role };
         setCurrentUser(userObj);
         saveState('siap_session', userObj);
+        pullStateFromServer(true);
         setActiveMenu('dashboard');
         return null;
       }
@@ -919,6 +1109,7 @@ export default function App() {
         const userObj = { id: teacher.nuptk, name: teacher.name, username: teacher.username, role: 'GURU' as Role };
         setCurrentUser(userObj);
         saveState('siap_session', userObj);
+        pullStateFromServer(true);
         setActiveMenu('dashboard');
         return null;
       }
@@ -931,6 +1122,7 @@ export default function App() {
         const userObj = { id: student.nisn, name: student.name, username: student.nisn, role: 'SISWA' as Role, studentNisn: student.nisn };
         setCurrentUser(userObj);
         saveState('siap_session', userObj);
+        pullStateFromServer(true);
         setActiveMenu('dashboard');
         return null;
       }
@@ -1188,12 +1380,42 @@ export default function App() {
 
   const handleDeleteStudent = (nisn: string) => {
     const activeY = academicSetting.activeYear;
+    
+    // 1. Delete student from students master list
     const updated = students.filter(s => {
       const year = s.academicYear || '2025/2026';
       return !(s.nisn === nisn && year === activeY);
     });
     setStudents(updated);
     saveState('siap_students', updated);
+
+    // 2. Cascade delete Attendance records
+    const updatedAttendance = attendance.filter(a => {
+      return !(a.nisn === nisn && a.academicYear === activeY);
+    });
+    setAttendance(updatedAttendance);
+    saveState('siap_attendance', updatedAttendance);
+
+    // 3. Cascade delete Grades records
+    const updatedGrades = grades.filter(g => {
+      return !(g.nisn === nisn && g.academicYear === activeY);
+    });
+    setGrades(updatedGrades);
+    saveState('siap_grades', updatedGrades);
+
+    // 4. Cascade delete Case reports
+    const updatedCases = cases.filter(c => {
+      return !(c.nisn === nisn && c.academicYear === activeY);
+    });
+    setCases(updatedCases);
+    saveState('siap_cases', updatedCases);
+
+    // 5. Cascade delete Achievements
+    const updatedAchievements = achievements.filter(ac => {
+      return !(ac.nisn === nisn && ac.academicYear === activeY);
+    });
+    setAchievements(updatedAchievements);
+    saveState('siap_achievements', updatedAchievements);
   };
 
   const handlePromoteStudents = (
@@ -1683,9 +1905,36 @@ export default function App() {
       ? teachers.find(t => t.nuptk === currentUser.id || t.username === currentUser.username)
       : undefined;
 
-    const displayedStudents = (currentUser.role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS' && loggedTeacher.assignedClass)
-      ? students.filter(s => s.class === loggedTeacher.assignedClass)
+    const displayedClasses = (currentUser.role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS')
+      ? Array.from(new Set([
+          loggedTeacher.assignedClass,
+          ...(classStaffs ? classStaffs.filter(cs => cs.waliKelasNuptk === loggedTeacher.nuptk).map(cs => cs.classId) : [])
+        ].filter(Boolean) as string[]))
+      : academicSetting.classes;
+
+    const displayedStudents = (currentUser.role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS')
+      ? students.filter(s => displayedClasses.includes(s.class))
       : students;
+
+    const displayedAttendance = (currentUser.role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS')
+      ? attendance.filter(a => displayedClasses.includes(a.class))
+      : attendance;
+
+    const displayedCases = (currentUser.role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS')
+      ? cases.filter(c => displayedClasses.includes(c.class))
+      : cases;
+
+    const displayedAchievements = (currentUser.role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS')
+      ? achievements.filter(ac => displayedClasses.includes(ac.class))
+      : achievements;
+
+    const displayedGrades = (currentUser.role === 'GURU' && loggedTeacher)
+      ? (loggedTeacher.dutyType === 'GURU_KELAS'
+          ? grades.filter(g => displayedClasses.includes(g.class))
+          : (loggedTeacher.dutyType === 'GURU_MAPEL' && loggedTeacher.subject
+              ? grades.filter(g => g.subject === loggedTeacher.subject)
+              : grades))
+      : grades;
 
     switch (activeMenu) {
       case 'dashboard':
@@ -1695,10 +1944,10 @@ export default function App() {
             studentNisn={currentUser.studentNisn}
             students={displayedStudents}
             teachers={teachers}
-            attendance={attendance}
-            grades={grades}
-            cases={cases}
-            achievements={achievements}
+            attendance={displayedAttendance}
+            grades={displayedGrades}
+            cases={displayedCases}
+            achievements={displayedAchievements}
             emails={emails}
             academicYear={academicSetting.activeYear}
             semester={academicSetting.activeSemester}
@@ -1733,7 +1982,7 @@ export default function App() {
             schoolName={systemSetting.schoolName}
             academicYear={academicSetting.activeYear}
             semester={academicSetting.activeSemester}
-            availableClasses={academicSetting.classes}
+            availableClasses={displayedClasses}
             role={currentUser.role}
             teachers={teachers}
             classStaffs={classStaffs}
@@ -1745,13 +1994,13 @@ export default function App() {
         return (
           <AbsensiSec
             students={displayedStudents}
-            attendance={attendance}
+            attendance={displayedAttendance}
             onMarkAttendance={handleMarkAttendance}
             onDeleteAttendance={handleDeleteAttendance}
             schoolName={systemSetting.schoolName}
             academicYear={academicSetting.activeYear}
             semester={academicSetting.activeSemester}
-            availableClasses={academicSetting.classes}
+            availableClasses={displayedClasses}
             role={currentUser.role}
             studentNisn={currentUser.studentNisn}
             activeMenu={activeMenu}
@@ -1768,14 +2017,14 @@ export default function App() {
         return (
           <NilaiSec
             students={displayedStudents}
-            grades={grades}
+            grades={displayedGrades}
             onSaveGrade={handleSaveGrade}
             onSendGradeEmail={handleSendGradeEmail}
             onDeleteGrade={handleDeleteGrade}
             schoolName={systemSetting.schoolName}
             academicYear={academicSetting.activeYear}
             semester={academicSetting.activeSemester}
-            availableClasses={academicSetting.classes}
+            availableClasses={displayedClasses}
             availableSubjects={academicSetting.subjects}
             role={currentUser.role}
             studentNisn={currentUser.studentNisn}
@@ -1792,8 +2041,8 @@ export default function App() {
         return (
           <RecordSec
             students={displayedStudents}
-            cases={cases}
-            achievements={achievements}
+            cases={displayedCases}
+            achievements={displayedAchievements}
             onAddCase={handleAddCase}
             onAddAchievement={handleAddAchievement}
             onSendCaseEmail={handleSendCaseEmail}
@@ -1803,7 +2052,7 @@ export default function App() {
             schoolName={systemSetting.schoolName}
             academicYear={academicSetting.activeYear}
             semester={academicSetting.activeSemester}
-            availableClasses={academicSetting.classes}
+            availableClasses={displayedClasses}
             role={currentUser.role}
             studentNisn={currentUser.studentNisn}
             activeMenu={activeMenu}
@@ -1811,6 +2060,9 @@ export default function App() {
         );
 
       case 'uang-kas':
+        if (currentUser.role === 'GURU' && loggedTeacher?.dutyType === 'GURU_MAPEL') {
+          return <div className="text-white text-xs italic p-6 text-center bg-slate-900/40 rounded-2xl border border-red-500/10">Akses Ditolak. Guru Mata Pelajaran tidak memiliki izin untuk mengelola Tabungan dan Uang Kas.</div>;
+        }
         return (
           <UangKasSec
             students={displayedStudents}
@@ -1819,7 +2071,7 @@ export default function App() {
             schoolName={systemSetting.schoolName}
             academicYear={academicSetting.activeYear}
             semester={academicSetting.activeSemester}
-            availableClasses={academicSetting.classes}
+            availableClasses={displayedClasses}
             role={currentUser.role}
             studentNisn={currentUser.studentNisn}
             teachers={teachers}
@@ -1831,7 +2083,7 @@ export default function App() {
         return (
           <QrCodeSec
             students={displayedStudents}
-            availableClasses={academicSetting.classes}
+            availableClasses={displayedClasses}
             schoolName={systemSetting.schoolName}
           />
         );
@@ -1840,7 +2092,7 @@ export default function App() {
         return (
           <KartuSiswaSec
             students={displayedStudents}
-            availableClasses={academicSetting.classes}
+            availableClasses={displayedClasses}
             systemSetting={systemSetting}
           />
         );
@@ -1849,7 +2101,7 @@ export default function App() {
         return (
           <NaikKelasSec
             students={displayedStudents}
-            availableClasses={academicSetting.classes}
+            availableClasses={displayedClasses}
             academicSetting={academicSetting}
             onPromoteStudents={handlePromoteStudents}
             role={currentUser.role}
@@ -1907,29 +2159,44 @@ export default function App() {
   };
 
   const getTopBarSub = () => {
-    if (currentUser?.role === 'SISWA' && currentUser.studentNisn) {
+    if (!currentUser) return '';
+
+    if (currentUser.role === 'ADMIN') {
+      return `Peran: Administrator Utama • Kepala Madrasah: ${systemSetting.headmasterName}`;
+    }
+
+    if (currentUser.role === 'SISWA' && currentUser.studentNisn) {
       const studentObj = students.find(s => s.nisn === currentUser.studentNisn);
+      const classStr = studentObj ? `Kelas ${studentObj.class}` : '';
+      let detail = '';
       if (studentObj) {
         const staff = classStaffs.find(cs => cs.classId === studentObj.class);
         if (staff && staff.waliKelasNuptk) {
           const teacherObj = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
           if (teacherObj) {
-            const classTeacherObj = teachers.find(t => t.nuptk === staff.guruKelasNuptk);
-            return `Wali Kelas: ${teacherObj.name} • Guru Kelas: ${classTeacherObj?.name || '-'}`;
+            detail = ` • Wali Kelas: ${teacherObj.name}`;
           }
         }
-        return `Rombel: Kelas ${studentObj.class} • Wali: Belum Diset`;
       }
-    } else if (currentUser?.role === 'GURU') {
-      const waliOf = classStaffs.filter(cs => cs.waliKelasNuptk === currentUser.id).map(cs => cs.classId).join(', ');
-      const guruOf = classStaffs.filter(cs => cs.guruKelasNuptk === currentUser.id).map(cs => cs.classId).join(', ');
-      
-      let subParts = [];
-      if (waliOf) subParts.push(`Wali Kelas: Kelas ${waliOf}`);
-      if (guruOf) subParts.push(`Guru Kelas: Kelas ${guruOf}`);
-      return subParts.join(' • ') || `Peran: Guru Mata Pelajaran`;
+      return `Peran: Siswa Aktif • ${classStr}${detail}`;
     }
-    return `Kepala Madrasah: ${systemSetting.headmasterName}`;
+
+    if (currentUser.role === 'GURU') {
+      const teacherObj = teachers.find(t => t.nuptk === currentUser.id || t.username === currentUser.username);
+      if (teacherObj) {
+        if (teacherObj.dutyType === 'GURU_KELAS') {
+          const waliOf = classStaffs.filter(cs => cs.waliKelasNuptk === teacherObj.nuptk).map(cs => cs.classId).join(', ');
+          const classInfo = teacherObj.assignedClass || waliOf || '-';
+          return `Peran: Guru Kelas (Mengampu Kelas ${classInfo}) • Nama: ${teacherObj.name}`;
+        } else {
+          const subjectInfo = teacherObj.subject || 'Umum';
+          return `Peran: Guru Mata Pelajaran (Mapel ${subjectInfo}) • Nama: ${teacherObj.name}`;
+        }
+      }
+      return `Peran: Guru`;
+    }
+
+    return `SIAP Academic Portal`;
   };
 
   // --- IF NOT LOGGED IN, RENDER THE PROFESSIONAL LOGIN PAGE ---
@@ -2058,6 +2325,20 @@ export default function App() {
                 </select>
               </div>
             </div>
+
+            {/* Real-time sync status button */}
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncing}
+              className={`p-2 rounded-xl flex items-center justify-center transition-all duration-300 cursor-pointer active:scale-95 ${
+                darkMode
+                  ? 'bg-[#0f1612] text-emerald-400 shadow-[inset_2px_2px_5px_#070a08,inset_-2px_-2px_5px_#17221c] border border-[#17221c]'
+                  : 'bg-[#f0f5f1] text-emerald-600 shadow-[4px_4px_10px_#dce3dd,-4px_-4px_10px_#ffffff] border border-white'
+              } ${isSyncing ? 'opacity-75 animate-pulse' : ''}`}
+              title="Sinkronkan data secara real-time dari Guru Kelas, Guru Mapel, atau Admin"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            </button>
 
             {/* Elegant Neumorphic Dark Mode Toggle */}
             <button

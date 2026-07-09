@@ -436,19 +436,21 @@ export default function Sidebar({
               )}
             </div>
 
-            {/* Uang Kas & Tabungan (All Roles) */}
-            <button
-              onClick={() => handleMenuClick('uang-kas')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('uang-kas')}`}
-            >
-              <div className="flex items-center gap-3">
-                <Coins className="w-4.5 h-4.5" />
-                <span>Uang Kas & Tabungan</span>
-              </div>
-            </button>
+            {/* Uang Kas & Tabungan (All Roles except GURU_MAPEL) */}
+            {!(role === 'GURU' && teacherDutyType === 'Guru Mapel') && (
+              <button
+                onClick={() => handleMenuClick('uang-kas')}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('uang-kas')}`}
+              >
+                <div className="flex items-center gap-3">
+                  <Coins className="w-4.5 h-4.5" />
+                  <span>Uang Kas & Tabungan</span>
+                </div>
+              </button>
+            )}
 
-            {/* QR Code Absen (Admin & Guru) */}
-            {role !== 'SISWA' && (
+            {/* QR Code Absen (Admin & Guru Kelas) */}
+            {role !== 'SISWA' && !(role === 'GURU' && teacherDutyType === 'Guru Mapel') && (
               <button
                 onClick={() => handleMenuClick('qr-code')}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('qr-code')}`}
@@ -460,8 +462,8 @@ export default function Sidebar({
               </button>
             )}
 
-            {/* Kartu Siswa (Admin & Guru) */}
-            {role !== 'SISWA' && (
+            {/* Kartu Siswa (Admin & Guru Kelas) */}
+            {role !== 'SISWA' && !(role === 'GURU' && teacherDutyType === 'Guru Mapel') && (
               <button
                 onClick={() => handleMenuClick('kartu-siswa')}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('kartu-siswa')}`}

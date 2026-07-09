@@ -89,6 +89,15 @@ export default function RecordSec({
     const matchesSearch = c.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || c.nisn.includes(searchQuery);
     const matchesClass = classFilter ? c.class === classFilter : true;
     return matchesSearch && matchesClass;
+  }).sort((a, b) => {
+    const classA = (a.class || '').toLowerCase();
+    const classB = (b.class || '').toLowerCase();
+    if (classA !== classB) {
+      return classA.localeCompare(classB, 'id');
+    }
+    const nameA = (a.studentName || '').toLowerCase();
+    const nameB = (b.studentName || '').toLowerCase();
+    return nameA.localeCompare(nameB, 'id');
   });
 
   const filteredAchievements = achievements.filter(ac => {
@@ -98,6 +107,15 @@ export default function RecordSec({
     const matchesSearch = ac.studentName.toLowerCase().includes(searchQuery.toLowerCase()) || ac.nisn.includes(searchQuery);
     const matchesClass = classFilter ? ac.class === classFilter : true;
     return matchesSearch && matchesClass;
+  }).sort((a, b) => {
+    const classA = (a.class || '').toLowerCase();
+    const classB = (b.class || '').toLowerCase();
+    if (classA !== classB) {
+      return classA.localeCompare(classB, 'id');
+    }
+    const nameA = (a.studentName || '').toLowerCase();
+    const nameB = (b.studentName || '').toLowerCase();
+    return nameA.localeCompare(nameB, 'id');
   });
 
   // Handle new record additions

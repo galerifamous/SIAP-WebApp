@@ -161,7 +161,12 @@ export default function NilaiSec({
   // Filter/List States
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('');
-  const [subjectFilter, setSubjectFilter] = useState('');
+  const [subjectFilter, setSubjectFilter] = useState(() => {
+    if (role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_MAPEL' && loggedTeacher.subject) {
+      return loggedTeacher.subject;
+    }
+    return '';
+  });
 
   // Filter students based on class selection in INPUT form
   const inputClassStudents = students.filter(s => s.class === inputClass);
@@ -286,6 +291,15 @@ export default function NilaiSec({
     const matchesSubject = subjectFilter ? g.subject === subjectFilter : true;
 
     return matchesSearch && matchesClass && matchesSubject;
+  }).sort((a, b) => {
+    const classA = (a.class || '').toLowerCase();
+    const classB = (b.class || '').toLowerCase();
+    if (classA !== classB) {
+      return classA.localeCompare(classB, 'id');
+    }
+    const nameA = (a.studentName || '').toLowerCase();
+    const nameB = (b.studentName || '').toLowerCase();
+    return nameA.localeCompare(nameB, 'id');
   });
 
   // Export to Excel (highly structured dual-row merged format)
