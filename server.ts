@@ -1118,10 +1118,9 @@ app.post("/api/send-email", async (req, res) => {
     .content { padding: 40px 32px; background-color: #ffffff; }
     .title { font-size: 18px; font-weight: 600; color: #0f172a; margin: 0 0 20px 0; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
     .body-card { background-color: #f8fafc; border-left: 4px solid ${themeColor}; padding: 24px; border-radius: 0 8px 8px 0; margin: 24px 0; }
-    .footer { background-color: #f1f5f9; padding: 32px 24px; text-align: center; }
-    .footer-text { color: #64748b; font-size: 12px; line-height: 1.5; margin: 0 0 8px 0; }
-    .footer-divider { border-top: 1px solid #e2e8f0; margin: 16px 0; }
-    .footer-address { color: #94a3b8; font-size: 11px; margin: 0; }
+    .footer { background-color: #f1f5f9; padding: 24px; text-align: center; }
+    .footer-address { color: #64748b; font-size: 12px; font-weight: 600; margin: 0 0 4px 0; }
+    .footer-sub { color: #94a3b8; font-size: 11px; margin: 0; }
   </style>
 </head>
 <body>
@@ -1129,31 +1128,24 @@ app.post("/api/send-email", async (req, res) => {
     <table class="main" width="100%">
       <tr>
         <td class="header">
-          <h1 class="header-logo" style="color: #ffffff; font-family: sans-serif;">🏫 ${schoolName}</h1>
-          <p class="header-sub" style="font-family: sans-serif;">Laporan Informasi Akademik Orang Tua</p>
+          <h1 class="header-logo" style="color: #ffffff; font-family: sans-serif;">${schoolName}</h1>
+          <p class="header-sub" style="font-family: sans-serif;">Laporan Informasi Akademik</p>
         </td>
       </tr>
       <tr>
         <td class="content">
           <h2 class="title" style="font-family: sans-serif; color: #0f172a;">${subject}</h2>
           <div style="font-family: sans-serif; font-size: 15px; color: #334155; line-height: 1.6;">
-            <p style="margin: 0 0 16px 0;">Yth. Bapak/Ibu Wali Murid,</p>
-            <p style="margin: 0 0 24px 0;">Kami sampaikan informasi dan laporan resmi dari pihak sekolah/madrasah mengenai putra/putri Anda dengan rincian di bawah ini:</p>
             <div class="body-card">
               ${paragraphs}
             </div>
-            <p style="margin: 24px 0 0 0;">Demikian laporan ini kami sampaikan secara resmi. Atas perhatian dan kerjasama Bapak/Ibu, kami ucapkan terima kasih.</p>
           </div>
         </td>
       </tr>
       <tr>
         <td class="footer" style="font-family: sans-serif;">
-          <p class="footer-text"><strong>Email resmi dikirim oleh ${senderName || "Sistem Informasi Akademik"} (${senderEmail || "noreply@sekolah.sch.id"})</strong></p>
-          <p class="footer-text">Layanan ini disediakan secara otomatis untuk kelancaran komunikasi sekolah dan orang tua murid.</p>
-          <p class="footer-text" style="color: #94a3b8; font-size: 11px;">Pengiriman ini memenuhi standar keamanan enkripsi TLS dan terhubung langsung menggunakan Google Workspace API terverifikasi.</p>
-          <div class="footer-divider"></div>
           <p class="footer-address"><strong>${schoolName}</strong></p>
-          <p class="footer-address" style="color: #94a3b8; font-size: 11px;">${schoolAddress}</p>
+          <p class="footer-sub">${schoolAddress}</p>
         </td>
       </tr>
     </table>
