@@ -92,8 +92,8 @@ function doPost(e) {
         let emailOptions = {
           to: payload.recipient,
           subject: payload.subject,
-          body: payload.content,
-          htmlBody: payload.content.replace(/\\n/g, "<br>"),
+          body: payload.content.indexOf("<html") !== -1 || payload.content.indexOf("<!DOCTYPE") !== -1 ? "Silakan buka email ini menggunakan aplikasi email modern yang mendukung format HTML." : payload.content,
+          htmlBody: payload.content.indexOf("<html") !== -1 || payload.content.indexOf("<!DOCTYPE") !== -1 ? payload.content : payload.content.replace(/\\n/g, "<br>"),
           name: payload.senderName || "Sistem Informasi SIAP"
         };
         

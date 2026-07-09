@@ -32,7 +32,7 @@ import UangKasSec from './components/UangKasSec';
 import BackupRestoreSec from './components/BackupRestoreSec';
 import KartuSiswaSec from './components/KartuSiswaSec';
 import UnduhAplikasiSec from './components/UnduhAplikasiSec';
-import { ArrowLeft, Sun, Moon, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, RefreshCw, Cloud } from 'lucide-react';
 import NaikKelasSec from './components/NaikKelasSec';
 import PremiumDialog from './components/PremiumDialog';
 import {
@@ -154,6 +154,9 @@ export default function App() {
   const [syncEnabled, setSyncEnabled] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const isPullingRef = React.useRef(false);
+  const isDirtyRef = React.useRef(false);
+  const stateVersionRef = React.useRef(0);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'dirty'>('saved');
 
   // --- AUTOMATIC HANDSHAKE WITH SERVER TO SYNC SUPABASE CONNECTION ---
   useEffect(() => {
@@ -829,6 +832,10 @@ export default function App() {
   }, []);
 
   const pullStateFromServer = async (silent = true) => {
+    if (isDirtyRef.current) {
+      console.log("Local changes are pending save, skipping server pull to prevent overwriting.");
+      return;
+    }
     if (isPullingRef.current) return;
     isPullingRef.current = true;
     if (!silent) setIsSyncing(true);
@@ -978,113 +985,143 @@ export default function App() {
 
   // --- AUTOMATIC LOCAL EXPRESS SERVER SYNC ---
   useEffect(() => {
-    if (!isLoaded || !syncEnabled || isPullingRef.current) return;
+    if (!isLoaded || !syncEnabled) return;
+    if (!isDirtyRef.current) return;
 
-    const stateObj = {
-      siap_students: students,
-      siap_teachers: teachers,
-      siap_attendance: attendance,
-      siap_grades: grades,
-      siap_cases: cases,
-      siap_achievements: achievements,
-      siap_emails: emails,
-      siap_academic: academicSetting,
-      siap_system: systemSetting,
-      siap_holidays: holidays,
-      siap_class_staffs: classStaffs,
-      siap_gas_url: localStorage.getItem('siap_gas_url') || '',
-      siap_card_signature_img: localStorage.getItem('siap_card_signature_img') || '',
-      siap_card_stamp_img: localStorage.getItem('siap_card_stamp_img') || ''
-    };
+    const timer = setTimeout(() => {
+      // Capture the exact state version that we are about to save
+      const versionToSave = stateVersionRef.current;
+      setSaveStatus('saving');
 
-    fetch('/api/save', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getClientSupabaseHeaders()
-      },
-      body: JSON.stringify(stateObj)
-    })
-    .then((res) => {
-      if (!res.ok) throw new Error("Server save endpoint returned status " + res.status);
-      console.log('Database server successfully synced.');
-    })
-    .catch(async (err) => {
-      console.warn('Backend server sync failed. Trying client-side direct sync fallback for static hosting (Netlify/GitHub)...', err);
-      
-      // 1. Direct Client-Side Supabase Sync
-      if (supabaseConfig && supabaseConfig.supabaseUrl && supabaseConfig.supabaseAnonKey) {
-        try {
-          const clientSupabase = createClient(supabaseConfig.supabaseUrl, supabaseConfig.supabaseAnonKey);
-          
-          const upsertDoc = async (col: string, docId: string, docData: any) => {
-            if (!docId) return;
-            await clientSupabase.from('siap_store').upsert({
-              collection: col,
-              id: docId,
-              data: docData,
-              updated_at: new Date().toISOString()
+      const stateObj = {
+        siap_students: students,
+        siap_teachers: teachers,
+        siap_attendance: attendance,
+        siap_grades: grades,
+        siap_cases: cases,
+        siap_achievements: achievements,
+        siap_emails: emails,
+        siap_academic: academicSetting,
+        siap_system: systemSetting,
+        siap_holidays: holidays,
+        siap_class_staffs: classStaffs,
+        siap_gas_url: localStorage.getItem('siap_gas_url') || '',
+        siap_card_signature_img: localStorage.getItem('siap_card_signature_img') || '',
+        siap_card_stamp_img: localStorage.getItem('siap_card_stamp_img') || ''
+      };
+
+      fetch('/api/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getClientSupabaseHeaders()
+        },
+        body: JSON.stringify(stateObj)
+      })
+      .then((res) => {
+        if (!res.ok) throw new Error("Server save endpoint returned status " + res.status);
+        console.log('Database server successfully synced.');
+        
+        // Safety: only mark as clean if no new changes were made while this request was in-flight
+        if (stateVersionRef.current === versionToSave) {
+          isDirtyRef.current = false;
+          setSaveStatus('saved');
+        }
+      })
+      .catch(async (err) => {
+        console.warn('Backend server sync failed. Trying client-side direct sync fallback for static hosting (Netlify/GitHub)...', err);
+        
+        // 1. Direct Client-Side Supabase Sync
+        if (supabaseConfig && supabaseConfig.supabaseUrl && supabaseConfig.supabaseAnonKey) {
+          try {
+            const clientSupabase = createClient(supabaseConfig.supabaseUrl, supabaseConfig.supabaseAnonKey);
+            
+            const upsertDoc = async (col: string, docId: string, docData: any) => {
+              if (!docId) return;
+              await clientSupabase.from('siap_store').upsert({
+                collection: col,
+                id: docId,
+                data: docData,
+                updated_at: new Date().toISOString()
+              });
+            };
+
+            console.log("[Client Direct Sync] Syncing state directly to Supabase table 'siap_store'...");
+            
+            // Bulk-upsert logic (using helper to avoid infinite loops and keep tables clean)
+            const upsertPromises = [
+              ...students.map(s => upsertDoc("students", s.nisn, s)),
+              ...teachers.map(t => upsertDoc("teachers", t.nuptk, t)),
+              ...attendance.map(a => upsertDoc("attendance", a.id, a)),
+              ...grades.map(g => upsertDoc("grades", g.id, g)),
+              ...cases.map(c => upsertDoc("cases", c.id, c)),
+              ...achievements.map(ac => upsertDoc("achievements", ac.id, ac)),
+              ...emails.map(em => upsertDoc("emails", em.id, em)),
+              ...holidays.map(h => upsertDoc("holidays", h.id, h)),
+              ...classStaffs.map(cs => upsertDoc("class_staffs", cs.classId, cs))
+            ];
+
+            if (academicSetting) {
+              upsertPromises.push(upsertDoc("settings", "academic", academicSetting));
+            }
+            if (systemSetting) {
+              upsertPromises.push(upsertDoc("settings", "system", systemSetting));
+            }
+            
+            const gasUrlLocal = localStorage.getItem('siap_gas_url') || '';
+            if (gasUrlLocal) {
+              upsertPromises.push(upsertDoc("settings", "meta", { siap_gas_url: gasUrlLocal }));
+            }
+
+            await Promise.all(upsertPromises);
+            console.log("[Client Direct Sync] Client-side Supabase sync complete!");
+            
+            if (stateVersionRef.current === versionToSave) {
+              isDirtyRef.current = false;
+              setSaveStatus('saved');
+            }
+          } catch (subErr) {
+            console.error("[Client Direct Sync] Direct client-side Supabase sync failed:", subErr);
+          }
+        }
+
+        // 2. Direct Client-Side Google Apps Script (Spreadsheet) Sync (Realtime Backup)
+        const gasUrlLocal = localStorage.getItem('siap_gas_url') || '';
+        if (gasUrlLocal) {
+          try {
+            console.log("[Client Direct Sync] Auto-syncing directly to Google Sheets via GAS:", gasUrlLocal);
+            fetch(gasUrlLocal, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: {
+                'Content-Type': 'text/plain;charset=utf-8'
+              },
+              body: JSON.stringify(stateObj)
             });
-          };
-
-          console.log("[Client Direct Sync] Syncing state directly to Supabase table 'siap_store'...");
-          
-          // Bulk-upsert logic (using helper to avoid infinite loops and keep tables clean)
-          const upsertPromises = [
-            ...students.map(s => upsertDoc("students", s.nisn, s)),
-            ...teachers.map(t => upsertDoc("teachers", t.nuptk, t)),
-            ...attendance.map(a => upsertDoc("attendance", a.id, a)),
-            ...grades.map(g => upsertDoc("grades", g.id, g)),
-            ...cases.map(c => upsertDoc("cases", c.id, c)),
-            ...achievements.map(ac => upsertDoc("achievements", ac.id, ac)),
-            ...emails.map(em => upsertDoc("emails", em.id, em)),
-            ...holidays.map(h => upsertDoc("holidays", h.id, h)),
-            ...classStaffs.map(cs => upsertDoc("class_staffs", cs.classId, cs))
-          ];
-
-          if (academicSetting) {
-            upsertPromises.push(upsertDoc("settings", "academic", academicSetting));
+            console.log("[Client Direct Sync] Client-side GAS sync payload sent successfully.");
+            
+            if (stateVersionRef.current === versionToSave) {
+              isDirtyRef.current = false;
+              setSaveStatus('saved');
+            }
+          } catch (gasErr) {
+            console.warn("[Client Direct Sync] Client-side GAS sync error:", gasErr);
           }
-          if (systemSetting) {
-            upsertPromises.push(upsertDoc("settings", "system", systemSetting));
-          }
-          
-          const gasUrlLocal = localStorage.getItem('siap_gas_url') || '';
-          if (gasUrlLocal) {
-            upsertPromises.push(upsertDoc("settings", "meta", { siap_gas_url: gasUrlLocal }));
-          }
-
-          await Promise.all(upsertPromises);
-          console.log("[Client Direct Sync] Client-side Supabase sync complete!");
-        } catch (subErr) {
-          console.error("[Client Direct Sync] Direct client-side Supabase sync failed:", subErr);
         }
-      }
+      });
+    }, 300);
 
-      // 2. Direct Client-Side Google Apps Script (Spreadsheet) Sync (Realtime Backup)
-      const gasUrlLocal = localStorage.getItem('siap_gas_url') || '';
-      if (gasUrlLocal) {
-        try {
-          console.log("[Client Direct Sync] Auto-syncing directly to Google Sheets via GAS:", gasUrlLocal);
-          fetch(gasUrlLocal, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-              'Content-Type': 'text/plain;charset=utf-8'
-            },
-            body: JSON.stringify(stateObj)
-          });
-          console.log("[Client Direct Sync] Client-side GAS sync payload sent successfully.");
-        } catch (gasErr) {
-          console.warn("[Client Direct Sync] Client-side GAS sync error:", gasErr);
-        }
-      }
-    });
+    return () => clearTimeout(timer);
   }, [isLoaded, syncEnabled, students, teachers, attendance, grades, cases, achievements, emails, academicSetting, systemSetting, holidays, classStaffs]);
 
   // --- LOCAL PERSISTENCE WRITERS ---
   const saveState = (key: string, data: any) => {
     localStorage.setItem(key, JSON.stringify(data));
+    if (key !== 'siap_session') {
+      isDirtyRef.current = true;
+      stateVersionRef.current += 1;
+      setSaveStatus('dirty');
+    }
   };
 
   // --- LOGIN SUBMIT HANDLER ---
@@ -2324,6 +2361,50 @@ export default function App() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* Real-time Save Status Badge */}
+            <div
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-300 select-none ${
+                darkMode
+                  ? 'bg-[#0f1612] border border-[#17221c]'
+                  : 'bg-[#f0f5f1] border border-white shadow-[4px_4px_10px_#dce3dd,-4px_-4px_10px_#ffffff]'
+              }`}
+              title={
+                saveStatus === 'saved'
+                  ? 'Semua perubahan telah berhasil tersimpan aman di server database!'
+                  : saveStatus === 'saving'
+                  ? 'Sedang menyinkronkan data perubahan ke server...'
+                  : 'Menunggu jeda pengetikan selesai untuk mengirim ke server...'
+              }
+            >
+              <div className="relative flex items-center justify-center">
+                <Cloud className={`w-4 h-4 transition-all duration-300 ${
+                  saveStatus === 'saved'
+                    ? 'text-emerald-500'
+                    : saveStatus === 'saving'
+                    ? 'text-amber-500 animate-bounce'
+                    : 'text-orange-400'
+                }`} />
+                <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${
+                  saveStatus === 'saved'
+                    ? 'bg-emerald-500'
+                    : saveStatus === 'saving'
+                    ? 'bg-amber-500 animate-ping'
+                    : 'bg-orange-400 animate-pulse'
+                }`} />
+              </div>
+              <span className={`hidden md:inline font-mono font-bold text-[10px] tracking-wider uppercase ${
+                saveStatus === 'saved'
+                  ? 'text-emerald-500'
+                  : saveStatus === 'saving'
+                  ? 'text-amber-500'
+                  : 'text-orange-400'
+              }`}>
+                {saveStatus === 'saved' && 'Tersimpan'}
+                {saveStatus === 'saving' && 'Menyimpan...'}
+                {saveStatus === 'dirty' && 'Mengantre'}
+              </span>
             </div>
 
             {/* Real-time sync status button */}
