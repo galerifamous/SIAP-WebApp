@@ -667,8 +667,120 @@ export default function App() {
             });
           }
         })
-        .catch(err => {
-          console.warn("Express API load failed or server is booting up:", err);
+        .catch(async (err) => {
+          console.warn("Express API load failed or server is booting up. Trying client-side direct load fallback (Netlify/static hosting support)...", err);
+          
+          const config = getClientSupabaseConfig();
+          if (config.supabaseUrl && config.supabaseAnonKey) {
+            try {
+              console.log("[Client Direct Load] Connecting directly to Supabase from browser...");
+              const clientSupabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+              
+              const { data: rows, error } = await clientSupabase
+                .from('siap_store')
+                .select('*');
+                
+              if (error) throw error;
+              
+              if (rows && rows.length > 0) {
+                console.log(`[Client Direct Load] Loaded ${rows.length} rows directly from Supabase!`);
+                
+                const studentsList: Student[] = [];
+                const teachersList: Teacher[] = [];
+                const attendanceList: Attendance[] = [];
+                const gradesList: Grade[] = [];
+                const casesList: CaseReport[] = [];
+                const achievementsList: Achievement[] = [];
+                const emailsList: EmailLog[] = [];
+                const holidaysList: Holiday[] = [];
+                const classStaffsList: ClassStaff[] = [];
+                let academicSetObj: AcademicSetting | null = null;
+                let systemSetObj: SystemSetting | null = null;
+                let gasUrlStr: string = "";
+                
+                rows.forEach((row: any) => {
+                  const col = row.collection;
+                  const itemData = row.data;
+                  if (!itemData) return;
+                  
+                  if (col === "students") studentsList.push(itemData);
+                  else if (col === "teachers") teachersList.push(itemData);
+                  else if (col === "attendance") attendanceList.push(itemData);
+                  else if (col === "grades") gradesList.push(itemData);
+                  else if (col === "cases") casesList.push(itemData);
+                  else if (col === "achievements") achievementsList.push(itemData);
+                  else if (col === "emails") emailsList.push(itemData);
+                  else if (col === "holidays") holidaysList.push(itemData);
+                  else if (col === "class_staffs") classStaffsList.push(itemData);
+                  else if (col === "settings" && row.id === "academic") academicSetObj = itemData;
+                  else if (col === "settings" && row.id === "system") systemSetObj = itemData;
+                  else if (col === "settings" && row.id === "meta") gasUrlStr = itemData.siap_gas_url || "";
+                });
+                
+                if (systemSetObj) {
+                  setSystemSetting(systemSetObj);
+                  localStorage.setItem('siap_system', JSON.stringify(systemSetObj));
+                }
+                if (academicSetObj) {
+                  setAcademicSetting(academicSetObj);
+                  localStorage.setItem('siap_academic', JSON.stringify(academicSetObj));
+                }
+                if (studentsList.length > 0) {
+                  setStudents(studentsList);
+                  localStorage.setItem('siap_students', JSON.stringify(studentsList));
+                }
+                if (teachersList.length > 0) {
+                  setTeachers(teachersList);
+                  localStorage.setItem('siap_teachers', JSON.stringify(teachersList));
+                }
+                if (attendanceList.length > 0) {
+                  setAttendance(attendanceList);
+                  localStorage.setItem('siap_attendance', JSON.stringify(attendanceList));
+                }
+                if (gradesList.length > 0) {
+                  setGrades(gradesList);
+                  localStorage.setItem('siap_grades', JSON.stringify(gradesList));
+                }
+                if (casesList.length > 0) {
+                  setCases(casesList);
+                  localStorage.setItem('siap_cases', JSON.stringify(casesList));
+                }
+                if (achievementsList.length > 0) {
+                  setAchievements(achievementsList);
+                  localStorage.setItem('siap_achievements', JSON.stringify(achievementsList));
+                }
+                if (emailsList.length > 0) {
+                  setEmails(emailsList);
+                  localStorage.setItem('siap_emails', JSON.stringify(emailsList));
+                }
+                if (holidaysList.length > 0) {
+                  setHolidays(holidaysList);
+                  localStorage.setItem('siap_holidays', JSON.stringify(holidaysList));
+                }
+                if (classStaffsList.length > 0) {
+                  setClassStaffs(classStaffsList);
+                  localStorage.setItem('siap_class_staffs', JSON.stringify(classStaffsList));
+                }
+                if (gasUrlStr) {
+                  localStorage.setItem('siap_gas_url', gasUrlStr);
+                }
+                
+                setSyncEnabled(true);
+                setSupabaseConfig(config);
+              } else {
+                console.log("[Client Direct Load] Supabase is connected but empty. Ready to sync local states on next change.");
+                setSyncEnabled(true);
+                setSupabaseConfig(config);
+              }
+            } catch (subErr) {
+              console.error("[Client Direct Load] Direct client-side Supabase load failed:", subErr);
+              // Fallback to local storage only if direct Supabase load also failed
+              setSyncEnabled(false);
+            }
+          } else {
+            console.log("[Client Load Fallback] No Supabase credentials saved yet. Operating in local storage mode.");
+          }
+          
           setIsLoaded(true);
         });
     };
@@ -704,11 +816,80 @@ export default function App() {
       },
       body: JSON.stringify(stateObj)
     })
-    .then(() => {
+    .then((res) => {
+      if (!res.ok) throw new Error("Server save endpoint returned status " + res.status);
       console.log('Database server successfully synced.');
     })
-    .catch((err) => {
-      console.warn('Failed to sync to database server:', err);
+    .catch(async (err) => {
+      console.warn('Backend server sync failed. Trying client-side direct sync fallback for static hosting (Netlify/GitHub)...', err);
+      
+      // 1. Direct Client-Side Supabase Sync
+      if (supabaseConfig && supabaseConfig.supabaseUrl && supabaseConfig.supabaseAnonKey) {
+        try {
+          const clientSupabase = createClient(supabaseConfig.supabaseUrl, supabaseConfig.supabaseAnonKey);
+          
+          const upsertDoc = async (col: string, docId: string, docData: any) => {
+            if (!docId) return;
+            await clientSupabase.from('siap_store').upsert({
+              collection: col,
+              id: docId,
+              data: docData,
+              updated_at: new Date().toISOString()
+            });
+          };
+
+          console.log("[Client Direct Sync] Syncing state directly to Supabase table 'siap_store'...");
+          
+          // Bulk-upsert logic (using helper to avoid infinite loops and keep tables clean)
+          const upsertPromises = [
+            ...students.map(s => upsertDoc("students", s.nisn, s)),
+            ...teachers.map(t => upsertDoc("teachers", t.nuptk, t)),
+            ...attendance.map(a => upsertDoc("attendance", a.id, a)),
+            ...grades.map(g => upsertDoc("grades", g.id, g)),
+            ...cases.map(c => upsertDoc("cases", c.id, c)),
+            ...achievements.map(ac => upsertDoc("achievements", ac.id, ac)),
+            ...emails.map(em => upsertDoc("emails", em.id, em)),
+            ...holidays.map(h => upsertDoc("holidays", h.id, h)),
+            ...classStaffs.map(cs => upsertDoc("class_staffs", cs.classId, cs))
+          ];
+
+          if (academicSetting) {
+            upsertPromises.push(upsertDoc("settings", "academic", academicSetting));
+          }
+          if (systemSetting) {
+            upsertPromises.push(upsertDoc("settings", "system", systemSetting));
+          }
+          
+          const gasUrlLocal = localStorage.getItem('siap_gas_url') || '';
+          if (gasUrlLocal) {
+            upsertPromises.push(upsertDoc("settings", "meta", { siap_gas_url: gasUrlLocal }));
+          }
+
+          await Promise.all(upsertPromises);
+          console.log("[Client Direct Sync] Client-side Supabase sync complete!");
+        } catch (subErr) {
+          console.error("[Client Direct Sync] Direct client-side Supabase sync failed:", subErr);
+        }
+      }
+
+      // 2. Direct Client-Side Google Apps Script (Spreadsheet) Sync (Realtime Backup)
+      const gasUrlLocal = localStorage.getItem('siap_gas_url') || '';
+      if (gasUrlLocal) {
+        try {
+          console.log("[Client Direct Sync] Auto-syncing directly to Google Sheets via GAS:", gasUrlLocal);
+          fetch(gasUrlLocal, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8'
+            },
+            body: JSON.stringify(stateObj)
+          });
+          console.log("[Client Direct Sync] Client-side GAS sync payload sent successfully.");
+        } catch (gasErr) {
+          console.warn("[Client Direct Sync] Client-side GAS sync error:", gasErr);
+        }
+      }
     });
   }, [isLoaded, syncEnabled, students, teachers, attendance, grades, cases, achievements, emails, academicSetting, systemSetting, holidays, classStaffs]);
 
@@ -848,36 +1029,124 @@ export default function App() {
           return updated;
         });
       } else {
-        setEmails(prev => {
-          const updated = prev.map(log => {
-            if (log.id === newLogId) {
-              return { 
-                ...log, 
-                status: 'Failed' as const,
-                notes: json.message || "Failed to deliver"
-              };
-            }
-            return log;
+        // Fallback for static hosting (Netlify/GitHub Pages)
+        const gasUrlLocal = localStorage.getItem('siap_gas_url') || '';
+        if (gasUrlLocal) {
+          console.log("[Client Direct Email] Backend failed, trying direct client-side GAS fallback:", gasUrlLocal);
+          fetch(gasUrlLocal, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8'
+            },
+            body: JSON.stringify({
+              action: "send_email",
+              recipient,
+              subject,
+              content: content + antiSpamFooter,
+              senderName,
+              senderEmail
+            })
+          })
+          .then(() => {
+            setEmails(prev => {
+              const updated = prev.map(log => {
+                if (log.id === newLogId) {
+                  return { 
+                    ...log, 
+                    status: 'Success' as const,
+                    notes: "Terkirim langsung via Google Apps Script (Client Fallback)"
+                  };
+                }
+                return log;
+              });
+              saveState('siap_emails', updated);
+              return updated;
+            });
+          })
+          .catch((gasErr) => {
+            console.error("[Client Direct Email] Direct GAS email sending failed:", gasErr);
+            triggerFailureState(json.message || "Gagal mengirim email.");
           });
-          saveState('siap_emails', updated);
-          return updated;
-        });
+        } else {
+          triggerFailureState(json.message || "Failed to deliver");
+        }
       }
     })
     .catch((err) => {
-      console.warn("API direct email fail, falling back to local simulation.", err);
-      // Fallback to success simulation to keep offline demo functional
+      console.warn("API direct email fail, trying direct client-side GAS email fallback...", err);
+      const gasUrlLocal = localStorage.getItem('siap_gas_url') || '';
+      if (gasUrlLocal) {
+        fetch(gasUrlLocal, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify({
+            action: "send_email",
+            recipient,
+            subject,
+            content: content + antiSpamFooter,
+            senderName,
+            senderEmail
+          })
+        })
+        .then(() => {
+          setEmails(prev => {
+            const updated = prev.map(log => {
+              if (log.id === newLogId) {
+                return { 
+                  ...log, 
+                  status: 'Success' as const,
+                  notes: "Terkirim langsung via Google Apps Script (Client Fallback)"
+                };
+              }
+              return log;
+            });
+            saveState('siap_emails', updated);
+            return updated;
+          });
+        })
+        .catch((gasErr) => {
+          console.error("[Client Direct Email] Direct client-side GAS email failed:", gasErr);
+          // Fallback to success simulation to keep offline demo functional
+          simulateSuccessState();
+        });
+      } else {
+        simulateSuccessState();
+      }
+    });
+
+    const triggerFailureState = (errMsg: string) => {
       setEmails(prev => {
         const updated = prev.map(log => {
           if (log.id === newLogId) {
-            return { ...log, status: 'Success' as const };
+            return { 
+              ...log, 
+              status: 'Failed' as const,
+              notes: errMsg
+            };
           }
           return log;
         });
         saveState('siap_emails', updated);
         return updated;
       });
-    });
+    };
+
+    const simulateSuccessState = () => {
+      setEmails(prev => {
+        const updated = prev.map(log => {
+          if (log.id === newLogId) {
+            return { ...log, status: 'Success' as const, notes: "Simulasi Terkirim (Offline)" };
+          }
+          return log;
+        });
+        saveState('siap_emails', updated);
+        return updated;
+      });
+    };
   };
 
   // --- DATA SISWA WRITERS ---

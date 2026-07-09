@@ -817,6 +817,49 @@ app.post("/api/save", async (req, res) => {
     }
   }
 
+  // Automatic Realtime Sync to Google Apps Script (Spreadsheet) in background
+  let gasUrl = payload.siap_gas_url || current.siap_gas_url || "";
+  if (!gasUrl && supabase) {
+    try {
+      const settingsMap = await loadSettings(supabase).catch(() => ({}));
+      gasUrl = settingsMap["meta"]?.siap_gas_url || "";
+    } catch (err) {}
+  }
+
+  if (gasUrl) {
+    // Perform an asynchronous, non-blocking background fetch to GAS
+    // to keep Google Sheet in sync without blocking the API response
+    const gasPayload = {
+      siap_students: payload.siap_students,
+      siap_teachers: payload.siap_teachers,
+      siap_attendance: payload.siap_attendance,
+      siap_grades: payload.siap_grades,
+      siap_cases: payload.siap_cases,
+      siap_achievements: payload.siap_achievements,
+      siap_emails: payload.siap_emails,
+      siap_academic: payload.siap_academic,
+      siap_system: payload.siap_system,
+      siap_holidays: payload.siap_holidays,
+      siap_class_staffs: payload.siap_class_staffs,
+    };
+
+    console.log(`[Auto GAS Sync] Auto-syncing updated data to Google Sheets via ${gasUrl}...`);
+    fetch(gasUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body: JSON.stringify(gasPayload),
+    })
+    .then(async (gasRes) => {
+      const text = await gasRes.text();
+      console.log("[Auto GAS Sync] Response from GAS:", text.substring(0, 200));
+    })
+    .catch((gasErr) => {
+      console.error("[Auto GAS Sync] Error auto-syncing to GAS:", gasErr);
+    });
+  }
+
   if (success) {
     res.json({ success: true });
   } else {
