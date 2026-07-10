@@ -1420,7 +1420,7 @@ export default function App() {
     
     // 1. Delete student from students master list
     const updated = students.filter(s => {
-      const year = s.academicYear || '2025/2026';
+      const year = s.academicYear || activeY || '2025/2026';
       return !(s.nisn === nisn && year === activeY);
     });
     setStudents(updated);
@@ -1428,28 +1428,32 @@ export default function App() {
 
     // 2. Cascade delete Attendance records
     const updatedAttendance = attendance.filter(a => {
-      return !(a.nisn === nisn && a.academicYear === activeY);
+      const year = a.academicYear || activeY || '2025/2026';
+      return !(a.nisn === nisn && year === activeY);
     });
     setAttendance(updatedAttendance);
     saveState('siap_attendance', updatedAttendance);
 
     // 3. Cascade delete Grades records
     const updatedGrades = grades.filter(g => {
-      return !(g.nisn === nisn && g.academicYear === activeY);
+      const year = g.academicYear || activeY || '2025/2026';
+      return !(g.nisn === nisn && year === activeY);
     });
     setGrades(updatedGrades);
     saveState('siap_grades', updatedGrades);
 
     // 4. Cascade delete Case reports
     const updatedCases = cases.filter(c => {
-      return !(c.nisn === nisn && c.academicYear === activeY);
+      const year = c.academicYear || activeY || '2025/2026';
+      return !(c.nisn === nisn && year === activeY);
     });
     setCases(updatedCases);
     saveState('siap_cases', updatedCases);
 
     // 5. Cascade delete Achievements
     const updatedAchievements = achievements.filter(ac => {
-      return !(ac.nisn === nisn && ac.academicYear === activeY);
+      const year = ac.academicYear || activeY || '2025/2026';
+      return !(ac.nisn === nisn && year === activeY);
     });
     setAchievements(updatedAchievements);
     saveState('siap_achievements', updatedAchievements);
@@ -2289,8 +2293,8 @@ export default function App() {
         {/* Top Header Bar */}
         <header className={`px-6 py-4 border-b flex flex-col sm:flex-row justify-between sm:items-center gap-4 z-10 transition-all duration-300 ${
           darkMode 
-            ? 'bg-[#0f1612]/80 border-[#17221c] backdrop-blur-md' 
-            : 'bg-[#f0f5f1]/80 border-[#cbd5ce] backdrop-blur-md'
+            ? 'bg-[#0f1612] border-[#17221c]' 
+            : 'bg-[#f0f5f1] border-[#cbd5ce]'
         }`}>
           <div className="flex items-center gap-3">
             {navHistory.length > 1 && (

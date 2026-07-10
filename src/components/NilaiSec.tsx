@@ -302,7 +302,7 @@ export default function NilaiSec({
     return nameA.localeCompare(nameB, 'id');
   });
 
-  // Export to Excel (highly structured dual-row merged format)
+  // Export to Excel (highly structured dual-row merged format with custom column widths)
   const handleExportExcel = () => {
     const targetGrades = filteredGrades;
     const maxSums = Math.max(...targetGrades.map(g => g.sumatif?.length || 0), 4);
@@ -328,12 +328,29 @@ export default function NilaiSec({
       
       const sums: any[] = [];
       for (let i = 0; i < maxSums; i++) {
-        sums.push(g.sumatif && g.sumatif[i] !== undefined ? g.sumatif[i] : '-');
+        let valStr = '-';
+        if (g.sumatifDetails && g.sumatifDetails[i]) {
+          const det = g.sumatifDetails[i];
+          const harian = det.harian || [];
+          const avg = harian.length > 0 ? Math.round(harian.reduce((a, b) => a + b, 0) / harian.length) : 0;
+          if (harian.length > 0) {
+            valStr = `${avg} (${harian.join(', ')})`;
+          } else {
+            valStr = g.sumatif && g.sumatif[i] !== undefined ? String(g.sumatif[i]) : '-';
+          }
+        } else {
+          valStr = g.sumatif && g.sumatif[i] !== undefined ? String(g.sumatif[i]) : '-';
+        }
+        sums.push(valStr);
       }
 
-      const sumAvg = g.sumatif && g.sumatif.length > 0 
-        ? Math.round((g.sumatif.reduce((a, b) => a + b, 0) / g.sumatif.length) * 10) / 10 
-        : 0;
+      const sumAverages = g.sumatifDetails && g.sumatifDetails.length > 0
+        ? g.sumatifDetails.map(item => {
+            const h = item.harian || [];
+            return h.length > 0 ? h.reduce((a, b) => a + b, 0) / h.length : 0;
+          })
+        : (g.sumatif || []);
+      const sumAvg = sumAverages.length > 0 ? Math.round((sumAverages.reduce((s, v) => s + v, 0) / sumAverages.length) * 10) / 10 : 0;
 
       const stsVal = g.sts ?? 0;
       const sasVal = g.sas ?? 0;
@@ -353,6 +370,24 @@ export default function NilaiSec({
 
     const aoa = [row1, row2, ...dataRows];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Set neat, fixed column widths (paten) so user doesn't need to resize manually
+    const cols = [
+      { wch: 15 }, // NISN
+      { wch: 28 }, // Nama Siswa
+      { wch: 6 },  // JK (Jenis Kelamin)
+    ];
+    // For SUM columns, make them small/compact
+    for (let i = 0; i < maxSums; i++) {
+      cols.push({ wch: 12 });
+    }
+    // For average and assessment columns
+    cols.push({ wch: 15 }); // Rata-Rata SUM
+    cols.push({ wch: 8 });  // STS
+    cols.push({ wch: 8 });  // ASAS
+    cols.push({ wch: 15 }); // Rata-Rata ASAS
+
+    ws['!cols'] = cols;
 
     // Set merges
     ws['!merges'] = [
@@ -438,15 +473,36 @@ export default function NilaiSec({
 
       const sumsCellsHtml = [];
       for (let i = 0; i < maxSums; i++) {
-        const val = g.sumatif && g.sumatif[i] !== undefined ? g.sumatif[i] : '-';
+        let valStr = '-';
+        let detailHtml = '';
+        if (g.sumatifDetails && g.sumatifDetails[i]) {
+          const det = g.sumatifDetails[i];
+          const harian = det.harian || [];
+          const avg = harian.length > 0 ? Math.round(harian.reduce((a, b) => a + b, 0) / harian.length) : 0;
+          if (harian.length > 0) {
+            valStr = String(avg);
+            detailHtml = `<div style="font-size: 7.5px; color: #64748b; margin-top: 2px;">(${harian.join(', ')})</div>`;
+          } else {
+            valStr = g.sumatif && g.sumatif[i] !== undefined ? String(g.sumatif[i]) : '-';
+          }
+        } else {
+          valStr = g.sumatif && g.sumatif[i] !== undefined ? String(g.sumatif[i]) : '-';
+        }
         sumsCellsHtml.push(
-          `<td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 9px;">${val}</td>`
+          `<td style="padding: 6px; border: 1px solid #cbd5e1; text-align: center; font-size: 9px; min-width: 45px;">
+            <div style="font-weight: bold;">${valStr}</div>
+            ${detailHtml}
+          </td>`
         );
       }
 
-      const sumAvg = g.sumatif && g.sumatif.length > 0 
-        ? Math.round((g.sumatif.reduce((a, b) => a + b, 0) / g.sumatif.length) * 10) / 10 
-        : 0;
+      const sumAverages = g.sumatifDetails && g.sumatifDetails.length > 0
+        ? g.sumatifDetails.map(item => {
+            const h = item.harian || [];
+            return h.length > 0 ? h.reduce((a, b) => a + b, 0) / h.length : 0;
+          })
+        : (g.sumatif || []);
+      const sumAvg = sumAverages.length > 0 ? Math.round((sumAverages.reduce((s, v) => s + v, 0) / sumAverages.length) * 10) / 10 : 0;
 
       const stsVal = g.sts ?? 0;
       const sasVal = g.sas ?? 0;

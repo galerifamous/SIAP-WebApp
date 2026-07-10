@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Student, Teacher, ClassStaff } from '../types';
 import { downloadFile, convertToCSV, printToPDF } from '../utils/export';
+import * as XLSX from 'xlsx';
 
 interface SiswaListProps {
   students: Student[];
@@ -131,7 +132,7 @@ export default function SiswaList({
     downloadFile(csvContent, `Data_Siswa_${classFilter || 'Semua'}_${academicYear.replace('/', '-')}.csv`, 'text/csv;charset=utf-8;');
   };
 
-  // Export template for bulk upload
+  // Export template for bulk upload (using real XLSX with custom column widths so it's beautifully organized)
   const handleDownloadTemplate = () => {
     const headers = [
       'NISN',
@@ -148,86 +149,136 @@ export default function SiswaList({
       ['1112223334', 'Ahmad Dani', 'IX-A', 'Bandung', '2011-05-12', 'Laki-laki', 'Dani Hamdan', 'danihamdan@gmail.com', 'Jl. Sukajadi No. 12'],
       ['4445556667', 'Siti Rahma', 'IX-A', 'Jakarta', '2011-10-22', 'Perempuan', 'Rahmat Sutrisno', 'rahmat@gmail.com', 'Jl. Kemang Raya No. 4, Jakarta Selatan']
     ];
-    const delimiter = ';';
-    const csvContent = [
-      "sep=;",
-      headers.join(delimiter),
-      ...templateRows.map(row => row.map(v => `"${v.replace(/"/g, '""')}"`).join(delimiter))
-    ].join('\n');
-    downloadFile(csvContent, 'Template_Import_Siswa.csv', 'text/csv;charset=utf-8;');
+
+    const aoa = [headers, ...templateRows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Set neat, fixed column widths (paten) so user doesn't need to resize manually
+    ws['!cols'] = [
+      { wch: 15 }, // NISN
+      { wch: 28 }, // Nama Siswa
+      { wch: 10 }, // Kelas
+      { wch: 15 }, // Tempat Lahir
+      { wch: 25 }, // Tanggal Lahir
+      { wch: 32 }, // Jenis Kelamin
+      { wch: 22 }, // Nama Orangtua
+      { wch: 25 }, // Email Orangtua
+      { wch: 35 }  // Alamat
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template Siswa');
+    XLSX.writeFile(wb, 'Template_Import_Siswa.xlsx');
   };
 
-  // Import bulk data
+  // Import bulk data (supports both XLSX and CSV)
   const handleBulkImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const fileName = file.name.toLowerCase();
+    const isXlsx = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
+
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
-        const text = event.target?.result as string;
-        const lines = text.split(/\r?\n/);
         const importedStudents: Student[] = [];
 
-        // Dynamic delimiter detection
-        let startIdx = 1; // Default to skip header at line 0
-        let delimiter = ',';
-        const firstLine = lines[0]?.trim() || '';
+        if (isXlsx) {
+          const data = new Uint8Array(event.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-        if (firstLine.startsWith('sep=')) {
-          delimiter = firstLine.split('=')[1] || ';';
-          startIdx = 2; // Skip both sep= line (line 0) and header (line 1)
-        } else {
-          // If first line contains semicolon, assume semicolon delimiter
-          if (firstLine.includes(';')) {
-            delimiter = ';';
-          }
-        }
+          for (let i = 1; i < json.length; i++) {
+            const cells = json[i];
+            if (!cells || cells.length < 2) continue;
 
-        // Robust CSV line parser supporting quoted values with custom delimiter
-        const parseCSVLine = (line: string, delim: string): string[] => {
-          const result: string[] = [];
-          let current = '';
-          let inQuotes = false;
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            if (char === '"') {
-              inQuotes = !inQuotes;
-            } else if (char === delim && !inQuotes) {
-              result.push(current.trim());
-              current = '';
-            } else {
-              current += char;
+            const cleanCell = (val: any) => val !== undefined && val !== null ? String(val).trim() : '';
+
+            const nisn = cleanCell(cells[0]);
+            const name = cleanCell(cells[1]);
+            const className = cleanCell(cells[2]);
+
+            if (nisn && name) {
+              importedStudents.push({
+                nisn,
+                name,
+                class: className || 'IX-A',
+                pob: cleanCell(cells[3]) || 'Jakarta',
+                dob: cleanCell(cells[4]) || '2011-01-01',
+                gender: (cleanCell(cells[5]).toLowerCase().includes('perempuan') || cleanCell(cells[5]) === 'Perempuan' ? 'Perempuan' : 'Laki-laki'),
+                parentName: cleanCell(cells[6]) || 'Nama Orangtua',
+                parentEmail: cleanCell(cells[7]) || 'ortu@gmail.com',
+                address: cleanCell(cells[8]) || 'Alamat',
+                photoUrl: '',
+                savings: 0,
+                cashBill: 0,
+              });
             }
           }
-          result.push(current.trim());
-          return result;
-        };
+        } else {
+          const text = event.target?.result as string;
+          const lines = text.split(/\r?\n/);
 
-        const cleanCell = (c: string) => c ? c.trim().replace(/\r/g, '').replace(/^"|"$/g, '') : '';
+          // Dynamic delimiter detection
+          let startIdx = 1; // Default to skip header at line 0
+          let delimiter = ',';
+          const firstLine = lines[0]?.trim() || '';
 
-        // Parse students starting from startIdx
-        for (let i = startIdx; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
+          if (firstLine.startsWith('sep=')) {
+            delimiter = firstLine.split('=')[1] || ';';
+            startIdx = 2; // Skip both sep= line (line 0) and header (line 1)
+          } else {
+            if (firstLine.includes(';')) {
+              delimiter = ';';
+            }
+          }
 
-          const cells = parseCSVLine(line, delimiter);
+          const parseCSVLine = (line: string, delim: string): string[] => {
+            const result: string[] = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+              const char = line[i];
+              if (char === '"') {
+                inQuotes = !inQuotes;
+              } else if (char === delim && !inQuotes) {
+                result.push(current.trim());
+                current = '';
+              } else {
+                current += char;
+              }
+            }
+            result.push(current.trim());
+            return result;
+          };
 
-          if (cells.length >= 3) { // Minimum requirement: NISN, Nama, Kelas
-            importedStudents.push({
-              nisn: cleanCell(cells[0]),
-              name: cleanCell(cells[1]),
-              class: cleanCell(cells[2]) || 'IX-A',
-              pob: cleanCell(cells[3]) || 'Jakarta',
-              dob: cleanCell(cells[4]) || '2011-01-01',
-              gender: (cleanCell(cells[5]) === 'Perempuan' ? 'Perempuan' : 'Laki-laki'),
-              parentName: cleanCell(cells[6]) || 'Nama Orangtua',
-              parentEmail: cleanCell(cells[7]) || 'ortu@gmail.com',
-              address: cleanCell(cells[8]) || 'Alamat',
-              photoUrl: '', // Initial empty photo
-              savings: 0,
-              cashBill: 0,
-            });
+          const cleanCell = (c: string) => c ? c.trim().replace(/\r/g, '').replace(/^"|"$/g, '') : '';
+
+          for (let i = startIdx; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+
+            const cells = parseCSVLine(line, delimiter);
+
+            if (cells.length >= 3) {
+              importedStudents.push({
+                nisn: cleanCell(cells[0]),
+                name: cleanCell(cells[1]),
+                class: cleanCell(cells[2]) || 'IX-A',
+                pob: cleanCell(cells[3]) || 'Jakarta',
+                dob: cleanCell(cells[4]) || '2011-01-01',
+                gender: (cleanCell(cells[5]) === 'Perempuan' ? 'Perempuan' : 'Laki-laki'),
+                parentName: cleanCell(cells[6]) || 'Nama Orangtua',
+                parentEmail: cleanCell(cells[7]) || 'ortu@gmail.com',
+                address: cleanCell(cells[8]) || 'Alamat',
+                photoUrl: '',
+                savings: 0,
+                cashBill: 0,
+              });
+            }
           }
         }
 
@@ -238,11 +289,16 @@ export default function SiswaList({
           toast.error('Format data di file template tidak valid.');
         }
       } catch (err) {
-        toast.error('Gagal membaca file CSV template.');
+        toast.error('Gagal membaca file template.');
       }
     };
-    reader.readAsText(file);
-    e.target.value = ''; // Reset input
+
+    if (isXlsx) {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
+    e.target.value = '';
   };
 
   // Export to PDF
@@ -366,7 +422,7 @@ export default function SiswaList({
               <span>Impor Masal</span>
               <input
                 type="file"
-                accept=".csv"
+                accept=".csv,.xlsx,.xls"
                 ref={bulkFileInputRef}
                 onChange={handleBulkImport}
                 className="hidden"
@@ -381,7 +437,7 @@ export default function SiswaList({
                   ? 'bg-slate-800 hover:bg-slate-700/80 border-slate-700/60 text-slate-200' 
                   : 'bg-slate-100 hover:bg-slate-200 border-[#cbd5ce] text-slate-700'
               }`}
-              title="Unduh template Excel (CSV) untuk input masal"
+              title="Unduh template Excel (.xlsx) untuk input masal"
             >
               <Download className="w-4 h-4 text-blue-400" />
               <span>Unduh Template</span>

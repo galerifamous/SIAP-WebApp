@@ -317,6 +317,19 @@ export default function AbsensiSec({
     const aoa = [row1, row2, ...dataRows];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
+    // Set neat, fixed column widths (paten) so user doesn't need to resize manually
+    const cols = [
+      { wch: 5 },  // No
+      { wch: 15 }, // NISN
+      { wch: 28 }, // Nama Siswa
+      { wch: 6 },  // JK
+    ];
+    for (let d = 1; d <= daysInMonth; d++) {
+      cols.push({ wch: 4 }); // Very compact day columns
+    }
+    cols.push({ wch: 4 }, { wch: 4 }, { wch: 4 }, { wch: 4 }); // H, S, I, A count columns
+    ws['!cols'] = cols;
+
     // Set merges
     ws['!merges'] = [
       { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // No

@@ -240,7 +240,7 @@ export default function Dashboard({
           {/* Key Metric Summary Cards */}
           <div className="grid grid-cols-3 sm:grid-cols-3 gap-1.5 sm:gap-4">
             {/* Siswa Card */}
-            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
@@ -262,7 +262,7 @@ export default function Dashboard({
             </div>
 
             {/* Kehadiran Card */}
-            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
@@ -284,7 +284,7 @@ export default function Dashboard({
             </div>
 
             {/* Kasus Card */}
-            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
@@ -575,7 +575,7 @@ export default function Dashboard({
           {/* Key Metric Summary Cards */}
           <div className="grid grid-cols-3 sm:grid-cols-3 gap-1.5 sm:gap-4">
             {/* Kehadiran Card */}
-            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
@@ -597,7 +597,7 @@ export default function Dashboard({
             </div>
 
             {/* Prestasi Card */}
-            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
@@ -619,7 +619,7 @@ export default function Dashboard({
             </div>
 
             {/* Catatan Kasus Card */}
-            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between h-full ${
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between ${
               isDark 
                 ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
                 : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'

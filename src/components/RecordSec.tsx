@@ -324,7 +324,7 @@ export default function RecordSec({
                 <th className="p-4">Tindak Lanjut / Resolusi</th>
                 <th className="p-4 text-center">Kategori</th>
                 {role !== 'SISWA' && <th className="p-4 text-center w-28">Email Orangtua</th>}
-                {role === 'ADMIN' && <th className="p-4 text-center w-16">Hapus</th>}
+                {role !== 'SISWA' && <th className="p-4 text-center w-16">Hapus</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -375,7 +375,7 @@ export default function RecordSec({
                         </button>
                       </td>
                     )}
-                    {role === 'ADMIN' && (
+                    {role !== 'SISWA' && (
                       <td className="p-4 text-center">
                         <button
                           onClick={async () => {
@@ -413,7 +413,7 @@ export default function RecordSec({
                 <th className="p-4">Tingkat</th>
                 <th className="p-4">Deskripsi Pencapaian</th>
                 {role !== 'SISWA' && <th className="p-4 text-center w-28">Email Orangtua</th>}
-                {role === 'ADMIN' && <th className="p-4 text-center w-16">Hapus</th>}
+                {role !== 'SISWA' && <th className="p-4 text-center w-16">Hapus</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-slate-300">
@@ -458,7 +458,7 @@ export default function RecordSec({
                         </button>
                       </td>
                     )}
-                    {role === 'ADMIN' && (
+                    {role !== 'SISWA' && (
                       <td className="p-4 text-center">
                         <button
                           onClick={async () => {
