@@ -12,6 +12,7 @@ import {
   Filter,
   FileSpreadsheet,
   FileDown,
+  Printer,
   Mail,
   Check,
   AlertCircle,
@@ -22,7 +23,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { Student, Grade, Teacher, ClassStaff, AcademicSetting, SumatifDetail } from '../types';
-import { downloadFile, convertToCSV, printToPDF } from '../utils/export';
+import { downloadFile, convertToCSV, printToPDF, downloadToPDF } from '../utils/export';
 import * as XLSX from 'xlsx';
 
 interface NilaiSecProps {
@@ -160,7 +161,11 @@ export default function NilaiSec({
 
   // Filter/List States
   const [searchQuery, setSearchQuery] = useState('');
-  const [classFilter, setClassFilter] = useState('');
+  const [classFilter, setClassFilter] = useState(() => {
+    return (role === 'GURU' && allowedClasses && allowedClasses.length > 0)
+      ? allowedClasses[0]
+      : '';
+  });
   const [subjectFilter, setSubjectFilter] = useState(() => {
     if (role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_MAPEL' && loggedTeacher.subject) {
       return loggedTeacher.subject;
@@ -307,6 +312,21 @@ export default function NilaiSec({
     const targetGrades = filteredGrades;
     const maxSums = Math.max(...targetGrades.map(g => g.sumatif?.length || 0), 4);
 
+    let schoolAddress = '';
+    let logoUrl = '';
+    let govLogoUrl = '';
+    try {
+      const sysRaw = localStorage.getItem('siap_system');
+      if (sysRaw) {
+        const sys = JSON.parse(sysRaw);
+        if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
+        if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
+      }
+    } catch (e) {
+      // ignore
+    }
+
     // Header Row 1
     const row1 = ['NISN', 'Nama Siswa', 'JK', subjectFilter || 'Mata Pelajaran'];
     for (let i = 1; i < maxSums; i++) {
@@ -368,7 +388,20 @@ export default function NilaiSec({
       ];
     });
 
-    const aoa = [row1, row2, ...dataRows];
+    const logoStatus = logoUrl ? 'TERUNGGAH & AKTIF' : 'BELUM DIUNGGAH';
+    const govLogoStatus = govLogoUrl ? 'TERUNGGAH & AKTIF' : 'BELUM DIUNGGAH';
+    const headerRows = [
+      ['KEMENTERIAN AGAMA REPUBLIK INDONESIA'],
+      [schoolName],
+      [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
+      [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
+      [],
+      [`REKAP NILAI RAPOR SISWA - KELAS ${classFilter || 'SEMUA KELAS'}`],
+      [`Mata Pelajaran: ${subjectFilter || 'Semua'} | TP: ${academicYear} | Semester: ${semester}`],
+      [],
+    ];
+
+    const aoa = [...headerRows, row1, row2, ...dataRows];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
     // Set neat, fixed column widths (paten) so user doesn't need to resize manually
@@ -389,16 +422,16 @@ export default function NilaiSec({
 
     ws['!cols'] = cols;
 
-    // Set merges
+    // Set merges shifted by 8 header rows
     ws['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // NISN
-      { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } }, // Nama Siswa
-      { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } }, // JK
-      { s: { r: 0, c: 3 }, e: { r: 0, c: 3 + maxSums - 1 } }, // Subject name
-      { s: { r: 0, c: 3 + maxSums }, e: { r: 1, c: 3 + maxSums } }, // Rata-Rata SUM
-      { s: { r: 0, c: 3 + maxSums + 1 }, e: { r: 1, c: 3 + maxSums + 1 } }, // STS
-      { s: { r: 0, c: 3 + maxSums + 2 }, e: { r: 1, c: 3 + maxSums + 2 } }, // ASAS
-      { s: { r: 0, c: 3 + maxSums + 3 }, e: { r: 1, c: 3 + maxSums + 3 } }  // Rata-Rata ASAS
+      { s: { r: 8, c: 0 }, e: { r: 9, c: 0 } }, // NISN
+      { s: { r: 8, c: 1 }, e: { r: 9, c: 1 } }, // Nama Siswa
+      { s: { r: 8, c: 2 }, e: { r: 9, c: 2 } }, // JK
+      { s: { r: 8, c: 3 }, e: { r: 8, c: 3 + maxSums - 1 } }, // Subject name
+      { s: { r: 8, c: 3 + maxSums }, e: { r: 9, c: 3 + maxSums } }, // Rata-Rata SUM
+      { s: { r: 8, c: 3 + maxSums + 1 }, e: { r: 9, c: 3 + maxSums + 1 } }, // STS
+      { s: { r: 8, c: 3 + maxSums + 2 }, e: { r: 9, c: 3 + maxSums + 2 } }, // ASAS
+      { s: { r: 8, c: 3 + maxSums + 3 }, e: { r: 9, c: 3 + maxSums + 3 } }  // Rata-Rata ASAS
     ];
 
     const wb = XLSX.utils.book_new();
@@ -414,6 +447,7 @@ export default function NilaiSec({
     // Retrieve system settings
     let schoolAddress = '';
     let logoUrl = '';
+    let govLogoUrl = '';
     let headmasterName = 'Makhfud, S.Pd.';
     try {
       const sysRaw = localStorage.getItem('siap_system');
@@ -421,6 +455,7 @@ export default function NilaiSec({
         const sys = JSON.parse(sysRaw);
         if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
         if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
         if (sys.headmasterName) headmasterName = sys.headmasterName;
       }
     } catch (e) {
@@ -544,7 +579,7 @@ export default function NilaiSec({
             .kop-container {
               display: flex;
               align-items: center;
-              justify-content: center;
+              justify-content: space-between;
               border-bottom: 3px double #0f172a;
               padding-bottom: 8px;
               margin-bottom: 12px;
@@ -553,10 +588,16 @@ export default function NilaiSec({
               width: 55px;
               height: 55px;
               object-fit: contain;
+            }
+            .kop-logo-left {
               margin-right: 15px;
+            }
+            .kop-logo-right {
+              margin-left: 15px;
             }
             .kop-text {
               text-align: center;
+              flex-grow: 1;
             }
             .kop-school {
               font-size: 14px;
@@ -646,12 +687,21 @@ export default function NilaiSec({
 
           <!-- Beautiful Kop Surat (Letterhead) -->
           <div class="kop-container">
-            ${logoUrl ? `<img src="${logoUrl}" class="kop-logo" />` : ''}
-            <div class="kop-text" style="text-align: center; flex-grow: 1; padding-right: 40px;">
+            ${govLogoUrl ? `
+              <img src="${govLogoUrl}" class="kop-logo kop-logo-left" />
+            ` : `
+              <div class="kop-logo kop-logo-left" style="width: 55px; height: 55px; border-radius: 50%; background: #f1f5f9; border: 1px solid #0f172a; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: bold; color: #475569; text-align: center; line-height: 1.2;">KOP<br/>DINAS</div>
+            `}
+            <div class="kop-text" style="text-align: center; flex-grow: 1;">
               <p class="kop-kemendikbud" style="font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #1e293b; margin: 0 0 3px 0;">KEMENTERIAN AGAMA REPUBLIK INDONESIA</p>
               <h1 class="kop-school-name" style="font-size: 18px; font-weight: bold; text-transform: uppercase; color: #0f172a; margin: 0 0 4px 0; letter-spacing: 0.5px; line-height: 1.1;">${schoolName}</h1>
               <p class="kop-alamat" style="font-size: 9px; color: #475569; margin: 0; line-height: 1.4; font-weight: 500;">${schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'}</p>
             </div>
+            ${logoUrl ? `
+              <img src="${logoUrl}" class="kop-logo kop-logo-right" />
+            ` : `
+              <div class="kop-logo kop-logo-right" style="width: 55px; height: 55px; border-radius: 50%; background: #f1f5f9; border: 1px solid #0f172a; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: bold; color: #475569; text-align: center; line-height: 1.2;">KOP<br/>SEKOLAH</div>
+            `}
           </div>
 
           <div class="title-section">
@@ -685,18 +735,20 @@ export default function NilaiSec({
           <div class="signature-container" style="display: flex; justify-content: space-between; margin-top: 30px; page-break-inside: avoid; text-align: center; font-size: 11px;">
             <div class="signature-box" style="width: 250px; text-align: left;">
               <p style="visibility: hidden;">${cityName}, ${formattedDate}</p>
-              <p style="margin-top: 3px; font-weight: bold;">Wali Kelas,</p>
+              <p style="margin-top: 3px; font-weight: bold; margin-bottom: 15px;">Mengetahui,</p>
+              <p style="margin-top: 3px; font-weight: bold;">Kepala Madrasah,</p>
               <div class="signature-space" style="height: 50px;"></div>
-              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase;">${waliKelasName || '........................'}</p>
-              <p style="color: #64748b; margin: 2px 0 0 0;">NIP. ................................</p>
+              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase;">${headmasterName}</p>
+              <p style="color: #64748b; margin: 2px 0 0 0;">NIP. 197812052005011002</p>
             </div>
 
             <div class="signature-box" style="width: 250px; text-align: right;">
               <p>${cityName}, ${formattedDate}</p>
-              <p style="margin-top: 3px; font-weight: bold; padding-right: 25px;">Kepala Madrasah,</p>
+              <p style="visibility: hidden; margin-top: 3px; margin-bottom: 15px;">&nbsp;</p>
+              <p style="margin-top: 3px; font-weight: bold; padding-right: 25px;">Wali Kelas,</p>
               <div class="signature-space" style="height: 50px;"></div>
-              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; padding-right: 25px;">${headmasterName}</p>
-              <p style="color: #64748b; margin: 2px 0 0 0; padding-right: 25px;">NIP. 197812052005011002</p>
+              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; padding-right: 25px;">${waliKelasName || '........................'}</p>
+              <p style="color: #64748b; margin: 2px 0 0 0; padding-right: 25px;">NIP. ................................</p>
             </div>
           </div>
 
@@ -712,6 +764,89 @@ export default function NilaiSec({
 
     printWindow.document.write(htmlContent);
     printWindow.document.close();
+  };
+
+  // Download direct PDF using downloadToPDF helper
+  const handleDownloadPDF = () => {
+    const targetGrades = filteredGrades;
+    const maxSums = Math.max(...targetGrades.map(g => g.sumatif?.length || 0), 4);
+
+    const sumHeaders = [];
+    for (let i = 1; i <= maxSums; i++) {
+      sumHeaders.push(`SUM ${i}`);
+    }
+
+    const headers = ['No', 'NISN', 'Nama Siswa', 'JK', ...sumHeaders, 'Rata Sum', 'STS', 'SAS', 'Rapor'];
+
+    let waliKelasName = '';
+    if (classFilter && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === classFilter);
+      if (staff) {
+        const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
+        if (teacher) {
+          waliKelasName = teacher.name;
+        }
+      }
+    }
+
+    const rows = targetGrades.map((g, idx) => {
+      const sGender = students.find(s => s.nisn === g.nisn)?.gender;
+      const jk = sGender === 'Laki-laki' ? 'L' : 'P';
+
+      const sumVals = [];
+      for (let i = 0; i < maxSums; i++) {
+        let valStr = '-';
+        if (g.sumatifDetails && g.sumatifDetails[i]) {
+          const det = g.sumatifDetails[i];
+          const harian = det.harian || [];
+          const avg = harian.length > 0 ? Math.round(harian.reduce((a, b) => a + b, 0) / harian.length) : 0;
+          if (harian.length > 0) {
+            valStr = `${avg} (${harian.join(',')})`;
+          } else {
+            valStr = g.sumatif && g.sumatif[i] !== undefined ? String(g.sumatif[i]) : '-';
+          }
+        } else {
+          valStr = g.sumatif && g.sumatif[i] !== undefined ? String(g.sumatif[i]) : '-';
+        }
+        sumVals.push(valStr);
+      }
+
+      const sumAverages = g.sumatifDetails && g.sumatifDetails.length > 0
+        ? g.sumatifDetails.map(item => {
+            const h = item.harian || [];
+            return h.length > 0 ? h.reduce((a, b) => a + b, 0) / h.length : 0;
+          })
+        : (g.sumatif || []);
+      const sumAvg = sumAverages.length > 0 ? Math.round((sumAverages.reduce((s, v) => s + v, 0) / sumAverages.length) * 10) / 10 : 0;
+
+      const stsVal = g.sts ?? 0;
+      const sasVal = g.sas ?? 0;
+      const rAsas = Math.round(((stsVal + sasVal) / 2) * 10) / 10;
+
+      return [
+        String(idx + 1),
+        g.nisn,
+        g.studentName,
+        jk,
+        ...sumVals,
+        String(sumAvg),
+        String(stsVal),
+        String(sasVal),
+        String(rAsas)
+      ];
+    });
+
+    downloadToPDF(
+      `Daftar Nilai dan Hasil Asesmen Akademik`,
+      headers,
+      rows,
+      `Rekap_Nilai_Siswa_${academicYear.replace('/', '-')}_${classFilter || 'Semua'}.pdf`,
+      schoolName,
+      academicYear,
+      semester,
+      classFilter || undefined,
+      waliKelasName || undefined
+    );
   };
 
   return (
@@ -1082,19 +1217,21 @@ export default function NilaiSec({
                 </div>
 
                 {/* Class selector filter */}
-                <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-slate-500" />
-                  <select
-                    value={classFilter}
-                    onChange={(e) => setClassFilter(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-emerald-500 font-semibold"
-                  >
-                    <option value="">Semua Kelas</option>
-                    {allowedClasses.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
+                {role !== 'GURU' && (
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-4 h-4 text-slate-500" />
+                    <select
+                      value={classFilter}
+                      onChange={(e) => setClassFilter(e.target.value)}
+                      className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-300 focus:outline-none focus:border-emerald-500 font-semibold"
+                    >
+                      <option value="">Semua Kelas</option>
+                      {allowedClasses.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 {/* Subject filter */}
                 <select
@@ -1116,18 +1253,26 @@ export default function NilaiSec({
                 {/* Export buttons */}
                 <button
                   onClick={handleExportExcel}
-                  className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-emerald-400 border border-slate-700/60 rounded-xl transition duration-150"
-                  title="Ekspor Rekap Excel"
+                  className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-emerald-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
+                  title="Unduh Rekap Excel (.xlsx)"
                 >
                   <FileSpreadsheet className="w-4.5 h-4.5" />
                 </button>
 
                 <button
-                  onClick={handleExportPDF}
-                  className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-red-400 border border-slate-700/60 rounded-xl transition duration-150"
-                  title="Ekspor PDF / Cetak"
+                  onClick={handleDownloadPDF}
+                  className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-sky-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
+                  title="Unduh PDF (.pdf) Langsung"
                 >
                   <FileDown className="w-4.5 h-4.5" />
+                </button>
+
+                <button
+                  onClick={handleExportPDF}
+                  className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-rose-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
+                  title="Cetak Laporan PDF / Pratinjau"
+                >
+                  <Printer className="w-4.5 h-4.5" />
                 </button>
               </div>
             </div>

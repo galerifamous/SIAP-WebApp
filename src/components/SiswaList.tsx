@@ -13,6 +13,7 @@ import {
   Filter,
   FileSpreadsheet,
   FileDown,
+  Printer,
   Trash2,
   Edit3,
   X,
@@ -22,7 +23,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { Student, Teacher, ClassStaff } from '../types';
-import { downloadFile, convertToCSV, printToPDF } from '../utils/export';
+import { downloadFile, convertToCSV, printToPDF, downloadToPDF } from '../utils/export';
 import * as XLSX from 'xlsx';
 
 interface SiswaListProps {
@@ -65,7 +66,11 @@ export default function SiswaList({
 
   // Navigation & Search State
   const [searchQuery, setSearchQuery] = useState('');
-  const [classFilter, setClassFilter] = useState('');
+  const [classFilter, setClassFilter] = useState(() => {
+    return (role === 'GURU' && availableClasses && availableClasses.length > 0)
+      ? availableClasses[0]
+      : '';
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
@@ -111,8 +116,25 @@ export default function SiswaList({
     return nameA.localeCompare(nameB, 'id');
   });
 
-  // Export all students to Excel (CSV)
+  // Export all students to Excel with official school letterhead header and logo status
   const handleExportExcel = () => {
+    let schoolAddress = '';
+    let headmasterName = 'Makhfud, S.Pd.';
+    let logoUrl = '';
+    let govLogoUrl = '';
+    try {
+      const sysRaw = localStorage.getItem('siap_system');
+      if (sysRaw) {
+        const sys = JSON.parse(sysRaw);
+        if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
+        if (sys.headmasterName) headmasterName = sys.headmasterName;
+        if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
+      }
+    } catch (e) {
+      // ignore
+    }
+
     const headers = [
       'NISN',
       'Nama Siswa',
@@ -124,12 +146,52 @@ export default function SiswaList({
       'Email Orangtua',
       'Alamat'
     ];
-    const csvContent = convertToCSV(
-      filteredStudents,
-      headers,
-      ['nisn', 'name', 'class', 'pob', 'dob', 'gender', 'parentName', 'parentEmail', 'address']
-    );
-    downloadFile(csvContent, `Data_Siswa_${classFilter || 'Semua'}_${academicYear.replace('/', '-')}.csv`, 'text/csv;charset=utf-8;');
+
+    const logoStatus = logoUrl ? 'TERUNGGAH & AKTIF' : 'BELUM DIUNGGAH';
+    const govLogoStatus = govLogoUrl ? 'TERUNGGAH & AKTIF' : 'BELUM DIUNGGAH';
+    const headerRows = [
+      ['KEMENTERIAN AGAMA REPUBLIK INDONESIA'],
+      [schoolName],
+      [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
+      [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
+      [],
+      [`LAPORAN DATA LENGKAP SISWA - KELAS ${classFilter || 'SEMUA KELAS'}`],
+      [`Tahun Pelajaran: ${academicYear} | Semester: ${semester}`],
+      [],
+      headers
+    ];
+
+    const dataRows = filteredStudents.map(s => [
+      s.nisn,
+      s.name,
+      s.class,
+      s.pob || '-',
+      s.dob || '-',
+      s.gender || '-',
+      s.parentName || '-',
+      s.parentEmail || '-',
+      s.address || '-'
+    ]);
+
+    const aoa = [...headerRows, ...dataRows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Set nice column widths
+    ws['!cols'] = [
+      { wch: 15 }, // NISN
+      { wch: 28 }, // Nama Siswa
+      { wch: 10 }, // Kelas
+      { wch: 18 }, // Tempat Lahir
+      { wch: 15 }, // Tanggal Lahir
+      { wch: 15 }, // Jenis Kelamin
+      { wch: 22 }, // Nama Orangtua
+      { wch: 25 }, // Email Orangtua
+      { wch: 35 }  // Alamat
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Data Siswa');
+    XLSX.writeFile(wb, `Data_Siswa_${classFilter || 'Semua'}_${academicYear.replace('/', '-')}.xlsx`);
   };
 
   // Export template for bulk upload (using real XLSX with custom column widths so it's beautifully organized)
@@ -327,6 +389,42 @@ export default function SiswaList({
     printToPDF(`Laporan Data Lengkap Siswa`, headers, rows, schoolName, academicYear, semester, classFilter || undefined, waliKelasName || undefined);
   };
 
+  // Download PDF directly
+  const handleDownloadPDF = () => {
+    let waliKelasName = '';
+    if (classFilter && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === classFilter);
+      if (staff) {
+        const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
+        if (teacher) {
+          waliKelasName = teacher.name;
+        }
+      }
+    }
+
+    const headers = ['No', 'NISN', 'Nama Lengkap', 'Kelas', 'L/P', 'Nama Orangtua', 'Email Orangtua'];
+    const rows = filteredStudents.map((s, idx) => [
+      String(idx + 1),
+      s.nisn,
+      s.name,
+      s.class,
+      s.gender === 'Laki-laki' ? 'L' : 'P',
+      s.parentName,
+      s.parentEmail
+    ]);
+    downloadToPDF(
+      `Laporan Data Lengkap Siswa`,
+      headers,
+      rows,
+      `Data_Siswa_${academicYear.replace('/', '-')}_${classFilter || 'Semua'}.pdf`,
+      schoolName,
+      academicYear,
+      semester,
+      classFilter || undefined,
+      waliKelasName || undefined
+    );
+  };
+
   // Convert uploaded image to Base64
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, isEditing = false) => {
     const file = e.target.files?.[0];
@@ -474,25 +572,29 @@ export default function SiswaList({
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex-shrink-0 text-slate-500 text-xs flex items-center gap-1 font-semibold">
-            <Filter className="w-3.5 h-3.5" /> Filter Kelas:
+        {role !== 'GURU' && (
+          <div className="flex items-center gap-2">
+            <div className="flex-shrink-0 text-slate-500 text-xs flex items-center gap-1 font-semibold">
+              <Filter className="w-3.5 h-3.5" /> Filter Kelas:
+            </div>
+            <select
+              value={classFilter}
+              onChange={(e) => setClassFilter(e.target.value)}
+              className={`rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:border-emerald-500/80 border ${
+                isDark 
+                  ? 'bg-[#121e15] border-slate-800 text-slate-300' 
+                  : 'bg-white border-[#cbd5ce] text-slate-700'
+              }`}
+            >
+              <option value="" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-850"}>Semua Kelas</option>
+              {(availableClasses || []).map(c => (
+                <option key={c} value={c} className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-850"}>{c}</option>
+              ))}
+            </select>
           </div>
-          <select
-            value={classFilter}
-            onChange={(e) => setClassFilter(e.target.value)}
-            className={`rounded-xl py-2 px-3 text-xs font-semibold focus:outline-none focus:border-emerald-500/80 border ${
-              isDark 
-                ? 'bg-[#121e15] border-slate-800 text-slate-300' 
-                : 'bg-white border-[#cbd5ce] text-slate-700'
-            }`}
-          >
-            <option value="" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-850"}>Semua Kelas</option>
-            {(availableClasses || []).map(c => (
-              <option key={c} value={c} className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-850"}>{c}</option>
-            ))}
-          </select>
+        )}
 
+        <div className="flex items-center gap-2 ml-auto">
           {/* Export buttons */}
           <button
             onClick={handleExportExcel}
@@ -501,9 +603,21 @@ export default function SiswaList({
                 ? 'bg-slate-800 hover:bg-slate-700/80 text-emerald-400 border-slate-700/60' 
                 : 'bg-slate-50 hover:bg-slate-100 text-emerald-600 border-[#cbd5ce]'
             }`}
-            title="Ekspor Excel (CSV)"
+            title="Unduh Excel (.xlsx) Langsung"
           >
             <FileSpreadsheet className="w-4.5 h-4.5" />
+          </button>
+
+          <button
+            onClick={handleDownloadPDF}
+            className={`p-2.5 rounded-xl transition duration-150 border ${
+              isDark 
+                ? 'bg-slate-800 hover:bg-slate-700/80 text-sky-400 border-slate-700/60' 
+                : 'bg-slate-50 hover:bg-slate-100 text-sky-600 border-[#cbd5ce]'
+            }`}
+            title="Unduh PDF (.pdf) Langsung"
+          >
+            <FileDown className="w-4.5 h-4.5" />
           </button>
 
           <button
@@ -513,9 +627,9 @@ export default function SiswaList({
                 ? 'bg-slate-800 hover:bg-slate-700/80 text-rose-400 border-slate-700/60' 
                 : 'bg-slate-50 hover:bg-slate-100 text-rose-600 border-[#cbd5ce]'
             }`}
-            title="Ekspor PDF / Cetak"
+            title="Cetak Dokumen PDF / Pratinjau"
           >
-            <FileDown className="w-4.5 h-4.5" />
+            <Printer className="w-4.5 h-4.5" />
           </button>
         </div>
       </div>

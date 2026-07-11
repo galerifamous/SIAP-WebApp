@@ -71,6 +71,7 @@ export default function Sidebar({
   const [isOpen, setIsOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
     absensi: true,
+    sholat: true,
     nilai: true,
     record: true,
     pengaturan: false
@@ -155,9 +156,9 @@ export default function Sidebar({
             ) : (
               <School className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
             )}
-            <span className={`font-bold text-sm tracking-tight transition-colors duration-300 ${
+            <span className={`font-bold text-sm tracking-tight transition-colors duration-300 truncate max-w-[150px] ${
               isDark ? 'text-white' : 'text-[#0f1612]'
-            }`}>SIAP</span>
+            }`}>{schoolName}</span>
           </div>
         </div>
         <div className={`text-[10px] font-mono px-2.5 py-1 border rounded-lg transition-all duration-300 ${
@@ -204,15 +205,10 @@ export default function Sidebar({
                 <School className={`w-8 h-8 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
               )}
             </div>
-            <div className="min-w-0">
-              <h2 className={`text-lg font-bold tracking-tight flex items-center gap-1.5 leading-none transition-colors duration-300 ${
-                isDark ? 'text-white' : 'text-[#0f1612]'
-              }`}>
-                SIAP
-              </h2>
-              <p className="text-[10px] text-slate-500 mt-1 font-bold uppercase tracking-wider truncate" title={schoolName}>
+            <div className="min-w-0 flex-1">
+              <h2 className={`text-sm font-bold tracking-tight transition-colors duration-300 truncate`} title={schoolName}>
                 {schoolName}
-              </p>
+              </h2>
             </div>
           </div>
 
@@ -360,6 +356,54 @@ export default function Sidebar({
               </button>
             )}
 
+            {/* Absen Sholat Dzuhur Berjama'ah (Admin & Guru: Collapsible, Siswa: Flat menu) */}
+            {role !== 'SISWA' ? (
+              <div className="space-y-1">
+                <button
+                  type="button"
+                  onClick={() => toggleExpand('sholat')}
+                  className={getHeaderItemClass('sholat')}
+                >
+                  <div className="flex items-center gap-3">
+                    <CalendarCheck className="w-4.5 h-4.5 text-emerald-400" />
+                    <span>Absen Sholat Dzuhur</span>
+                  </div>
+                  {expandedMenus.sholat ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+                {expandedMenus.sholat && (
+                  <div className="pl-6 space-y-1 animate-slideDown">
+                    <button
+                      type="button"
+                      onClick={() => handleMenuClick('sholat-scan')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('sholat-scan')}`}
+                    >
+                      <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Scan & Absen Sholat</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMenuClick('sholat-rekap')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('sholat-rekap')}`}
+                    >
+                      <ClipboardList className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Rekap Absen Sholat</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleMenuClick('sholat-rekap')}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('sholat-rekap')}`}
+              >
+                <div className="flex items-center gap-3">
+                  <CalendarCheck className="w-4.5 h-4.5 text-emerald-400" />
+                  <span>Absen Sholat Dzuhur</span>
+                </div>
+              </button>
+            )}
+
             {/* Nilai Siswa (Admin & Guru: Collapsible, Siswa: Flat menu) */}
             {role !== 'SISWA' ? (
               <div className="space-y-1">
@@ -488,16 +532,7 @@ export default function Sidebar({
               </button>
             )}
 
-            {/* Unduh Aplikasi (Semua Akun - Admin, Guru, Siswa) */}
-            <button
-              onClick={() => handleMenuClick('unduh-aplikasi')}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('unduh-aplikasi')}`}
-            >
-              <div className="flex items-center gap-3">
-                <Download className="w-4.5 h-4.5" />
-                <span>Unduh Aplikasi</span>
-              </div>
-            </button>
+
 
             {/* Pengaturan (Admin Only: Collapsible) */}
             {role === 'ADMIN' && (

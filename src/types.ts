@@ -54,6 +54,19 @@ export interface Attendance {
   timestamp: string;
 }
 
+export interface SholatAttendance {
+  id: string;
+  nisn: string;
+  studentName: string;
+  class: string;
+  date: string; // YYYY-MM-DD
+  status: 'Hadir' | 'Izin' | 'Bolos';
+  academicYear: string;
+  semester: string;
+  timestamp: string;
+  emailSent?: boolean;
+}
+
 export interface SumatifDetail {
   name: string; // e.g. "Sumatif 1"
   harian: number[]; // e.g. [80, 85, 90]
@@ -118,6 +131,7 @@ export interface SystemSetting {
   adminEmail: string;
   headmasterName: string;
   logoUrl: string; // Base64 or custom logo URL
+  govLogoUrl?: string; // Ministry logo Base64 or URL
   adminUsername?: string;
   adminPassword?: string;
 }

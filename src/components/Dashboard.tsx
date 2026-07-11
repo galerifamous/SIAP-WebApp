@@ -26,7 +26,9 @@ import {
   Settings,
   User,
   Download,
-  Trash2
+  Trash2,
+  Briefcase,
+  Monitor
 } from 'lucide-react';
 import {
   BarChart,
@@ -43,7 +45,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { Student, Teacher, Attendance, Grade, CaseReport, Achievement, EmailLog, Role } from '../types';
+import { Student, Teacher, Attendance, SholatAttendance, Grade, CaseReport, Achievement, EmailLog, Role } from '../types';
 
 interface DashboardProps {
   role: Role;
@@ -59,6 +61,8 @@ interface DashboardProps {
   semester: string;
   onNavigate?: (menuId: string) => void;
   onClearEmails?: () => void;
+  teacherDutyType?: string;
+  schoolName?: string;
 }
 
 export default function Dashboard({
@@ -74,7 +78,9 @@ export default function Dashboard({
   academicYear,
   semester,
   onNavigate,
-  onClearEmails
+  onClearEmails,
+  teacherDutyType,
+  schoolName
 }: DashboardProps) {
 
   const [isDark, setIsDark] = React.useState(() => document.documentElement.classList.contains('dark'));
@@ -86,11 +92,180 @@ export default function Dashboard({
     return () => window.removeEventListener('theme-change', handleThemeChange);
   }, []);
 
+  // Define menu items that exactly mirror sidebar visibility logic
+  const menuConfig = [
+    {
+      label: 'Profil Saya',
+      icon: User,
+      menu: 'profil',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role === 'SISWA'
+    },
+    {
+      label: 'Data Siswa',
+      icon: Users,
+      menu: 'siswa',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role !== 'SISWA'
+    },
+    {
+      label: 'Kenaikan Kelas',
+      icon: TrendingUp,
+      menu: 'naik-kelas',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role !== 'SISWA'
+    },
+    {
+      label: 'QR Code Absen Biasa',
+      icon: QrCode,
+      menu: 'absensi-scan',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role !== 'SISWA' && !(role === 'GURU' && teacherDutyType === 'Guru Mapel')
+    },
+    {
+      label: role === 'SISWA' ? 'Kehadiran Saya' : 'Absen Biasa',
+      icon: ClipboardList,
+      menu: 'absensi-siswa',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: true
+    },
+    {
+      label: 'QR Code Absen Sholat',
+      icon: QrCode,
+      menu: 'sholat-scan',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role !== 'SISWA' && !(role === 'GURU' && teacherDutyType === 'Guru Mapel')
+    },
+    {
+      label: role === 'SISWA' ? "Sholat Jama'ah Saya" : 'Absen Sholat Dzuhur',
+      icon: CalendarCheck,
+      menu: 'sholat-rekap',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: true
+    },
+    {
+      label: 'Input Nilai',
+      icon: PenTool,
+      menu: 'nilai-input',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role !== 'SISWA'
+    },
+    {
+      label: role === 'SISWA' ? 'Nilai & Rapor' : 'Nilai Siswa',
+      icon: GraduationCap,
+      menu: 'nilai-siswa',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: true
+    },
+    {
+      label: role === 'SISWA' ? 'Catatan Perilaku' : 'Kasus Siswa',
+      icon: AlertTriangle,
+      menu: 'kasus',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: true
+    },
+    {
+      label: role === 'SISWA' ? 'Prestasi Saya' : 'Prestasi Siswa',
+      icon: Trophy,
+      menu: 'prestasi',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: true
+    },
+    {
+      label: 'Uang Kas & Tabungan',
+      icon: CreditCard,
+      menu: 'uang-kas',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: !(role === 'GURU' && teacherDutyType === 'Guru Mapel')
+    },
+    {
+      label: 'Cetak Kartu QR Siswa',
+      icon: QrCode,
+      menu: 'qr-code',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role !== 'SISWA' && !(role === 'GURU' && teacherDutyType === 'Guru Mapel')
+    },
+    {
+      label: 'Cetak Kartu',
+      icon: FileText,
+      menu: 'kartu-siswa',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role !== 'SISWA' && !(role === 'GURU' && teacherDutyType === 'Guru Mapel')
+    },
+    {
+      label: 'Backup & Restore',
+      icon: Database,
+      menu: 'backup-restore',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role !== 'SISWA'
+    },
+
+    {
+      label: 'Pengaturan Akademik',
+      icon: Settings,
+      menu: 'set-akademik',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role === 'ADMIN'
+    },
+    {
+      label: 'Pengaturan Sistem',
+      icon: Monitor,
+      menu: 'set-sistem',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role === 'ADMIN'
+    },
+    {
+      label: 'Guru',
+      icon: Briefcase,
+      menu: 'set-guru',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: role === 'ADMIN'
+    }
+  ];
+
+  const visibleMenuItems = menuConfig.filter(item => item.visible);
+
   // --- FILTERED ACADEMIC DATA ---
   const activeAttendance = attendance.filter(a => a.academicYear === academicYear && a.semester === semester);
   const activeGrades = grades.filter(g => g.academicYear === academicYear && g.semester === semester);
   const activeCases = cases.filter(c => c.academicYear === academicYear && c.semester === semester);
   const activeAchievements = achievements.filter(ac => ac.academicYear === academicYear && ac.semester === semester);
+
+  // Load Sholat Attendance
+  const [sholatAttendance, setSholatAttendance] = React.useState<SholatAttendance[]>(() => {
+    try {
+      const saved = localStorage.getItem('sholat_attendance_db');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sholat_attendance_db');
+      if (saved) {
+        setSholatAttendance(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const activeSholatAttendance = sholatAttendance.filter(
+    (a) => a.academicYear === academicYear && a.semester === semester
+  );
+
+  const sholatStatusCounts = activeSholatAttendance.reduce((acc, curr) => {
+    acc[curr.status] = (acc[curr.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const sholatChartData = [
+    { name: 'Hadir', Jumlah: sholatStatusCounts['Hadir'] || 0, color: '#10b981' },
+    { name: 'Izin', Jumlah: sholatStatusCounts['Izin'] || 0, color: '#f59e0b' },
+    { name: 'Bolos', Jumlah: sholatStatusCounts['Bolos'] || 0, color: '#ef4444' },
+  ];
 
   // --- HELPER METRICS (ADMIN & GURU) ---
   const totalStudents = students.length;
@@ -102,7 +277,7 @@ export default function Dashboard({
   const presentToday = todayAttendance.filter(a => a.status === 'Hadir').length;
   const attendancePercentage = todayAttendance.length > 0 
     ? Math.round((presentToday / todayAttendance.length) * 100) 
-    : 85; // Default for display if empty
+    : 0; // 0% if empty
 
   // Calculate Overall Average Grades
   const validGrades = activeGrades.filter(g => g.sumatif !== undefined);
@@ -112,7 +287,7 @@ export default function Dashboard({
         const score = ((sumAvg + (g.sts ?? 0) + (g.sas ?? 0)) / 3);
         return sum + score;
       }, 0) / validGrades.length) * 10) / 10
-    : 82.5;
+    : 0; // 0 if empty
 
   // Active Cases Count
   const pendingCases = activeCases.length;
@@ -133,10 +308,10 @@ export default function Dashboard({
   }, {} as Record<string, number>);
 
   const attendanceChartData = [
-    { name: 'Hadir', Jumlah: attendanceStatusCounts['Hadir'] || 4, color: '#10b981' },
-    { name: 'Sakit', Jumlah: attendanceStatusCounts['Sakit'] || 1, color: '#34d399' },
-    { name: 'Izin', Jumlah: attendanceStatusCounts['Izin'] || 1, color: '#059669' },
-    { name: 'Alpa', Jumlah: attendanceStatusCounts['Alpa'] || 1, color: '#047857' },
+    { name: 'Hadir', Jumlah: attendanceStatusCounts['Hadir'] || 0, color: '#10b981' },
+    { name: 'Sakit', Jumlah: attendanceStatusCounts['Sakit'] || 0, color: '#34d399' },
+    { name: 'Izin', Jumlah: attendanceStatusCounts['Izin'] || 0, color: '#059669' },
+    { name: 'Alpa', Jumlah: attendanceStatusCounts['Alpa'] || 0, color: '#047857' },
   ];
 
   // 2. Average Grade by Subject Chart (Line)
@@ -155,15 +330,6 @@ export default function Dashboard({
     name: subject,
     'Nilai Rata-rata': Math.round((subjectGrades[subject].sum / subjectGrades[subject].count) * 10) / 10
   }));
-
-  // Fallback if empty
-  const defaultGradeChartData = [
-    { name: 'Matematika', 'Nilai Rata-rata': 82 },
-    { name: 'B. Indonesia', 'Nilai Rata-rata': 89 },
-    { name: 'IPA', 'Nilai Rata-rata': 78 },
-    { name: 'IPS', 'Nilai Rata-rata': 84 },
-    { name: 'B. Inggris', 'Nilai Rata-rata': 86 },
-  ];
 
   // 3. Email Delivery Channels Chart (Pie)
   const emailTypeCounts = emails.reduce((acc, curr) => {
@@ -196,6 +362,22 @@ export default function Dashboard({
   const myAchievements = activeAchievements.filter(ac => ac.nisn === studentNisn);
   const myEmails = emails.filter(e => e.recipient === currentStudent?.parentEmail);
 
+  // Student Sholat Attendance Calculations
+  const mySholatAttendance = activeSholatAttendance.filter(a => a.nisn === studentNisn);
+  const mySholatPresent = mySholatAttendance.filter(a => a.status === 'Hadir').length;
+  const mySholatAttendanceRate = mySholatAttendance.length > 0 ? Math.round((mySholatPresent / mySholatAttendance.length) * 100) : 100;
+
+  const mySholatStatusCounts = mySholatAttendance.reduce((acc, curr) => {
+    acc[curr.status] = (acc[curr.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const mySholatChartData = [
+    { name: 'Hadir', Jumlah: mySholatStatusCounts['Hadir'] || 0, color: '#10b981' },
+    { name: 'Izin', Jumlah: mySholatStatusCounts['Izin'] || 0, color: '#f59e0b' },
+    { name: 'Bolos', Jumlah: mySholatStatusCounts['Bolos'] || 0, color: '#ef4444' },
+  ];
+
   // Student subject grades for charts
   const myGradeChartData = myGrades.map(g => {
     const sumAvg = g.sumatif && g.sumatif.length > 0 ? Math.round((g.sumatif.reduce((s, v) => s + v, 0) / g.sumatif.length) * 10) / 10 : 0;
@@ -218,7 +400,7 @@ export default function Dashboard({
       }`}>
         <div>
           <h1 className={`text-xl md:text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
-            Selamat Datang di Portal SIAP, <span className={isDark ? 'text-emerald-400' : 'text-emerald-600'}>{role === 'SISWA' ? currentStudent?.name : (role === 'ADMIN' ? 'Administrator' : 'Rekan Pengajar')}</span>!
+            Selamat Datang di Portal {schoolName || 'Sistem Informasi Akademik Pelajar'}, <span className={isDark ? 'text-emerald-400' : 'text-emerald-600'}>{role === 'SISWA' ? currentStudent?.name : (role === 'ADMIN' ? 'Administrator' : 'Rekan Pengajar')}</span>!
           </h1>
           <p className={`text-xs md:text-sm mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
             {role === 'SISWA' 
@@ -314,19 +496,8 @@ export default function Dashboard({
               <div className={`w-1.5 h-3.5 rounded-full ${isDark ? 'bg-emerald-500' : 'bg-emerald-600'}`} />
               <h4 className={`text-xs font-extrabold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-800'}`}>Akses Cepat Menu Layanan</h4>
             </div>
-            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-10 gap-1.5 sm:gap-3">
-              {[
-                { label: 'Data Siswa', icon: Users, menu: 'siswa', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Absensi Scan', icon: QrCode, menu: 'absensi-scan', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Absensi Siswa', icon: ClipboardList, menu: 'absensi-siswa', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Input Nilai', icon: PenTool, menu: 'nilai-input', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Nilai Siswa', icon: GraduationCap, menu: 'nilai-siswa', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Kasus Siswa', icon: AlertTriangle, menu: 'kasus', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Prestasi Siswa', icon: Trophy, menu: 'prestasi', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Uang Kas & Tabungan', icon: CreditCard, menu: 'uang-kas', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Cetak Kartu', icon: FileText, menu: 'kartu-siswa', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Manajemen Data', icon: Settings, menu: 'set-akademik', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-              ].map((item, idx) => (
+             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-1.5 sm:gap-3">
+              {visibleMenuItems.map((item, idx) => (
                 <button
                   key={idx}
                   onClick={() => onNavigate && onNavigate(item.menu)}
@@ -348,38 +519,85 @@ export default function Dashboard({
           </div>
 
           {/* Graphical Analytics and real-time email dashboard */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Chart 1: Attendance Distribution */}
+          {/* Section 1: Integrated Attendance Reports */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Chart 1a: Class Attendance Distribution */}
             <div className={`p-5 rounded-2xl flex flex-col justify-between transition-all duration-300 ${
               isDark ? 'bg-[#121e15] border border-[#17221c] nm-flat-dark-shallow' : 'bg-white border border-[#cbd5ce] nm-flat-light-shallow'
             }`}>
               <div>
-                <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Grafik Kehadiran Siswa ({academicYear})</h3>
+                <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Grafik Kehadiran Siswa Harian ({academicYear})</h3>
                 <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                    <BarChart data={attendanceChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e293b' : '#e2e8f0'} />
-                      <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#475569'} fontSize={11} />
-                      <YAxis stroke={isDark ? '#64748b' : '#475569'} fontSize={11} />
-                      <Tooltip contentStyle={
-                        isDark 
-                          ? { backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', color: '#fff' } 
-                          : { backgroundColor: '#fff', borderColor: '#cbd5ce', borderRadius: '12px', fontSize: '11px', color: '#334155' }
-                      } />
-                      <Bar dataKey="Jumlah" radius={[6, 6, 0, 0]}>
-                        {attendanceChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {activeAttendance.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                      <BarChart data={attendanceChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e293b' : '#e2e8f0'} />
+                        <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#475569'} fontSize={11} />
+                        <YAxis stroke={isDark ? '#64748b' : '#475569'} fontSize={11} />
+                        <Tooltip contentStyle={
+                          isDark 
+                            ? { backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', color: '#fff' } 
+                            : { backgroundColor: '#fff', borderColor: '#cbd5ce', borderRadius: '12px', fontSize: '11px', color: '#334155' }
+                        } />
+                        <Bar dataKey="Jumlah" radius={[6, 6, 0, 0]}>
+                          {attendanceChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className={`h-full w-full flex flex-col items-center justify-center border border-dashed rounded-xl ${isDark ? 'border-slate-800 text-slate-500' : 'border-[#cbd5ce] text-slate-500'}`}>
+                      <p className="text-xs italic font-medium">Belum ada data kehadiran siswa</p>
+                    </div>
+                  )}
                 </div>
               </div>
               <p className={`text-[10px] mt-3 italic text-center ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
-                *Data diakumulasikan berdasarkan rekap absensi harian pada tahun pelajaran aktif.
+                *Data diakumulasikan berdasarkan rekap absensi kelas harian pada tahun pelajaran aktif.
               </p>
             </div>
 
+            {/* Chart 1b: Sholat Dzuhur Berjama'ah Attendance Distribution */}
+            <div className={`p-5 rounded-2xl flex flex-col justify-between transition-all duration-300 ${
+              isDark ? 'bg-[#121e15] border border-[#17221c] nm-flat-dark-shallow' : 'bg-white border border-[#cbd5ce] nm-flat-light-shallow'
+            }`}>
+              <div>
+                <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Grafik Absensi Sholat Dzuhur Berjama'ah</h3>
+                <div className="h-64 w-full">
+                  {activeSholatAttendance.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                      <BarChart data={sholatChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e293b' : '#e2e8f0'} />
+                        <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#475569'} fontSize={11} />
+                        <YAxis stroke={isDark ? '#64748b' : '#475569'} fontSize={11} />
+                        <Tooltip contentStyle={
+                          isDark 
+                            ? { backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', color: '#fff' } 
+                            : { backgroundColor: '#fff', borderColor: '#cbd5ce', borderRadius: '12px', fontSize: '11px', color: '#334155' }
+                        } />
+                        <Bar dataKey="Jumlah" radius={[6, 6, 0, 0]}>
+                          {sholatChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className={`h-full w-full flex flex-col items-center justify-center border border-dashed rounded-xl ${isDark ? 'border-slate-800 text-slate-500' : 'border-[#cbd5ce] text-slate-500'}`}>
+                      <p className="text-xs italic font-medium">Belum ada data kehadiran sholat jama'ah</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className={`text-[10px] mt-3 italic text-center ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
+                *Data diakumulasikan berdasarkan absensi sholat jama'ah dzuhur pada tahun pelajaran aktif.
+              </p>
+            </div>
+          </div>
+
+          {/* Section 2: Academic & Communications Reports */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
             {/* Email Channels Card */}
             <div className={`p-5 rounded-2xl flex flex-col justify-between transition-all duration-300 ${
               isDark ? 'bg-[#121e15] border border-[#17221c] nm-flat-dark-shallow' : 'bg-white border border-[#cbd5ce] nm-flat-light-shallow'
@@ -433,25 +651,31 @@ export default function Dashboard({
             </div>
 
             {/* Chart 2: Grade Average */}
-            <div className={`p-5 rounded-2xl flex flex-col justify-between transition-all duration-300 ${
+            <div className={`p-5 rounded-2xl flex flex-col justify-between transition-all duration-300 lg:col-span-2 ${
               isDark ? 'bg-[#121e15] border border-[#17221c] nm-flat-dark-shallow' : 'bg-white border border-[#cbd5ce] nm-flat-light-shallow'
             }`}>
               <div>
                 <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Rata-rata Nilai Mapel</h3>
                 <div className="h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%" debounce={100}>
-                    <LineChart data={gradeChartData.length > 0 ? gradeChartData : defaultGradeChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e293b' : '#e2e8f0'} />
-                      <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#475569'} fontSize={9} />
-                      <YAxis stroke={isDark ? '#64748b' : '#475569'} fontSize={11} domain={[0, 100]} />
-                      <Tooltip contentStyle={
-                        isDark 
-                          ? { backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', color: '#fff' } 
-                          : { backgroundColor: '#fff', borderColor: '#cbd5ce', borderRadius: '12px', fontSize: '11px', color: '#334155' }
-                      } />
-                      <Line type="monotone" dataKey="Nilai Rata-rata" stroke="#10b981" strokeWidth={3} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  {gradeChartData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                      <LineChart data={gradeChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e293b' : '#e2e8f0'} />
+                        <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#475569'} fontSize={9} />
+                        <YAxis stroke={isDark ? '#64748b' : '#475569'} fontSize={11} domain={[0, 100]} />
+                        <Tooltip contentStyle={
+                          isDark 
+                            ? { backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', color: '#fff' } 
+                            : { backgroundColor: '#fff', borderColor: '#cbd5ce', borderRadius: '12px', fontSize: '11px', color: '#334155' }
+                        } />
+                        <Line type="monotone" dataKey="Nilai Rata-rata" stroke="#10b981" strokeWidth={3} activeDot={{ r: 6 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className={`h-full w-full flex flex-col items-center justify-center border border-dashed rounded-xl ${isDark ? 'border-slate-800 text-slate-500' : 'border-[#cbd5ce] text-slate-500'}`}>
+                      <p className="text-xs italic font-medium">Belum ada data nilai mata pelajaran</p>
+                    </div>
+                  )}
                 </div>
               </div>
               <p className={`text-[10px] mt-2 text-center ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
@@ -573,7 +797,7 @@ export default function Dashboard({
         // --- SISWA PORTAL VIEW ---
         <>
           {/* Key Metric Summary Cards */}
-          <div className="grid grid-cols-3 sm:grid-cols-3 gap-1.5 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 sm:gap-4">
             {/* Kehadiran Card */}
             <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between ${
               isDark 
@@ -592,6 +816,28 @@ export default function Dashboard({
                 <h3 className={`text-sm sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{myAttendanceRate}%</h3>
                 <p className={`text-[7px] sm:text-[10px] md:text-xs mt-1 sm:mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
                   Hadir <span className={`${isDark ? 'text-emerald-400' : 'text-emerald-600'} font-bold font-mono`}>{myPresent}</span>/ {myAttendance.length} hr
+                </p>
+              </div>
+            </div>
+
+            {/* Kehadiran Sholat Jama'ah Card */}
+            <div className={`transition-all duration-300 p-2 sm:p-5 rounded-xl md:rounded-2xl flex flex-col justify-between ${
+              isDark 
+                ? 'bg-[#121e15] border border-[#17221c] nm-card-dark hover:border-[#223329]' 
+                : 'bg-white border border-[#cbd5ce]/60 nm-card-light hover:border-[#96a89c]'
+            }`}>
+              <div className="flex justify-between items-start gap-1 sm:gap-2">
+                <p className={`${isDark ? 'text-slate-400' : 'text-slate-600'} text-[8px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider leading-tight`}>Sholat Jama'ah</p>
+                <div className={`p-1 sm:p-2 rounded-lg sm:rounded-xl shrink-0 transition-all duration-300 ${
+                  isDark ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }`}>
+                  <Activity className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
+                </div>
+              </div>
+              <div className="mt-2 sm:mt-4">
+                <h3 className={`text-sm sm:text-2xl md:text-3xl font-extrabold font-mono leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>{mySholatAttendanceRate}%</h3>
+                <p className={`text-[7px] sm:text-[10px] md:text-xs mt-1 sm:mt-2 leading-tight ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
+                  Berjama'ah <span className={`${isDark ? 'text-emerald-400' : 'text-emerald-600'} font-bold font-mono`}>{mySholatPresent}</span>/ {mySholatAttendance.length} kali
                 </p>
               </div>
             </div>
@@ -649,16 +895,8 @@ export default function Dashboard({
               <div className={`w-1.5 h-3.5 rounded-full ${isDark ? 'bg-emerald-500' : 'bg-emerald-600'}`} />
               <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-800'}`}>Akses Cepat Menu Siswa</h4>
             </div>
-            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-7 gap-1.5 sm:gap-3">
-              {[
-                { label: 'Profil Saya', icon: User, menu: 'profil', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Kehadiran Saya', icon: CalendarCheck, menu: 'absensi-siswa', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Nilai & Rapor', icon: GraduationCap, menu: 'nilai-siswa', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Catatan Perilaku', icon: AlertTriangle, menu: 'kasus', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Prestasi Saya', icon: Trophy, menu: 'prestasi', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Uang Kas & Tabungan', icon: CreditCard, menu: 'uang-kas', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-                { label: 'Unduh Aplikasi', icon: Download, menu: 'unduh-aplikasi', color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50' },
-              ].map((item, idx) => (
+             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1.5 sm:gap-3">
+              {visibleMenuItems.map((item, idx) => (
                 <button
                   key={idx}
                   onClick={() => onNavigate && onNavigate(item.menu)}
@@ -709,6 +947,43 @@ export default function Dashboard({
                   Belum ada laporan nilai untuk semester berjalan.
                 </div>
               )}
+            </div>
+
+            {/* Chart: Student Sholat Attendance details */}
+            <div className={`p-5 rounded-2xl transition-all duration-300 flex flex-col justify-between ${
+              isDark ? 'bg-[#121e15] border border-[#17221c] nm-flat-dark-shallow' : 'bg-white border border-[#cbd5ce] nm-flat-light-shallow'
+            }`}>
+              <div>
+                <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${isDark ? 'text-white' : 'text-slate-800'}`}>Grafik Sholat Dzuhur Berjama'ah Anda</h3>
+                {mySholatAttendance.length > 0 ? (
+                  <div className="h-72 w-full">
+                    <ResponsiveContainer width="100%" height="100%" debounce={100}>
+                      <BarChart data={mySholatChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1e293b' : '#e2e8f0'} />
+                        <XAxis dataKey="name" stroke={isDark ? '#64748b' : '#475569'} fontSize={11} />
+                        <YAxis stroke={isDark ? '#64748b' : '#475569'} fontSize={11} />
+                        <Tooltip contentStyle={
+                          isDark 
+                            ? { backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '12px', fontSize: '11px', color: '#fff' } 
+                            : { backgroundColor: '#fff', borderColor: '#cbd5ce', borderRadius: '12px', fontSize: '11px', color: '#334155' }
+                        } />
+                        <Bar dataKey="Jumlah" radius={[6, 6, 0, 0]}>
+                          {mySholatChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className={`text-center py-16 text-xs italic border border-dashed rounded-xl ${isDark ? 'text-slate-500 border-slate-800' : 'text-slate-500 border-[#cbd5ce]'}`}>
+                    Belum ada rekaman absensi sholat jama'ah untuk semester berjalan.
+                  </div>
+                )}
+              </div>
+              <p className={`text-[10px] mt-2 text-center ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>
+                Grafik rekapitulasi kehadiran sholat Dzuhur berjama'ah Anda.
+              </p>
             </div>
 
             {/* Parent Notification History Box */}

@@ -12,6 +12,7 @@ import {
   Filter,
   FileSpreadsheet,
   FileDown,
+  Printer,
   Mail,
   Plus,
   Trash2,
@@ -21,7 +22,8 @@ import {
   X
 } from 'lucide-react';
 import { Student, CaseReport, Achievement } from '../types';
-import { downloadFile, convertToCSV, printToPDF } from '../utils/export';
+import { downloadFile, convertToCSV, printToPDF, downloadToPDF } from '../utils/export';
+import * as XLSX from 'xlsx';
 
 interface RecordSecProps {
   students: Student[];
@@ -64,7 +66,11 @@ export default function RecordSec({
 
   // Search/Filters States
   const [searchQuery, setSearchQuery] = useState('');
-  const [classFilter, setClassFilter] = useState('');
+  const [classFilter, setClassFilter] = useState(() => {
+    return (role === 'GURU' && availableClasses && availableClasses.length > 0)
+      ? availableClasses[0]
+      : '';
+  });
 
   // Add States
   const [showAddModal, setShowAddModal] = useState(false);
@@ -173,24 +179,117 @@ export default function RecordSec({
     setShowAddModal(false);
   };
 
-  // Export to CSV
+  // Export to beautifully structured Excel file (.xlsx) with school letterhead and logo status
   const handleExportExcel = () => {
+    let schoolAddress = '';
+    let logoUrl = '';
+    let govLogoUrl = '';
+    try {
+      const sysRaw = localStorage.getItem('siap_system');
+      if (sysRaw) {
+        const sys = JSON.parse(sysRaw);
+        if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
+        if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
+      }
+    } catch (e) {
+      // ignore
+    }
+    const logoStatus = logoUrl ? 'TERUNGGAH & AKTIF' : 'BELUM DIUNGGAH';
+    const govLogoStatus = govLogoUrl ? 'TERUNGGAH & AKTIF' : 'BELUM DIUNGGAH';
+
     if (activeMenu === 'kasus') {
       const headers = ['ID Kasus', 'NISN', 'Nama Siswa', 'Kelas', 'Tanggal Kejadian', 'Laporan Kasus', 'Kategori Pelanggaran', 'Resolusi / Tindakan', 'Tahun Pelajaran', 'Semester'];
-      const csvContent = convertToCSV(
-        filteredCases,
-        headers,
-        ['id', 'nisn', 'studentName', 'class', 'date', 'caseName', 'category', 'resolution', 'academicYear', 'semester']
-      );
-      downloadFile(csvContent, `Laporan_Kasus_Siswa_${academicYear.replace('/', '-')}.csv`, 'text/csv;charset=utf-8;');
+      const headerRows = [
+        ['KEMENTERIAN AGAMA REPUBLIK INDONESIA'],
+        [schoolName],
+        [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
+        [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
+        [],
+        [`LAPORAN KASUS DAN PELANGGARAN SISWA - KELAS ${classFilter || 'SEMUA KELAS'}`],
+        [`Tahun Pelajaran: ${academicYear} | Semester: ${semester}`],
+        [],
+        headers
+      ];
+
+      const dataRows = filteredCases.map(c => [
+        c.id,
+        c.nisn,
+        c.studentName,
+        c.class,
+        c.date,
+        c.caseName,
+        c.category,
+        c.resolution,
+        c.academicYear,
+        c.semester
+      ]);
+
+      const aoa = [...headerRows, ...dataRows];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+      ws['!cols'] = [
+        { wch: 12 }, // ID Kasus
+        { wch: 15 }, // NISN
+        { wch: 25 }, // Nama Siswa
+        { wch: 10 }, // Kelas
+        { wch: 15 }, // Tanggal Kejadian
+        { wch: 30 }, // Laporan Kasus
+        { wch: 20 }, // Kategori Pelanggaran
+        { wch: 30 }, // Resolusi / Tindakan
+        { wch: 15 }, // Tahun Pelajaran
+        { wch: 10 }  // Semester
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Laporan Kasus');
+      XLSX.writeFile(wb, `Laporan_Kasus_Siswa_${classFilter || 'Semua'}_${academicYear.replace('/', '-')}.xlsx`);
     } else {
       const headers = ['ID Prestasi', 'NISN', 'Nama Siswa', 'Kelas', 'Tanggal Prestasi', 'Nama Prestasi', 'Tingkat Penghargaan', 'Keterangan Prestasi', 'Tahun Pelajaran', 'Semester'];
-      const csvContent = convertToCSV(
-        filteredAchievements,
-        headers,
-        ['id', 'nisn', 'studentName', 'class', 'date', 'achievementName', 'level', 'description', 'academicYear', 'semester']
-      );
-      downloadFile(csvContent, `Laporan_Prestasi_Siswa_${academicYear.replace('/', '-')}.csv`, 'text/csv;charset=utf-8;');
+      const headerRows = [
+        ['KEMENTERIAN AGAMA REPUBLIK INDONESIA'],
+        [schoolName],
+        [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
+        [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
+        [],
+        [`LAPORAN PRESTASI DAN PENGHARGAAN SISWA - KELAS ${classFilter || 'SEMUA KELAS'}`],
+        [`Tahun Pelajaran: ${academicYear} | Semester: ${semester}`],
+        [],
+        headers
+      ];
+
+      const dataRows = filteredAchievements.map(ac => [
+        ac.id,
+        ac.nisn,
+        ac.studentName,
+        ac.class,
+        ac.date,
+        ac.achievementName,
+        ac.level,
+        ac.description,
+        ac.academicYear,
+        ac.semester
+      ]);
+
+      const aoa = [...headerRows, ...dataRows];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+      ws['!cols'] = [
+        { wch: 12 }, // ID Prestasi
+        { wch: 15 }, // NISN
+        { wch: 25 }, // Nama Siswa
+        { wch: 10 }, // Kelas
+        { wch: 15 }, // Tanggal Prestasi
+        { wch: 25 }, // Nama Prestasi
+        { wch: 20 }, // Tingkat Penghargaan
+        { wch: 35 }, // Keterangan Prestasi
+        { wch: 15 }, // Tahun Pelajaran
+        { wch: 10 }  // Semester
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Laporan Prestasi');
+      XLSX.writeFile(wb, `Laporan_Prestasi_Siswa_${classFilter || 'Semua'}_${academicYear.replace('/', '-')}.xlsx`);
     }
   };
 
@@ -222,6 +321,53 @@ export default function RecordSec({
         ac.description
       ]);
       printToPDF(`Laporan Prestasi dan Penghargaan Siswa`, headers, rows, schoolName, academicYear, semester);
+    }
+  };
+
+  // Download PDF directly
+  const handleDownloadPDF = () => {
+    if (activeMenu === 'kasus') {
+      const headers = ['No', 'NISN', 'Nama Siswa', 'Kelas', 'Tanggal', 'Nama Kasus', 'Kategori', 'Resolusi'];
+      const rows = filteredCases.map((c, idx) => [
+        String(idx + 1),
+        c.nisn,
+        c.studentName,
+        c.class,
+        c.date,
+        c.caseName,
+        c.category,
+        c.resolution
+      ]);
+      downloadToPDF(
+        `Laporan Kasus dan Bimbingan Siswa`,
+        headers,
+        rows,
+        `Laporan_Kasus_Siswa_${academicYear.replace('/', '-')}.pdf`,
+        schoolName,
+        academicYear,
+        semester
+      );
+    } else {
+      const headers = ['No', 'NISN', 'Nama Siswa', 'Kelas', 'Tanggal', 'Nama Penghargaan', 'Tingkat', 'Deskripsi'];
+      const rows = filteredAchievements.map((ac, idx) => [
+        String(idx + 1),
+        ac.nisn,
+        ac.studentName,
+        ac.class,
+        ac.date,
+        ac.achievementName,
+        ac.level,
+        ac.description
+      ]);
+      downloadToPDF(
+        `Laporan Prestasi dan Penghargaan Siswa`,
+        headers,
+        rows,
+        `Laporan_Prestasi_Siswa_${academicYear.replace('/', '-')}.pdf`,
+        schoolName,
+        academicYear,
+        semester
+      );
     }
   };
 
@@ -279,31 +425,41 @@ export default function RecordSec({
           </div>
 
           <div className="flex items-center gap-2">
-            <select
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              className="bg-slate-950/40 border border-slate-800 rounded-xl py-2 px-3 text-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-500/80"
-            >
-              <option value="">Semua Kelas</option>
-              {availableClasses.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+            {role !== 'GURU' && (
+              <select
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+                className="bg-slate-950/40 border border-slate-800 rounded-xl py-2 px-3 text-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-500/80"
+              >
+                <option value="">Semua Kelas</option>
+                {availableClasses.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            )}
 
             <button
               onClick={handleExportExcel}
-              className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-emerald-400 border border-slate-700/60 rounded-xl transition duration-150"
-              title="Ekspor Rekap Excel"
+              className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-emerald-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
+              title="Unduh Rekap Excel"
             >
               <FileSpreadsheet className="w-4.5 h-4.5" />
             </button>
 
             <button
-              onClick={handleExportPDF}
-              className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-red-400 border border-slate-700/60 rounded-xl transition duration-150"
-              title="Ekspor PDF"
+              onClick={handleDownloadPDF}
+              className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-sky-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
+              title="Unduh PDF (.pdf) Langsung"
             >
               <FileDown className="w-4.5 h-4.5" />
+            </button>
+
+            <button
+              onClick={handleExportPDF}
+              className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-rose-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
+              title="Cetak Laporan PDF / Pratinjau"
+            >
+              <Printer className="w-4.5 h-4.5" />
             </button>
           </div>
         </div>

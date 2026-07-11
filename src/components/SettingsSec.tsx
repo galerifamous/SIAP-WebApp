@@ -69,9 +69,11 @@ export default function SettingsSec({
   const [sysEmail, setSysEmail] = useState(systemSetting.adminEmail);
   const [sysHead, setSysHead] = useState(systemSetting.headmasterName);
   const [sysLogo, setSysLogo] = useState(systemSetting.logoUrl);
+  const [sysGovLogo, setSysGovLogo] = useState(systemSetting.govLogoUrl || '');
   const [sysAdminUser, setSysAdminUser] = useState(systemSetting.adminUsername || 'admin');
   const [sysAdminPass, setSysAdminPass] = useState(systemSetting.adminPassword || 'admin');
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const govLogoInputRef = useRef<HTMLInputElement>(null);
 
   // --- GURU PORTAL STATE ---
   const [showAddGuru, setShowAddGuru] = useState(false);
@@ -133,6 +135,7 @@ export default function SettingsSec({
       adminEmail: sysEmail,
       headmasterName: sysHead,
       logoUrl: sysLogo,
+      govLogoUrl: sysGovLogo,
       adminUsername: sysAdminUser,
       adminPassword: sysAdminPass
     });
@@ -175,6 +178,49 @@ export default function SettingsSec({
           setSysLogo(compressedBase64);
         } else {
           setSysLogo(event.target?.result as string);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Convert and compress uploaded Ministry/Gov logo to compact Base64
+  const handleGovLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 300;
+        const MAX_HEIGHT = 300;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL('image/png');
+          setSysGovLogo(compressedBase64);
+        } else {
+          setSysGovLogo(event.target?.result as string);
         }
       };
       img.src = event.target?.result as string;
@@ -882,16 +928,57 @@ export default function SettingsSec({
               />
             </div>
 
+            {/* Ministry/Gov Logo */}
+            <div>
+              <label className="block text-slate-400 font-semibold mb-1">
+                Logo Kementerian / Dinas <span className="text-emerald-400 font-mono text-[10px]">(POSISI KIRI KOP SURAT)</span>
+              </label>
+              <div className="flex items-center gap-4">
+                <div
+                  onClick={() => govLogoInputRef.current?.click()}
+                  className="flex-1 border-2 border-dashed border-slate-800 hover:border-emerald-500/55 rounded-xl p-3 text-center cursor-pointer transition bg-slate-950/20"
+                >
+                  <Camera className="w-4 h-4 mx-auto text-slate-500 mb-0.5" />
+                  <span className="text-[10px] text-slate-400 font-bold">Unggah Logo Kiri PNG/JPG</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    ref={govLogoInputRef}
+                    onChange={handleGovLogoUpload}
+                    className="hidden"
+                  />
+                </div>
+                {sysGovLogo ? (
+                  <div className="relative w-12 h-12 rounded-xl border border-slate-700 overflow-hidden bg-slate-800 flex items-center justify-center p-1">
+                    <img src={sysGovLogo} alt="Logo Kementerian" className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
+                    <button
+                      type="button"
+                      onClick={() => setSysGovLogo('')}
+                      className="absolute top-0.5 right-0.5 p-0.5 bg-rose-500/80 text-white rounded-full hover:bg-rose-500"
+                    >
+                      <Trash2 className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-xl border border-dashed border-slate-800 flex items-center justify-center text-slate-600 text-[9px] text-center font-bold">
+                    Kosong
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* School Logo */}
             <div>
-              <label className="block text-slate-400 font-semibold mb-1">Unggah & Sinkron Logo Instansi</label>
+              <label className="block text-slate-400 font-semibold mb-1">
+                Logo Madrasah / Sekolah <span className="text-emerald-400 font-mono text-[10px]">(POSISI KANAN KOP SURAT)</span>
+              </label>
               <div className="flex items-center gap-4">
                 <div
                   onClick={() => logoInputRef.current?.click()}
                   className="flex-1 border-2 border-dashed border-slate-800 hover:border-emerald-500/55 rounded-xl p-3 text-center cursor-pointer transition bg-slate-950/20"
                 >
                   <Camera className="w-4 h-4 mx-auto text-slate-500 mb-0.5" />
-                  <span className="text-[10px] text-slate-400 font-bold">Ganti Logo PNG/JPG</span>
+                  <span className="text-[10px] text-slate-400 font-bold">Unggah Logo Kanan PNG/JPG</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -900,9 +987,9 @@ export default function SettingsSec({
                     className="hidden"
                   />
                 </div>
-                {sysLogo && (
+                {sysLogo ? (
                   <div className="relative w-12 h-12 rounded-xl border border-slate-700 overflow-hidden bg-slate-800 flex items-center justify-center p-1">
-                    <img src={sysLogo} alt="Logo" className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
+                    <img src={sysLogo} alt="Logo Madrasah" className="max-w-full max-h-full object-contain" referrerPolicy="no-referrer" />
                     <button
                       type="button"
                       onClick={() => setSysLogo('')}
@@ -910,6 +997,10 @@ export default function SettingsSec({
                     >
                       <Trash2 className="w-2.5 h-2.5" />
                     </button>
+                  </div>
+                ) : (
+                  <div className="w-12 h-12 rounded-xl border border-dashed border-slate-800 flex items-center justify-center text-slate-600 text-[9px] text-center font-bold">
+                    Kosong
                   </div>
                 )}
               </div>

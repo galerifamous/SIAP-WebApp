@@ -21,10 +21,13 @@ import {
   Sparkles,
   Info,
   FileSpreadsheet,
-  FileText
+  FileText,
+  FileDown,
+  Printer
 } from 'lucide-react';
 import { Student, Teacher, ClassStaff } from '../types';
 import * as XLSX from 'xlsx';
+import { downloadToPDF } from '../utils/export';
 
 interface UangKasSecProps {
   students: Student[];
@@ -63,7 +66,11 @@ export default function UangKasSec({
   }, []);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [classFilter, setClassFilter] = useState('');
+  const [classFilter, setClassFilter] = useState(() => {
+    return (role === 'GURU' && availableClasses && availableClasses.length > 0)
+      ? availableClasses[0]
+      : '';
+  });
   const [financeTypeFilter, setFinanceTypeFilter] = useState<'all' | 'has_bill' | 'has_savings'>('all');
 
   // Transaction Modals State
@@ -187,7 +194,33 @@ export default function UangKasSec({
       []
     ];
 
+    let schoolAddress = '';
+    let logoUrl = '';
+    let govLogoUrl = '';
+    try {
+      const sysRaw = localStorage.getItem('siap_system');
+      if (sysRaw) {
+        const sys = JSON.parse(sysRaw);
+        if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
+        if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
+      }
+    } catch (e) {
+      // ignore
+    }
+    const logoStatus = logoUrl ? 'TERUNGGAH & AKTIF' : 'BELUM DIUNGGAH';
+    const govLogoStatus = govLogoUrl ? 'TERUNGGAH & AKTIF' : 'BELUM DIUNGGAH';
+
+    const kopSurat = [
+      ['KEMENTERIAN AGAMA REPUBLIK INDONESIA'],
+      [schoolName],
+      [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
+      [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
+      [],
+    ];
+
     const aoa = [
+      ...kopSurat,
       titleRow,
       [],
       ...infoRows,
@@ -216,6 +249,7 @@ export default function UangKasSec({
 
     let schoolAddress = '';
     let logoUrl = '';
+    let govLogoUrl = '';
     let headmasterName = 'Makhfud, S.Pd.';
     try {
       const sysRaw = localStorage.getItem('siap_system');
@@ -223,6 +257,7 @@ export default function UangKasSec({
         const sys = JSON.parse(sysRaw);
         if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
         if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
         if (sys.headmasterName) headmasterName = sys.headmasterName;
       }
     } catch (e) {
@@ -301,7 +336,7 @@ export default function UangKasSec({
             .kop-container {
               display: flex;
               align-items: center;
-              justify-content: center;
+              justify-content: space-between;
               border-bottom: 3.5px double #0f172a;
               padding-bottom: 12px;
               margin-bottom: 20px;
@@ -310,10 +345,16 @@ export default function UangKasSec({
               width: 70px;
               height: 70px;
               object-fit: contain;
-              margin-right: 18px;
+            }
+            .kop-logo-left {
+              margin-right: 15px;
+            }
+            .kop-logo-right {
+              margin-left: 15px;
             }
             .kop-text {
               text-align: center;
+              flex-grow: 1;
             }
             .kop-school {
               font-size: 16px;
@@ -422,12 +463,21 @@ export default function UangKasSec({
 
           <!-- Beautiful Kop Surat (Letterhead) -->
           <div class="kop-container">
-            ${logoUrl ? `<img src="${logoUrl}" class="kop-logo" />` : ''}
-            <div class="kop-text" style="text-align: center; flex-grow: 1; padding-right: 40px;">
+            ${govLogoUrl ? `
+              <img src="${govLogoUrl}" class="kop-logo kop-logo-left" />
+            ` : `
+              <div class="kop-logo kop-logo-left" style="width: 70px; height: 70px; border-radius: 50%; background: #f1f5f9; border: 1px solid #0f172a; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: bold; color: #475569; text-align: center; line-height: 1.2;">KOP<br/>DINAS</div>
+            `}
+            <div class="kop-text" style="text-align: center; flex-grow: 1;">
               <p class="kop-kemendikbud" style="font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #1e293b; margin: 0 0 3px 0;">KEMENTERIAN AGAMA REPUBLIK INDONESIA</p>
               <h1 class="kop-school-name" style="font-size: 18px; font-weight: bold; text-transform: uppercase; color: #0f172a; margin: 0 0 4px 0; letter-spacing: 0.5px; line-height: 1.1;">${schoolName}</h1>
               <p class="kop-alamat" style="font-size: 9px; color: #475569; margin: 0; line-height: 1.4; font-weight: 500;">${schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'}</p>
             </div>
+            ${logoUrl ? `
+              <img src="${logoUrl}" class="kop-logo kop-logo-right" />
+            ` : `
+              <div class="kop-logo kop-logo-right" style="width: 70px; height: 70px; border-radius: 50%; background: #f1f5f9; border: 1px solid #0f172a; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: bold; color: #475569; text-align: center; line-height: 1.2;">KOP<br/>SEKOLAH</div>
+            `}
           </div>
 
           <div class="title-section">
@@ -473,18 +523,20 @@ export default function UangKasSec({
           <div class="signature-container" style="display: flex; justify-content: space-between; margin-top: 30px; page-break-inside: avoid; text-align: center; font-size: 11px;">
             <div class="signature-box" style="width: 250px; text-align: left;">
               <p style="visibility: hidden;">${cityName}, ${formattedDate}</p>
-              <p style="margin-top: 3px; font-weight: bold;">Wali Kelas,</p>
+              <p style="margin-top: 3px; font-weight: bold; margin-bottom: 15px;">Mengetahui,</p>
+              <p style="margin-top: 3px; font-weight: bold;">Kepala Madrasah,</p>
               <div class="signature-space" style="height: 50px;"></div>
-              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase;">${waliKelasName || '........................'}</p>
-              <p style="color: #64748b; margin: 2px 0 0 0;">NIP. ................................</p>
+              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase;">${headmasterName}</p>
+              <p style="color: #64748b; margin: 2px 0 0 0;">NIP. 197812052005011002</p>
             </div>
 
             <div class="signature-box" style="width: 250px; text-align: right;">
               <p>${cityName}, ${formattedDate}</p>
-              <p style="margin-top: 3px; font-weight: bold; padding-right: 25px;">Kepala Madrasah,</p>
+              <p style="visibility: hidden; margin-top: 3px; margin-bottom: 15px;">&nbsp;</p>
+              <p style="margin-top: 3px; font-weight: bold; padding-right: 25px;">Wali Kelas,</p>
               <div class="signature-space" style="height: 50px;"></div>
-              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; padding-right: 25px;">${headmasterName}</p>
-              <p style="color: #64748b; margin: 2px 0 0 0; padding-right: 25px;">NIP. 197812052005011002</p>
+              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; padding-right: 25px;">${waliKelasName || '........................'}</p>
+              <p style="color: #64748b; margin: 2px 0 0 0; padding-right: 25px;">NIP. ................................</p>
             </div>
           </div>
 
@@ -500,6 +552,43 @@ export default function UangKasSec({
 
     printWindow.document.write(htmlContent);
     printWindow.document.close();
+  };
+
+  // Download PDF directly calling downloadToPDF
+  const handleDirectDownloadSavingsPDF = (student: Student) => {
+    const transactions = getSavingsTransactions(student);
+    const headers = ['No', 'Tanggal', 'Keterangan', 'Pemasukan', 'Pengeluaran', 'Saldo'];
+    const rows = transactions.map((t, idx) => [
+      String(idx + 1),
+      t.date,
+      t.description,
+      t.type === 'Masuk' ? `Rp ${t.amount.toLocaleString('id-ID')}` : '-',
+      t.type === 'Keluar' ? `Rp ${t.amount.toLocaleString('id-ID')}` : '-',
+      `Rp ${t.balance.toLocaleString('id-ID')}`
+    ]);
+
+    let waliKelasName = '';
+    if (student.class && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === student.class);
+      if (staff) {
+        const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
+        if (teacher) {
+          waliKelasName = teacher.name;
+        }
+      }
+    }
+
+    downloadToPDF(
+      `Laporan Mutasi Buku Tabungan - NISN: ${student.nisn} - ${student.name}`,
+      headers,
+      rows,
+      `Laporan_Tabungan_${student.nisn}_${student.name.replace(/\s+/g, '_')}.pdf`,
+      schoolName,
+      academicYear,
+      semester,
+      student.class,
+      waliKelasName || undefined
+    );
   };
 
   // Filter students
@@ -742,23 +831,25 @@ export default function UangKasSec({
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
             {/* Filter by Class */}
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border w-full sm:w-auto ${
-              isDark 
-                ? 'bg-slate-950 border-[#17221c]' 
-                : 'bg-white border-[#cbd5ce] shadow-[1px_1px_3px_#cbd5ce]'
-            }`}>
-              <Filter className="w-3.5 h-3.5 text-slate-500" />
-              <select
-                value={classFilter}
-                onChange={(e) => setClassFilter(e.target.value)}
-                className={`bg-transparent focus:outline-none cursor-pointer font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}
-              >
-                <option value="" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Semua Kelas</option>
-                {availableClasses.map(c => (
-                  <option key={c} value={c} className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Kelas {c}</option>
-                ))}
-              </select>
-            </div>
+            {role !== 'GURU' && (
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border w-full sm:w-auto ${
+                isDark 
+                  ? 'bg-slate-950 border-[#17221c]' 
+                  : 'bg-white border-[#cbd5ce] shadow-[1px_1px_3px_#cbd5ce]'
+              }`}>
+                <Filter className="w-3.5 h-3.5 text-slate-500" />
+                <select
+                  value={classFilter}
+                  onChange={(e) => setClassFilter(e.target.value)}
+                  className={`bg-transparent focus:outline-none cursor-pointer font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}
+                >
+                  <option value="" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Semua Kelas</option>
+                  {availableClasses.map(c => (
+                    <option key={c} value={c} className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Kelas {c}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Filter by Finance status */}
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border w-full sm:w-auto ${
@@ -842,30 +933,42 @@ export default function UangKasSec({
                       Rp {student.savings.toLocaleString('id-ID')}
                     </td>
                     <td className="p-4 text-center">
-                      <div className="flex justify-center items-center gap-1.5">
+                      <div className="flex justify-center items-center gap-1">
                         <button
                           onClick={() => handleDownloadSavingsExcel(student)}
-                          className={`p-1.5 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition cursor-pointer ${
+                          className={`p-1 rounded-lg border text-[9px] font-bold flex items-center gap-0.5 transition cursor-pointer ${
                             isDark
                               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/30'
                               : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                           }`}
                           title="Unduh Excel Mutasi Tabungan"
                         >
-                          <FileSpreadsheet className="w-3.5 h-3.5" />
+                          <FileSpreadsheet className="w-3 h-3" />
                           <span>EXCEL</span>
                         </button>
                         <button
+                          onClick={() => handleDirectDownloadSavingsPDF(student)}
+                          className={`p-1 rounded-lg border text-[9px] font-bold flex items-center gap-0.5 transition cursor-pointer ${
+                            isDark
+                              ? 'bg-sky-500/10 text-sky-400 border-sky-500/20 hover:bg-sky-500/30'
+                              : 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100'
+                          }`}
+                          title="Unduh PDF (.pdf) Mutasi Tabungan Langsung"
+                        >
+                          <FileDown className="w-3 h-3" />
+                          <span>PDF</span>
+                        </button>
+                        <button
                           onClick={() => handleDownloadSavingsPDF(student)}
-                          className={`p-1.5 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition cursor-pointer ${
+                          className={`p-1 rounded-lg border text-[9px] font-bold flex items-center gap-0.5 transition cursor-pointer ${
                             isDark
                               ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/30'
                               : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
                           }`}
-                          title="Unduh PDF Mutasi Tabungan"
+                          title="Cetak Mutasi Tabungan PDF"
                         >
-                          <FileText className="w-3.5 h-3.5" />
-                          <span>PDF</span>
+                          <Printer className="w-3 h-3" />
+                          <span>CETAK</span>
                         </button>
                       </div>
                     </td>

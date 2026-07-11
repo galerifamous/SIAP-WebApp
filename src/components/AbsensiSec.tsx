@@ -15,6 +15,7 @@ import {
   Filter,
   FileSpreadsheet,
   FileDown,
+  Printer,
   UserCheck,
   Scan,
   Mail,
@@ -31,7 +32,9 @@ import {
   SwitchCamera
 } from 'lucide-react';
 import { Student, Attendance, Holiday, Teacher, ClassStaff } from '../types';
-import { downloadFile, convertToCSV, printToPDF } from '../utils/export';
+import { downloadFile, convertToCSV, printToPDF, downloadToPDF } from '../utils/export';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 interface AbsensiSecProps {
@@ -209,7 +212,11 @@ export default function AbsensiSec({
 
   // List States
   const [searchQuery, setSearchQuery] = useState('');
-  const [classFilter, setClassFilter] = useState('');
+  const [classFilter, setClassFilter] = useState(() => {
+    return (role === 'GURU' && availableClasses && availableClasses.length > 0)
+      ? availableClasses[0]
+      : '';
+  });
   const [statusFilter, setStatusFilter] = useState('');
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
 
@@ -261,6 +268,21 @@ export default function AbsensiSec({
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
     const monthName = monthNames[monthNum - 1];
+
+    let schoolAddress = '';
+    let logoUrl = '';
+    let govLogoUrl = '';
+    try {
+      const sysRaw = localStorage.getItem('siap_system');
+      if (sysRaw) {
+        const sys = JSON.parse(sysRaw);
+        if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
+        if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
+      }
+    } catch (e) {
+      // ignore
+    }
 
     // Header 1
     const row1 = ['No', 'NISN', 'Nama Siswa', 'JK (L/P)', `${monthName.toUpperCase()} ${monthlyYear}`];
@@ -314,7 +336,20 @@ export default function AbsensiSec({
       ];
     });
 
-    const aoa = [row1, row2, ...dataRows];
+    const logoStatus = logoUrl ? 'TERUNGGAH & AKTIF' : 'BELUM DIUNGGAH';
+    const govLogoStatus = govLogoUrl ? 'TERUNGGAH & AKTIF' : 'BELUM DIUNGGAH';
+    const headerRows = [
+      ['KEMENTERIAN AGAMA REPUBLIK INDONESIA'],
+      [schoolName],
+      [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
+      [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
+      [],
+      [`REKAP BULANAN PRESENSI SISWA - KELAS ${monthlyClass || 'SEMUA KELAS'}`],
+      [`Bulan: ${monthName} ${monthlyYear} | TP: ${academicYear} | Semester: ${semester}`],
+      [],
+    ];
+
+    const aoa = [...headerRows, row1, row2, ...dataRows];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
     // Set neat, fixed column widths (paten) so user doesn't need to resize manually
@@ -330,14 +365,14 @@ export default function AbsensiSec({
     cols.push({ wch: 4 }, { wch: 4 }, { wch: 4 }, { wch: 4 }); // H, S, I, A count columns
     ws['!cols'] = cols;
 
-    // Set merges
+    // Set merges shifted by 8 header rows
     ws['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } }, // No
-      { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } }, // NISN
-      { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } }, // Nama Siswa
-      { s: { r: 0, c: 3 }, e: { r: 1, c: 3 } }, // JK
-      { s: { r: 0, c: 4 }, e: { r: 0, c: 4 + daysInMonth - 1 } }, // Bulan 1-31
-      { s: { r: 0, c: 4 + daysInMonth }, e: { r: 0, c: 4 + daysInMonth + 3 } } // Jumlah
+      { s: { r: 8, c: 0 }, e: { r: 9, c: 0 } }, // No
+      { s: { r: 8, c: 1 }, e: { r: 9, c: 1 } }, // NISN
+      { s: { r: 8, c: 2 }, e: { r: 9, c: 2 } }, // Nama Siswa
+      { s: { r: 8, c: 3 }, e: { r: 9, c: 3 } }, // JK
+      { s: { r: 8, c: 4 }, e: { r: 8, c: 4 + daysInMonth - 1 } }, // Bulan 1-31
+      { s: { r: 8, c: 4 + daysInMonth }, e: { r: 8, c: 4 + daysInMonth + 3 } } // Jumlah
     ];
 
     const wb = XLSX.utils.book_new();
@@ -364,6 +399,7 @@ export default function AbsensiSec({
     // Retrieve headmaster and system variables
     let schoolAddress = '';
     let logoUrl = '';
+    let govLogoUrl = '';
     let headmasterName = 'Makhfud, S.Pd.';
     try {
       const sysRaw = localStorage.getItem('siap_system');
@@ -371,6 +407,7 @@ export default function AbsensiSec({
         const sys = JSON.parse(sysRaw);
         if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
         if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
         if (sys.headmasterName) headmasterName = sys.headmasterName;
       }
     } catch (e) {
@@ -492,7 +529,7 @@ export default function AbsensiSec({
             .kop-container {
               display: flex;
               align-items: center;
-              justify-content: center;
+              justify-content: space-between;
               border-bottom: 3px double #0f172a;
               padding-bottom: 8px;
               margin-bottom: 12px;
@@ -501,10 +538,16 @@ export default function AbsensiSec({
               width: 55px;
               height: 55px;
               object-fit: contain;
+            }
+            .kop-logo-left {
               margin-right: 15px;
+            }
+            .kop-logo-right {
+              margin-left: 15px;
             }
             .kop-text {
               text-align: center;
+              flex-grow: 1;
             }
             .kop-school {
               font-size: 14px;
@@ -594,12 +637,21 @@ export default function AbsensiSec({
 
           <!-- Beautiful Kop Surat (Letterhead) -->
           <div class="kop-container">
-            ${logoUrl ? `<img src="${logoUrl}" class="kop-logo" />` : ''}
-            <div class="kop-text" style="text-align: center; flex-grow: 1; padding-right: 40px;">
+            ${govLogoUrl ? `
+              <img src="${govLogoUrl}" class="kop-logo kop-logo-left" />
+            ` : `
+              <div class="kop-logo kop-logo-left" style="width: 55px; height: 55px; border-radius: 50%; background: #f1f5f9; border: 1px solid #0f172a; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: bold; color: #475569; text-align: center; line-height: 1.2;">KOP<br/>DINAS</div>
+            `}
+            <div class="kop-text" style="text-align: center; flex-grow: 1;">
               <p class="kop-kemendikbud" style="font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #1e293b; margin: 0 0 3px 0;">KEMENTERIAN AGAMA REPUBLIK INDONESIA</p>
               <h1 class="kop-school-name" style="font-size: 18px; font-weight: bold; text-transform: uppercase; color: #0f172a; margin: 0 0 4px 0; letter-spacing: 0.5px; line-height: 1.1;">${schoolName}</h1>
               <p class="kop-alamat" style="font-size: 9px; color: #475569; margin: 0; line-height: 1.4; font-weight: 500;">${schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'}</p>
             </div>
+            ${logoUrl ? `
+              <img src="${logoUrl}" class="kop-logo kop-logo-right" />
+            ` : `
+              <div class="kop-logo kop-logo-right" style="width: 55px; height: 55px; border-radius: 50%; background: #f1f5f9; border: 1px solid #0f172a; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: bold; color: #475569; text-align: center; line-height: 1.2;">KOP<br/>SEKOLAH</div>
+            `}
           </div>
 
           <div class="title-section">
@@ -634,18 +686,20 @@ export default function AbsensiSec({
           <div class="signature-container" style="display: flex; justify-content: space-between; margin-top: 30px; page-break-inside: avoid; text-align: center; font-size: 11px;">
             <div class="signature-box" style="width: 250px; text-align: left;">
               <p style="visibility: hidden;">${cityName}, ${formattedDate}</p>
-              <p style="margin-top: 3px; font-weight: bold;">Wali Kelas,</p>
+              <p style="margin-top: 3px; font-weight: bold; margin-bottom: 15px;">Mengetahui,</p>
+              <p style="margin-top: 3px; font-weight: bold;">Kepala Madrasah,</p>
               <div class="signature-space" style="height: 50px;"></div>
-              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase;">${waliKelasName || '........................'}</p>
-              <p style="color: #64748b; margin: 2px 0 0 0;">NIP. ................................</p>
+              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase;">${headmasterName}</p>
+              <p style="color: #64748b; margin: 2px 0 0 0;">NIP. 197812052005011002</p>
             </div>
 
             <div class="signature-box" style="width: 250px; text-align: right;">
               <p>${cityName}, ${formattedDate}</p>
-              <p style="margin-top: 3px; font-weight: bold; padding-right: 25px;">Kepala Madrasah,</p>
+              <p style="visibility: hidden; margin-top: 3px; margin-bottom: 15px;">&nbsp;</p>
+              <p style="margin-top: 3px; font-weight: bold; padding-right: 25px;">Wali Kelas,</p>
               <div class="signature-space" style="height: 50px;"></div>
-              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; padding-right: 25px;">${headmasterName}</p>
-              <p style="color: #64748b; margin: 2px 0 0 0; padding-right: 25px;">NIP. 197812052005011002</p>
+              <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase; padding-right: 25px;">${waliKelasName || '........................'}</p>
+              <p style="color: #64748b; margin: 2px 0 0 0; padding-right: 25px;">NIP. ................................</p>
             </div>
           </div>
 
@@ -661,6 +715,189 @@ export default function AbsensiSec({
 
     printWindow.document.write(htmlContent);
     printWindow.document.close();
+  };
+
+  // Download Monthly PDF Directly in widescreen landscape orientation
+  const handleDownloadMonthlyPDF = () => {
+    const yearNum = Number(monthlyYear);
+    const monthNum = Number(monthlyMonth);
+    const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
+    const targetPrefix = `${monthlyYear}-${String(monthlyMonth).padStart(2, '0')}`;
+    const targetStudents = monthlyClass 
+      ? students.filter(s => s.class === monthlyClass)
+      : students;
+
+    const monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    const monthName = monthNames[monthNum - 1];
+
+    let waliKelasName = '';
+    if (monthlyClass && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === monthlyClass);
+      if (staff) {
+        const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
+        if (teacher) {
+          waliKelasName = teacher.name;
+        }
+      }
+    }
+
+    const dayHeaders = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      dayHeaders.push(String(d));
+    }
+    const headers = ['No', 'NISN', 'Nama Siswa', 'JK', ...dayHeaders, 'H', 'S', 'I', 'A'];
+
+    const rows = targetStudents.map((student, sIdx) => {
+      const studentAtts = attendance.filter(
+        att => att.nisn === student.nisn && att.date.startsWith(targetPrefix)
+      );
+
+      let hCount = 0;
+      let sCount = 0;
+      let iCount = 0;
+      let aCount = 0;
+
+      const dayStatuses = [];
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${targetPrefix}-${String(d).padStart(2, '0')}`;
+        const att = studentAtts.find(a => a.date === dateStr);
+        let statusChar = '-';
+        if (att) {
+          if (att.status === 'Hadir') { statusChar = 'H'; hCount++; }
+          else if (att.status === 'Sakit') { statusChar = 'S'; sCount++; }
+          else if (att.status === 'Izin') { statusChar = 'I'; iCount++; }
+          else if (att.status === 'Alpa') { statusChar = 'A'; aCount++; }
+        }
+        dayStatuses.push(statusChar);
+      }
+
+      return [
+        String(sIdx + 1),
+        student.nisn,
+        student.name,
+        student.gender === 'Laki-laki' ? 'L' : 'P',
+        ...dayStatuses,
+        String(hCount),
+        String(sCount),
+        String(iCount),
+        String(aCount)
+      ];
+    });
+
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
+
+    let schoolAddress = '';
+    let headmasterName = 'Makhfud, S.Pd.';
+    let logoUrl = '';
+    let govLogoUrl = '';
+    try {
+      const sysRaw = localStorage.getItem('siap_system');
+      if (sysRaw) {
+        const sys = JSON.parse(sysRaw);
+        if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
+        if (sys.headmasterName) headmasterName = sys.headmasterName;
+        if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    if (govLogoUrl) {
+      try {
+        doc.addImage(govLogoUrl, 'PNG', 15, 8, 18, 18);
+      } catch (e) {
+        console.error("Error adding gov logo to Landscape PDF:", e);
+      }
+    }
+
+    if (logoUrl) {
+      try {
+        doc.addImage(logoUrl, 'PNG', 264, 8, 18, 18);
+      } catch (e) {
+        console.error("Error adding school logo to Landscape PDF:", e);
+      }
+    }
+
+    let cityName = 'Indonesia';
+    if (schoolAddress) {
+      const parts = schoolAddress.split(',');
+      if (parts.length > 1) {
+        cityName = parts[parts.length - 2].trim().replace(/Kec\.|Kab\.|Kota/g, '').trim();
+      } else if (parts.length > 0) {
+        cityName = parts[0].trim();
+      }
+    }
+    if (!cityName || cityName.length > 20) {
+      cityName = 'Kota Sekolah';
+    }
+    const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('KEMENTERIAN AGAMA REPUBLIK INDONESIA', 148, 12, { align: 'center' });
+    
+    doc.setFontSize(15);
+    doc.text(schoolName, 148, 18, { align: 'center' });
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(schoolAddress || 'Alamat sekolah belum dikonfigurasi.', 148, 23, { align: 'center' });
+
+    doc.setLineWidth(0.8);
+    doc.line(15, 27, 282, 27);
+    doc.setLineWidth(0.2);
+    doc.line(15, 28, 282, 28);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(`REKAP BULANAN ABSENSI SISWA`, 148, 35, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.text(`Bulan: ${monthName} ${monthlyYear} | Kelas: ${monthlyClass || 'Semua Kelas'} | TP: ${academicYear} | Semester: ${semester}`, 15, 42);
+
+    autoTable(doc, {
+      startY: 46,
+      head: [headers],
+      body: rows,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], fontSize: 6.5, fontStyle: 'bold', halign: 'center' },
+      bodyStyles: { fontSize: 6, cellPadding: 1, halign: 'center' },
+      columnStyles: {
+        2: { halign: 'left', fontStyle: 'bold' }
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 15, right: 15 },
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 12;
+    const pageHeight = doc.internal.pageSize.height;
+    let sigY = finalY;
+    if (finalY + 35 > pageHeight) {
+      doc.addPage();
+      sigY = 20;
+    }
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+
+    // Right signature (Wali Kelas)
+    doc.text(`${cityName}, ${formattedDate}`, 210, sigY);
+    doc.text('Wali Kelas,', 210, sigY + 10);
+    doc.text(waliKelasName || '........................', 210, sigY + 27);
+    doc.text('NIP. ................................', 210, sigY + 31);
+
+    // Left signature (Kepala Madrasah)
+    doc.text('Mengetahui,', 30, sigY + 5);
+    doc.text('Kepala Madrasah,', 30, sigY + 10);
+    doc.text(headmasterName, 30, sigY + 27);
+    doc.text('NIP. 197812052005011002', 30, sigY + 31);
+
+    doc.save(`Rekap_Absensi_${monthlyClass || 'Semua'}_${monthName}_${monthlyYear}.pdf`);
   };
 
   // Audio simulation (Beep!)
@@ -749,6 +986,29 @@ export default function AbsensiSec({
       new Date(att.timestamp).toLocaleTimeString('id-ID')
     ]);
     printToPDF(`Laporan Absensi Siswa - ${dateFilter || 'Semua Tanggal'}`, headers, rows, schoolName, academicYear, semester);
+  };
+
+  // Download PDF directly
+  const handleDownloadPDF = () => {
+    const headers = ['No', 'NISN', 'Nama Siswa', 'Kelas', 'Tanggal', 'Status', 'Waktu Tercatat'];
+    const rows = filteredAttendance.map((att, idx) => [
+      String(idx + 1),
+      att.nisn,
+      att.studentName,
+      att.class,
+      att.date,
+      att.status,
+      new Date(att.timestamp).toLocaleTimeString('id-ID')
+    ]);
+    downloadToPDF(
+      `Laporan Absensi Siswa - ${dateFilter || 'Semua Tanggal'}`,
+      headers,
+      rows,
+      `Rekap_Absensi_${dateFilter || 'SemuaTanggal'}.pdf`,
+      schoolName,
+      academicYear,
+      semester
+    );
   };
 
   return (
@@ -1058,16 +1318,18 @@ export default function AbsensiSec({
                     />
 
                     {/* Class filter */}
-                    <select
-                      value={classFilter}
-                      onChange={(e) => setClassFilter(e.target.value)}
-                      className="bg-slate-950/40 border border-slate-800 rounded-xl py-2 px-3 text-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-500/80"
-                    >
-                      <option value="">Semua Kelas</option>
-                      {availableClasses.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
+                    {role !== 'GURU' && (
+                      <select
+                        value={classFilter}
+                        onChange={(e) => setClassFilter(e.target.value)}
+                        className="bg-slate-950/40 border border-slate-800 rounded-xl py-2 px-3 text-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-500/80"
+                      >
+                        <option value="">Semua Kelas</option>
+                        {availableClasses.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    )}
 
                     {/* Status filter */}
                     <select
@@ -1085,18 +1347,26 @@ export default function AbsensiSec({
                     {/* Export buttons */}
                     <button
                       onClick={handleExportExcel}
-                      className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-emerald-400 border border-slate-700/60 rounded-xl transition duration-150"
-                      title="Ekspor Rekap Harian (CSV)"
+                      className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-emerald-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
+                      title="Unduh Rekap Harian Excel"
                     >
                       <FileSpreadsheet className="w-4.5 h-4.5" />
                     </button>
 
                     <button
-                      onClick={handleExportPDF}
-                      className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-red-400 border border-slate-700/60 rounded-xl transition duration-150"
-                      title="Ekspor Rekap Harian PDF"
+                      onClick={handleDownloadPDF}
+                      className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-sky-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
+                      title="Unduh Rekap Harian PDF (.pdf) Langsung"
                     >
                       <FileDown className="w-4.5 h-4.5" />
+                    </button>
+
+                    <button
+                      onClick={handleExportPDF}
+                      className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-rose-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
+                      title="Cetak Rekap Harian PDF"
+                    >
+                      <Printer className="w-4.5 h-4.5" />
                     </button>
                   </div>
                 </div>
@@ -1166,22 +1436,33 @@ export default function AbsensiSec({
                       </select>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5 flex-wrap">
                       <button
                         type="button"
                         onClick={handleExportMonthlyCSV}
-                        className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-1.5 rounded-lg text-[10px] uppercase flex items-center justify-center gap-1.5 transition shadow-lg shadow-emerald-500/10"
+                        className="flex-1 min-w-[75px] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-1.5 rounded-lg text-[9px] uppercase flex items-center justify-center gap-1 transition shadow-lg shadow-emerald-500/10 cursor-pointer"
+                        title="Unduh Excel (.xlsx) Rekap Bulanan"
                       >
                         <FileSpreadsheet className="w-3.5 h-3.5" />
-                        <span>Unduh Excel</span>
+                        <span>Excel</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDownloadMonthlyPDF}
+                        className="flex-1 min-w-[75px] bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-1.5 rounded-lg text-[9px] uppercase flex items-center justify-center gap-1 transition shadow-lg shadow-sky-500/10 cursor-pointer"
+                        title="Unduh PDF (.pdf) Rekap Bulanan Langsung"
+                      >
+                        <FileDown className="w-3.5 h-3.5" />
+                        <span>PDF</span>
                       </button>
                       <button
                         type="button"
                         onClick={handleExportMonthlyPDF}
-                        className="flex-1 bg-slate-800 hover:bg-slate-700 text-red-400 border border-slate-700 rounded-lg font-bold py-1.5 text-[10px] uppercase flex items-center justify-center gap-1.5 transition"
+                        className="flex-1 min-w-[75px] bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 rounded-lg font-bold py-1.5 text-[9px] uppercase flex items-center justify-center gap-1 transition cursor-pointer"
+                        title="Cetak Laporan Bulanan PDF / Pratinjau"
                       >
-                        <FileDown className="w-3.5 h-3.5" />
-                        <span>Unduh PDF</span>
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Cetak</span>
                       </button>
                     </div>
                   </div>

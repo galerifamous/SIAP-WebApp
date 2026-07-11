@@ -31,10 +31,12 @@ import SiswaProfil from './components/SiswaProfil';
 import UangKasSec from './components/UangKasSec';
 import BackupRestoreSec from './components/BackupRestoreSec';
 import KartuSiswaSec from './components/KartuSiswaSec';
-import UnduhAplikasiSec from './components/UnduhAplikasiSec';
+
 import { ArrowLeft, Sun, Moon, RefreshCw, Cloud } from 'lucide-react';
 import NaikKelasSec from './components/NaikKelasSec';
+import SholatDzuhurSec from './components/SholatDzuhurSec';
 import PremiumDialog from './components/PremiumDialog';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   getClientSupabaseHeaders,
   getClientSupabaseConfig,
@@ -42,6 +44,16 @@ import {
   SupabaseConfig
 } from './utils/supabase';
 import { createClient } from '@supabase/supabase-js';
+
+const LOADING_TIPS = [
+  "Tahukah Anda? Kartu Siswa Digital SIAP dilengkapi kode QR unik untuk absensi super cepat tanpa kertas.",
+  "Tip Keamanan: Semua data nilai, keuangan, dan wali murid dicadangkan secara berkala dan dienkripsi aman.",
+  "Tip Desain: Anda bisa mencetak laporan data siswa atau tabungan langsung ke kertas fisik dengan Kop Surat Madrasah otomatis.",
+  "Keamanan Privasi: Guru Kelas hanya dapat mengakses data siswa di kelas yang diampunya untuk menjaga privasi wali murid.",
+  "Tip WhatsApp & Email: Sistem mengirimkan notifikasi instan langsung ke kontak orang tua/wali murid saat diaktifkan.",
+  "Mode Luring Pintar: Jika server database belum terhubung, semua perubahan data aman tersimpan secara lokal di peramban Anda.",
+  "Fakta Menarik: Sistem SIAP dirancang responsif, ringan, dan ramah seluler untuk memudahkan pemantauan harian oleh wali kelas."
+];
 
 export default function App() {
   // --- AUTH STATES ---
@@ -158,6 +170,43 @@ export default function App() {
   const stateVersionRef = React.useRef(0);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'dirty'>('saved');
 
+  const [loadingAnimation, setLoadingAnimation] = useState<{
+    active: boolean;
+    title: string;
+    description: string;
+    showDatabaseNotice?: boolean;
+  }>({
+    active: false,
+    title: '',
+    description: '',
+    showDatabaseNotice: false,
+  });
+
+  const triggerLoadingOverlay = (title: string, description: string, durationMs = 1500) => {
+    setLoadingAnimation({
+      active: true,
+      title,
+      description,
+      showDatabaseNotice: !syncEnabled
+    });
+    setTimeout(() => {
+      setLoadingAnimation(prev => ({ ...prev, active: false }));
+    }, durationMs);
+  };
+
+  const [tipIndex, setTipIndex] = useState(0);
+
+  useEffect(() => {
+    let interval: any;
+    if (loadingAnimation.active) {
+      setTipIndex(Math.floor(Math.random() * LOADING_TIPS.length));
+      interval = setInterval(() => {
+        setTipIndex(prev => (prev + 1) % LOADING_TIPS.length);
+      }, 4000);
+    }
+    return () => clearInterval(interval);
+  }, [loadingAnimation.active]);
+
   // --- AUTOMATIC HANDSHAKE WITH SERVER TO SYNC SUPABASE CONNECTION ---
   useEffect(() => {
     const local = getClientSupabaseConfig();
@@ -195,8 +244,8 @@ export default function App() {
   // --- DYNAMIC WEBAPP TITLE & FAVICON LOGO ---
   useEffect(() => {
     // Update tab title dynamically
-    const baseTitle = "SIAP - Sistem Informasi Akademik Pelajar";
-    document.title = systemSetting.schoolName ? `${baseTitle} - ${systemSetting.schoolName}` : baseTitle;
+    const baseTitle = "Sistem Informasi Akademik Pelajar";
+    document.title = systemSetting.schoolName ? `${systemSetting.schoolName} - ${baseTitle}` : baseTitle;
 
     // Update tab icon (favicon) based on uploaded system logo
     if (systemSetting.logoUrl) {
@@ -980,6 +1029,11 @@ export default function App() {
 
   // --- MANUAL SYNC HANDLER ---
   const handleManualSync = () => {
+    triggerLoadingOverlay(
+      'Sinkronisasi Database...',
+      'Sedang menyinkronkan data real-time dengan server database Madrasah. Harap tunggu sebentar...',
+      1500
+    );
     pullStateFromServer(false);
   };
 
@@ -1182,6 +1236,14 @@ export default function App() {
     content: string,
     type: 'Absensi' | 'Nilai' | 'Kasus' | 'Prestasi' | 'Tabungan' | 'Tagihan Uang Kas'
   ) => {
+    if (type !== 'Absensi') {
+      triggerLoadingOverlay(
+        'Mengirim Notifikasi Email...',
+        `Menghubungkan ke SMTP Server untuk mengirim laporan ${type} kepada orang tua/wali murid secara aman...`,
+        1800
+      );
+    }
+
     let senderEmail = 'noreply@madrasah.sch.id';
     let senderName = 'Sistem Informasi SIAP';
 
@@ -1380,6 +1442,10 @@ export default function App() {
 
   // --- DATA SISWA WRITERS ---
   const handleAddStudent = (student: Student) => {
+    triggerLoadingOverlay(
+      'Menambah Data Siswa...',
+      'Mendaftarkan dan menyimpan profil siswa baru ke database Madrasah...'
+    );
     const studentWithYear = {
       ...student,
       academicYear: student.academicYear || academicSetting.activeYear
@@ -1390,6 +1456,11 @@ export default function App() {
   };
 
   const handleAddStudentsBulk = (bulk: Student[]) => {
+    triggerLoadingOverlay(
+      'Mengimpor Data Masal...',
+      'Memproses baris data Excel dan menyisipkan daftar siswa baru secara masal ke database...',
+      2000
+    );
     const bulkWithYear = bulk.map(s => ({
       ...s,
       academicYear: s.academicYear || academicSetting.activeYear
@@ -1400,6 +1471,10 @@ export default function App() {
   };
 
   const handleEditStudent = (nisn: string, updatedStudent: Student) => {
+    triggerLoadingOverlay(
+      'Mengubah Profil Siswa...',
+      'Menyimpan pembaharuan biodata dan data wali murid ke dalam database...'
+    );
     const activeY = academicSetting.activeYear;
     const updated = students.map(s => {
       const year = s.academicYear || '2025/2026';
@@ -1416,6 +1491,10 @@ export default function App() {
   };
 
   const handleDeleteStudent = (nisn: string) => {
+    triggerLoadingOverlay(
+      'Menghapus Data Siswa...',
+      'Sedang menghapus profil siswa beserta riwayat nilai, absensi, dan bimbingan konseling...'
+    );
     const activeY = academicSetting.activeYear;
     
     // 1. Delete student from students master list
@@ -1466,6 +1545,11 @@ export default function App() {
     carryOverSavings: boolean,
     carryOverCash: boolean
   ) => {
+    triggerLoadingOverlay(
+      'Memproses Kenaikan Kelas...',
+      'Memigrasikan siswa terpilih ke jenjang kelas baru dan memperbarui status akademik...',
+      2000
+    );
     const newStudentsToInsert: Student[] = [];
     
     promotedNisns.forEach(nisn => {
@@ -1602,6 +1686,10 @@ export default function App() {
 
   // --- NILAI SISWA WRITERS ---
   const handleSaveGrade = (gradeData: Omit<Grade, 'id' | 'timestamp'>) => {
+    triggerLoadingOverlay(
+      'Menyimpan Nilai Rapor...',
+      'Sedang memproses nilai evaluasi sumatif, STS, dan SAS ke dalam rapor digital...'
+    );
     const existingIndex = grades.findIndex(
       g => g.nisn === gradeData.nisn &&
            g.subject === gradeData.subject &&
@@ -1658,6 +1746,10 @@ export default function App() {
   };
 
   const handleDeleteGrade = (id: string) => {
+    triggerLoadingOverlay(
+      'Menghapus Catatan Nilai...',
+      'Sedang menghapus riwayat nilai akademik siswa secara aman...'
+    );
     const updated = grades.filter(g => g.id !== id);
     setGrades(updated);
     saveState('siap_grades', updated);
@@ -1665,6 +1757,10 @@ export default function App() {
 
   // --- RECORD WRITERS ---
   const handleAddCase = (caseReport: Omit<CaseReport, 'id'>) => {
+    triggerLoadingOverlay(
+      'Mencatat Pelanggaran BK...',
+      'Menyimpan data insiden dan tindakan disipliner siswa ke sistem...'
+    );
     const newC: CaseReport = {
       ...caseReport,
       id: 'c-' + Date.now()
@@ -1693,12 +1789,20 @@ export default function App() {
   };
 
   const handleDeleteCase = (id: string) => {
+    triggerLoadingOverlay(
+      'Menghapus Catatan BK...',
+      'Sedang menghapus riwayat kasus bimbingan konseling dari sistem...'
+    );
     const updated = cases.filter(c => c.id !== id);
     setCases(updated);
     saveState('siap_cases', updated);
   };
 
   const handleAddAchievement = (achievement: Omit<Achievement, 'id'>) => {
+    triggerLoadingOverlay(
+      'Mencatat Prestasi Siswa...',
+      'Sedang menyimpan informasi sertifikat penghargaan dan prestasi baru...'
+    );
     const newA: Achievement = {
       ...achievement,
       id: 'ac-' + Date.now()
@@ -1727,6 +1831,10 @@ export default function App() {
   };
 
   const handleDeleteAchievement = (id: string) => {
+    triggerLoadingOverlay(
+      'Menghapus Catatan Prestasi...',
+      'Sedang menghapus riwayat penghargaan prestasi siswa secara permanen...'
+    );
     const updated = achievements.filter(ac => ac.id !== id);
     setAchievements(updated);
     saveState('siap_achievements', updated);
@@ -1994,6 +2102,8 @@ export default function App() {
             semester={academicSetting.activeSemester}
             onNavigate={(menuId) => setActiveMenu(menuId)}
             onClearEmails={handleClearEmails}
+            teacherDutyType={teacherDutyType}
+            schoolName={systemSetting.schoolName}
           />
         );
       case 'profil':
@@ -2050,6 +2160,23 @@ export default function App() {
             onDeleteHoliday={handleDeleteHoliday}
             teachers={teachers}
             classStaffs={classStaffs}
+          />
+        );
+
+      case 'sholat-scan':
+      case 'sholat-rekap':
+        return (
+          <SholatDzuhurSec
+            students={displayedStudents}
+            schoolName={systemSetting.schoolName}
+            academicYear={academicSetting.activeYear}
+            semester={academicSetting.activeSemester}
+            availableClasses={displayedClasses}
+            role={currentUser.role}
+            studentNisn={currentUser.studentNisn}
+            teachers={teachers}
+            classStaffs={classStaffs}
+            activeMenu={activeMenu}
           />
         );
 
@@ -2189,11 +2316,6 @@ export default function App() {
           />
         );
 
-      case 'unduh-aplikasi':
-        return (
-          <UnduhAplikasiSec schoolName={systemSetting.schoolName} />
-        );
-
       default:
         return <div className="text-white">Halaman tidak ditemukan.</div>;
     }
@@ -2237,7 +2359,7 @@ export default function App() {
       return `Peran: Guru`;
     }
 
-    return `SIAP Academic Portal`;
+    return `Sistem Informasi Akademik Pelajar`;
   };
 
   // --- IF NOT LOGGED IN, RENDER THE PROFESSIONAL LOGIN PAGE ---
@@ -2314,7 +2436,7 @@ export default function App() {
               <h1 className={`text-sm font-extrabold tracking-tight uppercase ${
                 darkMode ? 'text-white' : 'text-[#0f1612]'
               }`}>
-                SIAP Academic Management System
+                Sistem Informasi Akademik Pelajar
               </h1>
               <p className="text-[10px] text-slate-500 mt-0.5 font-bold">
                 <span className="text-emerald-500">{getTopBarSub()}</span>
@@ -2367,76 +2489,79 @@ export default function App() {
               </div>
             </div>
 
-            {/* Real-time Save Status Badge */}
-            <div
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-300 select-none ${
-                darkMode
-                  ? 'bg-[#0f1612] border border-[#17221c]'
-                  : 'bg-[#f0f5f1] border border-white shadow-[4px_4px_10px_#dce3dd,-4px_-4px_10px_#ffffff]'
-              }`}
-              title={
-                saveStatus === 'saved'
-                  ? 'Semua perubahan telah berhasil tersimpan aman di server database!'
-                  : saveStatus === 'saving'
-                  ? 'Sedang menyinkronkan data perubahan ke server...'
-                  : 'Menunggu jeda pengetikan selesai untuk mengirim ke server...'
-              }
-            >
-              <div className="relative flex items-center justify-center">
-                <Cloud className={`w-4 h-4 transition-all duration-300 ${
+            {/* Group for cloud save status, sync, and theme toggle with a closer gap */}
+            <div className="flex items-center gap-1.5">
+              {/* Real-time Save Status Badge */}
+              <div
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-300 select-none ${
+                  darkMode
+                    ? 'bg-[#0f1612] border border-[#17221c]'
+                    : 'bg-[#f0f5f1] border border-white shadow-[4px_4px_10px_#dce3dd,-4px_-4px_10px_#ffffff]'
+                }`}
+                title={
+                  saveStatus === 'saved'
+                    ? 'Semua perubahan telah berhasil tersimpan aman di server database!'
+                    : saveStatus === 'saving'
+                    ? 'Sedang menyinkronkan data perubahan ke server...'
+                    : 'Menunggu jeda pengetikan selesai untuk mengirim ke server...'
+                }
+              >
+                <div className="relative flex items-center justify-center">
+                  <Cloud className={`w-4 h-4 transition-all duration-300 ${
+                    saveStatus === 'saved'
+                      ? 'text-emerald-500'
+                      : saveStatus === 'saving'
+                      ? 'text-amber-500 animate-bounce'
+                      : 'text-orange-400'
+                  }`} />
+                  <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${
+                    saveStatus === 'saved'
+                      ? 'bg-emerald-500'
+                      : saveStatus === 'saving'
+                      ? 'bg-amber-500 animate-ping'
+                      : 'bg-orange-400 animate-pulse'
+                  }`} />
+                </div>
+                <span className={`hidden md:inline font-mono font-bold text-[10px] tracking-wider uppercase ${
                   saveStatus === 'saved'
                     ? 'text-emerald-500'
                     : saveStatus === 'saving'
-                    ? 'text-amber-500 animate-bounce'
+                    ? 'text-amber-500'
                     : 'text-orange-400'
-                }`} />
-                <span className={`absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${
-                  saveStatus === 'saved'
-                    ? 'bg-emerald-500'
-                    : saveStatus === 'saving'
-                    ? 'bg-amber-500 animate-ping'
-                    : 'bg-orange-400 animate-pulse'
-                }`} />
+                }`}>
+                  {saveStatus === 'saved' && 'Tersimpan'}
+                  {saveStatus === 'saving' && 'Menyimpan...'}
+                  {saveStatus === 'dirty' && 'Mengantre'}
+                </span>
               </div>
-              <span className={`hidden md:inline font-mono font-bold text-[10px] tracking-wider uppercase ${
-                saveStatus === 'saved'
-                  ? 'text-emerald-500'
-                  : saveStatus === 'saving'
-                  ? 'text-amber-500'
-                  : 'text-orange-400'
-              }`}>
-                {saveStatus === 'saved' && 'Tersimpan'}
-                {saveStatus === 'saving' && 'Menyimpan...'}
-                {saveStatus === 'dirty' && 'Mengantre'}
-              </span>
+
+              {/* Real-time sync status button */}
+              <button
+                onClick={handleManualSync}
+                disabled={isSyncing}
+                className={`p-2 rounded-xl flex items-center justify-center transition-all duration-300 cursor-pointer active:scale-95 ${
+                  darkMode
+                    ? 'bg-[#0f1612] text-emerald-400 shadow-[inset_2px_2px_5px_#070a08,inset_-2px_-2px_5px_#17221c] border border-[#17221c]'
+                    : 'bg-[#f0f5f1] text-emerald-600 shadow-[4px_4px_10px_#dce3dd,-4px_-4px_10px_#ffffff] border border-white'
+                } ${isSyncing ? 'opacity-75 animate-pulse' : ''}`}
+                title="Sinkronkan data secara real-time dari Guru Kelas, Guru Mapel, atau Admin"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              </button>
+
+              {/* Elegant Neumorphic Dark Mode Toggle */}
+              <button
+                onClick={toggleDarkMode}
+                className={`p-2 rounded-xl flex items-center justify-center transition-all duration-300 cursor-pointer active:scale-95 ${
+                  darkMode
+                    ? 'bg-[#0f1612] text-amber-400 shadow-[inset_2px_2px_5px_#070a08,inset_-2px_-2px_5px_#17221c] border border-[#17221c]'
+                    : 'bg-[#f0f5f1] text-emerald-600 shadow-[4px_4px_10px_#dce3dd,-4px_-4px_10px_#ffffff] border border-white'
+                }`}
+                title={darkMode ? "Ubah ke Mode Terang" : "Ubah ke Mode Gelap"}
+              >
+                {darkMode ? <Sun className="w-4 h-4 animate-spin-slow" /> : <Moon className="w-4 h-4" />}
+              </button>
             </div>
-
-            {/* Real-time sync status button */}
-            <button
-              onClick={handleManualSync}
-              disabled={isSyncing}
-              className={`p-2 rounded-xl flex items-center justify-center transition-all duration-300 cursor-pointer active:scale-95 ${
-                darkMode
-                  ? 'bg-[#0f1612] text-emerald-400 shadow-[inset_2px_2px_5px_#070a08,inset_-2px_-2px_5px_#17221c] border border-[#17221c]'
-                  : 'bg-[#f0f5f1] text-emerald-600 shadow-[4px_4px_10px_#dce3dd,-4px_-4px_10px_#ffffff] border border-white'
-              } ${isSyncing ? 'opacity-75 animate-pulse' : ''}`}
-              title="Sinkronkan data secara real-time dari Guru Kelas, Guru Mapel, atau Admin"
-            >
-              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-            </button>
-
-            {/* Elegant Neumorphic Dark Mode Toggle */}
-            <button
-              onClick={toggleDarkMode}
-              className={`p-2 rounded-xl flex items-center justify-center transition-all duration-300 cursor-pointer active:scale-95 ${
-                darkMode
-                  ? 'bg-[#0f1612] text-amber-400 shadow-[inset_2px_2px_5px_#070a08,inset_-2px_-2px_5px_#17221c] border border-[#17221c]'
-                  : 'bg-[#f0f5f1] text-emerald-600 shadow-[4px_4px_10px_#dce3dd,-4px_-4px_10px_#ffffff] border border-white'
-              }`}
-              title={darkMode ? "Ubah ke Mode Terang" : "Ubah ke Mode Gelap"}
-            >
-              {darkMode ? <Sun className="w-4 h-4 animate-spin-slow" /> : <Moon className="w-4 h-4" />}
-            </button>
 
             <div className={`text-right text-[10px] text-slate-500 font-bold uppercase tracking-wider sm:border-l sm:pl-4 ${
               darkMode ? 'sm:border-[#17221c]' : 'sm:border-[#cbd5ce]'
@@ -2455,10 +2580,99 @@ export default function App() {
         <footer className={`px-6 py-4 border-t text-center text-[10px] text-slate-500 font-medium transition-colors duration-300 ${
           darkMode ? 'border-[#17221c] bg-[#070a08]/30' : 'border-[#cbd5ce] bg-slate-200/20'
         }`}>
-          <p>© {new Date().getFullYear()} {systemSetting.schoolName}. Hak Cipta Dilindungi Undang-Undang. Powered by SIAP Academic Management System.</p>
+          <p>© {new Date().getFullYear()} {systemSetting.schoolName}. Hak Cipta Dilindungi Undang-Undang. Powered by Sistem Informasi Akademik Pelajar.</p>
         </footer>
       </main>
       <PremiumDialog />
+
+      <AnimatePresence>
+        {loadingAnimation.active && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-lg text-white p-6 select-none"
+          >
+            <div className="relative max-w-md w-full flex flex-col items-center text-center">
+              {/* Outer rotating ring */}
+              <div className="relative w-24 h-24 mb-8 flex items-center justify-center">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                  className="absolute inset-0 rounded-full border-4 border-emerald-500/10 border-t-emerald-500 border-r-emerald-400"
+                />
+                <motion.div
+                  animate={{ rotate: -360 }}
+                  transition={{ repeat: Infinity, duration: 2.5, ease: "linear" }}
+                  className="absolute inset-2 rounded-full border-4 border-teal-500/10 border-b-teal-400 border-l-teal-500"
+                />
+                <motion.div
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                  className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                >
+                  <RefreshCw className="w-5 h-5 text-emerald-400 animate-spin" />
+                </motion.div>
+              </div>
+
+              {/* Title & Description */}
+              <motion.h3
+                initial={{ y: 15, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="text-xl font-bold tracking-tight text-white mb-2"
+              >
+                {loadingAnimation.title || 'Sedang Memproses...'}
+              </motion.h3>
+              
+              <motion.p
+                initial={{ y: 15, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="text-sm text-slate-400 max-w-sm mb-8 leading-relaxed font-medium"
+              >
+                {loadingAnimation.description}
+              </motion.p>
+
+              {/* Tips Section */}
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 w-full text-left shadow-2xl relative overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 w-full animate-pulse" />
+                <div className="flex items-start gap-3">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                    <Cloud className="w-4 h-4 animate-bounce" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block mb-1">
+                      INFO &amp; TIPS MENARIK
+                    </span>
+                    <p className="text-xs text-slate-300 leading-relaxed font-semibold">
+                      {LOADING_TIPS[tipIndex]}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Database Notice Fallback */}
+              {loadingAnimation.showDatabaseNotice && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="mt-6 flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-400 tracking-wider uppercase"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                  DATABASE LURING (OFFLINE-FIRST) AKTIF
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

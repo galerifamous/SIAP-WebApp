@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 // Helper to download a string of data as a file
 export function downloadFile(content: string, filename: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
@@ -17,7 +20,12 @@ export function downloadFile(content: string, filename: string, mimeType: string
 }
 
 // Convert JSON array to CSV string with official signature footer at the bottom
-export function convertToCSV<T extends Record<string, any>>(data: T[], headers: string[], keys: (keyof T)[]): string {
+export function convertToCSV<T extends Record<string, any>>(
+  data: T[],
+  headers: string[],
+  keys: (keyof T)[],
+  waliKelas?: string
+): string {
   const delimiter = ';';
   const headerLine = headers.join(delimiter);
   const rows = data.map(item => {
@@ -43,6 +51,31 @@ export function convertToCSV<T extends Record<string, any>>(data: T[], headers: 
     // ignore
   }
 
+  let resolvedWaliKelas = waliKelas;
+  if (!resolvedWaliKelas) {
+    const firstItem = data[0];
+    const itemClass = firstItem ? (firstItem.class || firstItem.studentClass) : null;
+    if (itemClass) {
+      try {
+        const staffsRaw = localStorage.getItem('siap_class_staffs');
+        const teachersRaw = localStorage.getItem('siap_teachers');
+        if (staffsRaw && teachersRaw) {
+          const staffs = JSON.parse(staffsRaw);
+          const teachers = JSON.parse(teachersRaw);
+          const staff = staffs.find((s: any) => s.classId === itemClass);
+          if (staff) {
+            const teacher = teachers.find((t: any) => t.nuptk === staff.waliKelasNuptk);
+            if (teacher) {
+              resolvedWaliKelas = teacher.name;
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+
   let cityName = 'Indonesia';
   if (schoolAddress) {
     const parts = schoolAddress.split(',');
@@ -59,24 +92,24 @@ export function convertToCSV<T extends Record<string, any>>(data: T[], headers: 
   const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
   const colCount = headers.length;
   
-  const makeFooterRow = (text: string) => {
+  const makeFooterRowDual = (leftText: string, rightText: string) => {
     const cells = Array(colCount).fill('""');
-    const targetCol = Math.max(0, colCount - 2);
-    cells[targetCol] = `"${text}"`;
+    cells[1] = `"${leftText}"`;
+    cells[Math.max(2, colCount - 2)] = `"${rightText}"`;
     return cells.join(delimiter);
   };
 
   const footerRows = [
     "",
     "",
-    makeFooterRow(`${cityName}, ${formattedDate}`),
-    makeFooterRow("Mengetahui,"),
-    makeFooterRow("Kepala Madrasah,"),
+    makeFooterRowDual("", `${cityName}, ${formattedDate}`),
+    makeFooterRowDual("Mengetahui,", ""),
+    makeFooterRowDual("Kepala Madrasah,", "Wali Kelas,"),
     "",
     "",
     "",
-    makeFooterRow(headmasterName.toUpperCase()),
-    makeFooterRow("NIP. 197812052005011002")
+    makeFooterRowDual(headmasterName.toUpperCase(), (resolvedWaliKelas || '........................').toUpperCase()),
+    makeFooterRowDual("NIP. 197812052005011002", "NIP. ................................")
   ];
 
   return ["sep=;", headerLine, ...rows, ...footerRows].join('\n');
@@ -102,6 +135,7 @@ export function printToPDF(
   // Dynamic system signature footer retrieved from local storage
   let schoolAddress = '';
   let logoUrl = '';
+  let govLogoUrl = '';
   let headmasterName = 'Makhfud, S.Pd.';
   try {
     const sysRaw = localStorage.getItem('siap_system');
@@ -109,6 +143,7 @@ export function printToPDF(
       const sys = JSON.parse(sysRaw);
       if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
       if (sys.logoUrl) logoUrl = sys.logoUrl;
+      if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
       if (sys.headmasterName) headmasterName = sys.headmasterName;
     }
   } catch (e) {
@@ -152,11 +187,11 @@ export function printToPDF(
             print-color-adjust: exact;
           }
 
-          /* Official Kop Surat (Letterhead) Style */
+           /* Official Kop Surat (Letterhead) Style */
           .kop-container {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
             border-bottom: 4.5px double #0f172a;
             padding-bottom: 12px;
             margin-bottom: 25px;
@@ -167,8 +202,15 @@ export function printToPDF(
             width: 80px;
             height: 80px;
             object-fit: contain;
-            margin-right: 20px;
             flex-shrink: 0;
+          }
+
+          .kop-logo-left {
+            margin-right: 15px;
+          }
+
+          .kop-logo-right {
+            margin-left: 15px;
           }
 
           .kop-logo-placeholder {
@@ -180,7 +222,6 @@ export function printToPDF(
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 20px;
             flex-shrink: 0;
             font-size: 10px;
             font-weight: 800;
@@ -192,7 +233,6 @@ export function printToPDF(
           .kop-text-area {
             text-align: center;
             flex-grow: 1;
-            padding-right: 40px; /* balance the left logo space */
           }
 
           .kop-kemendikbud {
@@ -384,18 +424,29 @@ export function printToPDF(
 
         <!-- Beautiful Kop Surat (Letterhead) -->
         <div class="kop-container">
-          ${logoUrl ? `
-            <img src="${logoUrl}" class="kop-logo" />
+          <!-- Left Logo (Ministry / Gov Logo) -->
+          ${govLogoUrl ? `
+            <img src="${govLogoUrl}" class="kop-logo kop-logo-left" />
           ` : `
-            <div class="kop-logo-placeholder">
-              KOP<br/>SEKOLAH
+            <div class="kop-logo-placeholder kop-logo-left">
+              KOP<br/>DINAS
             </div>
           `}
+          
           <div class="kop-text-area">
             <p class="kop-kemendikbud">KEMENTERIAN AGAMA REPUBLIK INDONESIA</p>
             <h1 class="kop-school-name">${schoolName}</h1>
             <p class="kop-alamat">${schoolAddress || 'Alamat lengkap instansi sekolah belum disetting di dashboard pengaturan.'}</p>
           </div>
+
+          <!-- Right Logo (Madrasah / School Logo) -->
+          ${logoUrl ? `
+            <img src="${logoUrl}" class="kop-logo kop-logo-right" />
+          ` : `
+            <div class="kop-logo-placeholder kop-logo-right">
+              KOP<br/>SEKOLAH
+            </div>
+          `}
         </div>
 
         <!-- Document Title & Header -->
@@ -470,16 +521,18 @@ export function printToPDF(
         <div class="signature-wrapper">
           <div class="signature-box" style="text-align: left;">
             <div style="visibility: hidden;" class="sig-place-date">${cityName}, ${formattedDate}</div>
-            <div class="sig-title">Wali Kelas,</div>
-            <p class="sig-name" style="text-align: left;">${waliKelas || '........................'}</p>
-            <p class="sig-nip" style="text-align: left;">NIP. ................................</p>
+            <div style="margin-bottom: 15px; font-weight: bold; text-align: left; color: #0f172a;">Mengetahui,</div>
+            <div class="sig-title" style="text-align: left;">Kepala Madrasah,</div>
+            <p class="sig-name" style="text-align: left;">${headmasterName}</p>
+            <p class="sig-nip" style="text-align: left;">NIP. 197812052005011002</p>
           </div>
 
           <div class="signature-box" style="text-align: right;">
             <div class="sig-place-date">${cityName}, ${formattedDate}</div>
-            <div class="sig-title" style="text-align: right; padding-right: 25px;">Kepala Madrasah,</div>
-            <p class="sig-name" style="text-align: right; padding-right: 25px;">${headmasterName}</p>
-            <p class="sig-nip" style="text-align: right; padding-right: 25px;">NIP. 197812052005011002</p>
+            <div style="visibility: hidden; margin-bottom: 15px;">&nbsp;</div>
+            <div class="sig-title" style="text-align: right; padding-right: 25px;">Wali Kelas,</div>
+            <p class="sig-name" style="text-align: right; padding-right: 25px;">${waliKelas || '........................'}</p>
+            <p class="sig-nip" style="text-align: right; padding-right: 25px;">NIP. ................................</p>
           </div>
         </div>
 
@@ -495,4 +548,158 @@ export function printToPDF(
 
   printWindow.document.write(html);
   printWindow.document.close();
+}
+
+// Direct PDF download helper utilizing jsPDF and jspdf-autotable
+export function downloadToPDF(
+  title: string,
+  headers: string[],
+  rows: string[][],
+  filename: string,
+  schoolName?: string,
+  academicYear?: string,
+  semester?: string,
+  classFilter?: string,
+  waliKelas?: string
+) {
+  const doc = new jsPDF('p', 'mm', 'a4');
+
+  // Dynamic system signature footer retrieved from local storage
+  let schoolAddress = '';
+  let headmasterName = 'Makhfud, S.Pd.';
+  let logoUrl = '';
+  let govLogoUrl = '';
+  try {
+    const sysRaw = localStorage.getItem('siap_system');
+    if (sysRaw) {
+      const sys = JSON.parse(sysRaw);
+      if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
+      if (sys.headmasterName) headmasterName = sys.headmasterName;
+      if (sys.logoUrl) logoUrl = sys.logoUrl;
+      if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  // Draw Ministry/Gov logo on the left
+  if (govLogoUrl) {
+    try {
+      doc.addImage(govLogoUrl, 'PNG', 15, 11, 20, 20);
+    } catch (e) {
+      console.error("Error adding gov logo to PDF:", e);
+    }
+  }
+
+  // Draw school logo on the right
+  if (logoUrl) {
+    try {
+      doc.addImage(logoUrl, 'PNG', 175, 11, 20, 20);
+    } catch (e) {
+      console.error("Error adding school logo to PDF:", e);
+    }
+  }
+
+  // Header / Kop Surat
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('KEMENTERIAN AGAMA REPUBLIK INDONESIA', 105, 15, { align: 'center' });
+  
+  doc.setFontSize(16);
+  doc.text(schoolName || 'MADRASAH TSANAWIYAH', 105, 22, { align: 'center' });
+  
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  if (schoolAddress) {
+    const wrappedAddress = doc.splitTextToSize(schoolAddress, 180);
+    doc.text(wrappedAddress, 105, 27, { align: 'center' });
+  } else {
+    doc.text('Alamat lengkap instansi sekolah belum disetting di dashboard pengaturan.', 105, 27, { align: 'center' });
+  }
+
+  // Draw Double Line
+  doc.setLineWidth(0.8);
+  doc.line(15, 33, 195, 33);
+  doc.setLineWidth(0.2);
+  doc.line(15, 34, 195, 34);
+
+  // Document Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text(title.toUpperCase(), 105, 42, { align: 'center' });
+
+  // Metadata Grid
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  
+  let yPos = 48;
+  if (academicYear || semester || classFilter) {
+    doc.text(`Tahun Pelajaran : ${academicYear || '-'}`, 15, yPos);
+    doc.text(`Semester          : ${semester || '-'}`, 15, yPos + 4);
+    if (classFilter) {
+      doc.text(`Kelas                : ${classFilter}`, 115, yPos);
+    }
+    if (waliKelas) {
+      doc.text(`Wali Kelas        : ${waliKelas}`, 115, yPos + 4);
+    }
+    yPos += 12;
+  } else {
+    doc.text(`Tanggal Unduh   : ${new Date().toLocaleDateString('id-ID')}`, 15, yPos);
+    yPos += 8;
+  }
+
+  // Table using jspdf-autotable
+  autoTable(doc, {
+    startY: yPos,
+    head: [headers],
+    body: rows,
+    theme: 'striped',
+    headStyles: { fillColor: [15, 23, 42], fontSize: 8, fontStyle: 'bold' },
+    bodyStyles: { fontSize: 8 },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    margin: { left: 15, right: 15 },
+    styles: { overflow: 'linebreak', cellPadding: 2 },
+  });
+
+  // Signature Block at the end of the document
+  const finalY = (doc as any).lastAutoTable.finalY + 15;
+  const pageHeight = doc.internal.pageSize.height;
+  
+  let sigY = finalY;
+  if (finalY + 40 > pageHeight) {
+    doc.addPage();
+    sigY = 25;
+  }
+  
+  let cityName = 'Indonesia';
+  if (schoolAddress) {
+    const parts = schoolAddress.split(',');
+    if (parts.length > 1) {
+      cityName = parts[parts.length - 2].trim().replace(/Kec\.|Kab\.|Kota/g, '').trim();
+    } else if (parts.length > 0) {
+      cityName = parts[0].trim();
+    }
+  }
+  if (!cityName || cityName.length > 20) {
+    cityName = 'Kota Sekolah';
+  }
+  const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  
+  // Right signature (Wali Kelas)
+  doc.text(`${cityName}, ${formattedDate}`, 145, sigY);
+  doc.text('Wali Kelas,', 145, sigY + 10);
+  doc.text(waliKelas || '........................', 145, sigY + 30);
+  doc.text('NIP. ................................', 145, sigY + 34);
+
+  // Left signature (Kepala Madrasah)
+  doc.text('Mengetahui,', 25, sigY + 5);
+  doc.text('Kepala Madrasah,', 25, sigY + 10);
+  doc.text(headmasterName, 25, sigY + 30);
+  doc.text('NIP. 197812052005011002', 25, sigY + 34);
+
+  // Save PDF directly
+  doc.save(filename);
 }

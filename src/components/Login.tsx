@@ -94,9 +94,8 @@ export default function Login({
               <School className={`w-10 h-10 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} />
             )}
           </div>
-          <h1 className={`text-2xl font-bold tracking-tight transition-colors duration-300 ${darkMode ? 'text-white' : 'text-slate-800'}`}>SIAP</h1>
+          <h1 className={`text-2xl font-bold tracking-tight transition-colors duration-300 ${darkMode ? 'text-white' : 'text-slate-800'}`}>{schoolName || 'Madrasah'}</h1>
           <p className={`text-xs font-semibold uppercase tracking-widest mt-1 transition-colors duration-300 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>Sistem Informasi Akademik Pelajar</p>
-          <p className={`text-xs mt-1 max-w-[280px] mx-auto truncate font-medium transition-colors duration-300 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{schoolName}</p>
         </div>
 
         {/* Role Tabs */}
@@ -240,7 +239,7 @@ export default function Login({
         <div className={`mt-8 pt-4 border-t flex justify-between items-center text-[10px] font-semibold tracking-wider uppercase transition-colors duration-300 ${
           darkMode ? 'border-slate-800/60 text-slate-600' : 'border-slate-300/60 text-slate-400'
         }`}>
-          <span>SIAP Akademik</span>
+          <span className="truncate max-w-[180px]">{schoolName || 'Sistem Informasi Akademik Pelajar'}</span>
           <span className="flex items-center gap-1">
             <Award className={`w-3.5 h-3.5 ${darkMode ? 'text-emerald-500/60' : 'text-emerald-600/60'}`} /> Secure System
           </span>

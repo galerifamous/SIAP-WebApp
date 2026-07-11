@@ -139,6 +139,7 @@ export const INITIAL_SYSTEM: SystemSetting = {
   adminEmail: 'admin.siap@madrasah.sch.id',
   headmasterName: 'Makhfud, S.Pd.',
   logoUrl: '', // Will be rendered dynamically using beautiful SVG icon if empty
+  govLogoUrl: '', // Will be uploaded or empty by default
   adminUsername: 'admin',
   adminPassword: 'admin',
 };
