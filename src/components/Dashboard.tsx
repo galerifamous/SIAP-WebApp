@@ -28,7 +28,9 @@ import {
   Download,
   Trash2,
   Briefcase,
-  Monitor
+  Monitor,
+  Coins,
+  Wallet
 } from 'lucide-react';
 import {
   BarChart,
@@ -172,9 +174,16 @@ export default function Dashboard({
       visible: true
     },
     {
-      label: 'Uang Kas & Tabungan',
-      icon: CreditCard,
+      label: 'Uang Kas',
+      icon: Coins,
       menu: 'uang-kas',
+      color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
+      visible: !(role === 'GURU' && teacherDutyType === 'Guru Mapel')
+    },
+    {
+      label: 'Tabungan Siswa',
+      icon: Wallet,
+      menu: 'tabungan',
       color: isDark ? 'text-emerald-400 bg-emerald-500/10' : 'text-emerald-700 bg-emerald-50',
       visible: !(role === 'GURU' && teacherDutyType === 'Guru Mapel')
     },

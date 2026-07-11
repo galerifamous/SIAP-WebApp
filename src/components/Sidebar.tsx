@@ -31,7 +31,8 @@ import {
   Database,
   CreditCard,
   Download,
-  TrendingUp
+  TrendingUp,
+  Wallet
 } from 'lucide-react';
 import { Role } from '../types';
 
@@ -74,6 +75,7 @@ export default function Sidebar({
     sholat: true,
     nilai: true,
     record: true,
+    keuangan: true,
     pengaturan: false
   });
 
@@ -480,17 +482,38 @@ export default function Sidebar({
               )}
             </div>
 
-            {/* Uang Kas & Tabungan (All Roles except GURU_MAPEL) */}
+            {/* Keuangan: Uang Kas & Tabungan (All Roles except GURU_MAPEL) */}
             {!(role === 'GURU' && teacherDutyType === 'Guru Mapel') && (
-              <button
-                onClick={() => handleMenuClick('uang-kas')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('uang-kas')}`}
-              >
-                <div className="flex items-center gap-3">
-                  <Coins className="w-4.5 h-4.5" />
-                  <span>Uang Kas & Tabungan</span>
-                </div>
-              </button>
+              <div className="space-y-1">
+                <button
+                  onClick={() => toggleExpand('keuangan')}
+                  className={getHeaderItemClass('keuangan')}
+                >
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="w-4.5 h-4.5" />
+                    <span>Uang Kas & Tabungan</span>
+                  </div>
+                  {expandedMenus.keuangan ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </button>
+                {expandedMenus.keuangan && (
+                  <div className="pl-6 space-y-1">
+                    <button
+                      onClick={() => handleMenuClick('uang-kas')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('uang-kas')}`}
+                    >
+                      <Coins className="w-3.5 h-3.5" />
+                      <span>Uang Kas</span>
+                    </button>
+                    <button
+                      onClick={() => handleMenuClick('tabungan')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('tabungan')}`}
+                    >
+                      <Wallet className="w-3.5 h-3.5" />
+                      <span>Tabungan Siswa</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* QR Code Absen (Admin & Guru Kelas) */}

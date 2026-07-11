@@ -2228,6 +2228,7 @@ export default function App() {
         );
 
       case 'uang-kas':
+      case 'tabungan':
         if (currentUser.role === 'GURU' && loggedTeacher?.dutyType === 'GURU_MAPEL') {
           return <div className="text-white text-xs italic p-6 text-center bg-slate-900/40 rounded-2xl border border-red-500/10">Akses Ditolak. Guru Mata Pelajaran tidak memiliki izin untuk mengelola Tabungan dan Uang Kas.</div>;
         }
@@ -2244,6 +2245,7 @@ export default function App() {
             studentNisn={currentUser.studentNisn}
             teachers={teachers}
             classStaffs={classStaffs}
+            activeMenu={activeMenu}
           />
         );
 

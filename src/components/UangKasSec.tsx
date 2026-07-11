@@ -41,6 +41,7 @@ interface UangKasSecProps {
   studentNisn?: string;
   teachers?: Teacher[];
   classStaffs?: ClassStaff[];
+  activeMenu?: string;
 }
 
 export default function UangKasSec({
@@ -54,7 +55,8 @@ export default function UangKasSec({
   role,
   studentNisn,
   teachers,
-  classStaffs
+  classStaffs,
+  activeMenu
 }: UangKasSecProps) {
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   useEffect(() => {
@@ -721,11 +723,23 @@ export default function UangKasSec({
         isDark ? 'border-[#17221c]' : 'border-[#cbd5ce]'
       }`}>
         <div>
-          <h2 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>Manajemen Uang Kas & Tabungan Siswa</h2>
-          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Lacak tagihan kas kelas, catat setoran/penarikan tabungan, dan kirimkan tagihan ke email orangtua siswa</p>
+          <h2 className={`text-lg font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
+            {activeMenu === 'tabungan' 
+              ? (role === 'SISWA' ? 'Keuangan Saya - Tabungan' : 'Manajemen Tabungan Siswa')
+              : (activeMenu === 'uang-kas' 
+                  ? (role === 'SISWA' ? 'Keuangan Saya - Uang Kas' : 'Manajemen Uang Kas Siswa')
+                  : 'Manajemen Uang Kas & Tabungan Siswa')}
+          </h2>
+          <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+            {activeMenu === 'tabungan'
+              ? (role === 'SISWA' ? 'Lacak saldo tabungan dan riwayat mutasi tabungan Anda' : 'Catat setoran/penarikan tabungan siswa, unduh mutasi tabungan, dan kirimkan laporan tabungan ke email orangtua')
+              : (activeMenu === 'uang-kas'
+                  ? (role === 'SISWA' ? 'Lacak status pembayaran dan tagihan uang kas kelas Anda' : 'Lacak tagihan kas kelas, catat pembayaran uang kas, dan kirimkan tagihan ke email orangtua siswa')
+                  : 'Lacak tagihan kas kelas, catat setoran/penarikan tabungan, dan kirimkan tagihan ke email orangtua siswa')}
+          </p>
         </div>
 
-        {role !== 'SISWA' && (
+        {role !== 'SISWA' && activeMenu !== 'tabungan' && (
           <button
             onClick={handleSendMassEmails}
             className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-2.5 px-4 rounded-xl flex items-center gap-2 transition duration-150 shadow-md shadow-emerald-500/10 self-start md:self-auto cursor-pointer"
@@ -738,56 +752,62 @@ export default function UangKasSec({
 
       {/* Statistic Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className={`p-5 rounded-2xl flex items-center justify-between border transition-all duration-300 ${
-          isDark 
-            ? 'bg-[#121e15] border-[#17221c]' 
-            : 'bg-white border-[#cbd5ce]/60 shadow-[1px_1px_3px_#cbd5ce]'
-        }`}>
-          <div className="space-y-1">
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Total Tagihan Kas</span>
-            <div className={`text-xl font-extrabold font-mono ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
-              Rp {totalCashBill.toLocaleString('id-ID')}
+        {activeMenu !== 'tabungan' && (
+          <div className={`p-5 rounded-2xl flex items-center justify-between border transition-all duration-300 ${
+            isDark 
+              ? 'bg-[#121e15] border-[#17221c]' 
+              : 'bg-white border-[#cbd5ce]/60 shadow-[1px_1px_3px_#cbd5ce]'
+          }`}>
+            <div className="space-y-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Total Tagihan Kas</span>
+              <div className={`text-xl font-extrabold font-mono ${isDark ? 'text-rose-400' : 'text-rose-600'}`}>
+                Rp {totalCashBill.toLocaleString('id-ID')}
+              </div>
+              <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{unpaidCount} siswa belum lunas</p>
             </div>
-            <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{unpaidCount} siswa belum lunas</p>
+            <div className="p-3 bg-rose-500/10 rounded-xl border border-rose-500/20 text-rose-400">
+              <Coins className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-3 bg-rose-500/10 rounded-xl border border-rose-500/20 text-rose-400">
-            <Coins className="w-5 h-5" />
-          </div>
-        </div>
+        )}
 
-        <div className={`p-5 rounded-2xl flex items-center justify-between border transition-all duration-300 ${
-          isDark 
-            ? 'bg-[#121e15] border-[#17221c]' 
-            : 'bg-white border-[#cbd5ce]/60 shadow-[1px_1px_3px_#cbd5ce]'
-        }`}>
-          <div className="space-y-1">
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Total Tabungan</span>
-            <div className={`text-xl font-extrabold font-mono ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-              Rp {totalSavings.toLocaleString('id-ID')}
+        {activeMenu !== 'uang-kas' && (
+          <div className={`p-5 rounded-2xl flex items-center justify-between border transition-all duration-300 ${
+            isDark 
+              ? 'bg-[#121e15] border-[#17221c]' 
+              : 'bg-white border-[#cbd5ce]/60 shadow-[1px_1px_3px_#cbd5ce]'
+          }`}>
+            <div className="space-y-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Total Tabungan</span>
+              <div className={`text-xl font-extrabold font-mono ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                Rp {totalSavings.toLocaleString('id-ID')}
+              </div>
+              <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Penyimpanan kas sekolah</p>
             </div>
-            <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Penyimpanan kas sekolah</p>
+            <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+              <Wallet className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
-            <Wallet className="w-5 h-5" />
-          </div>
-        </div>
+        )}
 
-        <div className={`p-5 rounded-2xl flex items-center justify-between border transition-all duration-300 ${
-          isDark 
-            ? 'bg-[#121e15] border-[#17221c]' 
-            : 'bg-white border-[#cbd5ce]/60 shadow-[1px_1px_3px_#cbd5ce]'
-        }`}>
-          <div className="space-y-1">
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Siswa Lunas</span>
-            <div className={`text-xl font-extrabold font-mono ${isDark ? 'text-teal-400' : 'text-teal-600'}`}>
-              {paidCount} <span className="text-xs text-slate-500 font-sans font-normal">Siswa</span>
+        {activeMenu !== 'tabungan' && (
+          <div className={`p-5 rounded-2xl flex items-center justify-between border transition-all duration-300 ${
+            isDark 
+              ? 'bg-[#121e15] border-[#17221c]' 
+              : 'bg-white border-[#cbd5ce]/60 shadow-[1px_1px_3px_#cbd5ce]'
+          }`}>
+            <div className="space-y-1">
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Siswa Lunas</span>
+              <div className={`text-xl font-extrabold font-mono ${isDark ? 'text-teal-400' : 'text-teal-600'}`}>
+                {paidCount} <span className="text-xs text-slate-500 font-sans font-normal">Siswa</span>
+              </div>
+              <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Sudah menyelesaikan uang kas</p>
             </div>
-            <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Sudah menyelesaikan uang kas</p>
+            <div className="p-3 bg-teal-500/10 rounded-xl border border-teal-500/20 text-teal-400">
+              <Check className="w-5 h-5" />
+            </div>
           </div>
-          <div className="p-3 bg-teal-500/10 rounded-xl border border-teal-500/20 text-teal-400">
-            <Check className="w-5 h-5" />
-          </div>
-        </div>
+        )}
 
         <div className={`p-5 rounded-2xl flex items-center justify-between border transition-all duration-300 ${
           isDark 
@@ -863,9 +883,25 @@ export default function UangKasSec({
                 onChange={(e) => setFinanceTypeFilter(e.target.value as any)}
                 className={`bg-transparent focus:outline-none cursor-pointer font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}
               >
-                <option value="all" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Semua Data</option>
-                <option value="has_bill" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Belum Lunas Kas</option>
-                <option value="has_savings" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Memiliki Tabungan</option>
+                {activeMenu !== 'tabungan' && activeMenu !== 'uang-kas' && (
+                  <>
+                    <option value="all" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Semua Data</option>
+                    <option value="has_bill" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Belum Lunas Kas</option>
+                    <option value="has_savings" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Memiliki Tabungan</option>
+                  </>
+                )}
+                {activeMenu === 'uang-kas' && (
+                  <>
+                    <option value="all" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Semua Siswa</option>
+                    <option value="has_bill" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Belum Lunas Kas</option>
+                  </>
+                )}
+                {activeMenu === 'tabungan' && (
+                  <>
+                    <option value="all" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Semua Siswa</option>
+                    <option value="has_savings" className={isDark ? "bg-[#0f1612] text-[#f0f5f1]" : "bg-white text-slate-800"}>Memiliki Tabungan</option>
+                  </>
+                )}
               </select>
             </div>
           </div>
@@ -895,9 +931,9 @@ export default function UangKasSec({
                   <th className="p-4">NISN</th>
                   <th className="p-4">Nama Siswa</th>
                   <th className="p-4">Kelas</th>
-                  <th className="p-4 text-right">Tagihan Uang Kas</th>
-                  <th className="p-4 text-right">Saldo Tabungan</th>
-                  <th className="p-4 text-center">Mutasi Tabungan</th>
+                  {activeMenu !== 'tabungan' && <th className="p-4 text-right">Tagihan Uang Kas</th>}
+                  {activeMenu !== 'uang-kas' && <th className="p-4 text-right">Saldo Tabungan</th>}
+                  {activeMenu !== 'uang-kas' && <th className="p-4 text-center">Mutasi Tabungan</th>}
                   {role !== 'SISWA' && <th className="p-4 text-center">Notifikasi Email</th>}
                   {role !== 'SISWA' && <th className="p-4 text-center w-48">Aksi</th>}
                 </tr>
@@ -916,107 +952,117 @@ export default function UangKasSec({
                         {student.class}
                       </span>
                     </td>
-                    <td className="p-4 text-right font-mono font-bold">
-                      {student.cashBill > 0 ? (
-                        <span className={isDark ? 'text-rose-400' : 'text-rose-600'}>Rp {student.cashBill.toLocaleString('id-ID')}</span>
-                      ) : (
-                        <span className={`px-2 py-0.5 rounded-full font-sans text-[10px] ${
-                          isDark 
-                            ? 'text-teal-400 bg-teal-500/10 border border-teal-500/20' 
-                            : 'text-teal-700 bg-teal-50 border border-teal-200 font-semibold'
-                        }`}>
-                          Lunas
-                        </span>
-                      )}
-                    </td>
-                    <td className={`p-4 text-right font-mono font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
-                      Rp {student.savings.toLocaleString('id-ID')}
-                    </td>
-                    <td className="p-4 text-center">
-                      <div className="flex justify-center items-center gap-1">
-                        <button
-                          onClick={() => handleDownloadSavingsExcel(student)}
-                          className={`p-1 rounded-lg border text-[9px] font-bold flex items-center gap-0.5 transition cursor-pointer ${
-                            isDark
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/30'
-                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                          }`}
-                          title="Unduh Excel Mutasi Tabungan"
-                        >
-                          <FileSpreadsheet className="w-3 h-3" />
-                          <span>EXCEL</span>
-                        </button>
-                        <button
-                          onClick={() => handleDirectDownloadSavingsPDF(student)}
-                          className={`p-1 rounded-lg border text-[9px] font-bold flex items-center gap-0.5 transition cursor-pointer ${
-                            isDark
-                              ? 'bg-sky-500/10 text-sky-400 border-sky-500/20 hover:bg-sky-500/30'
-                              : 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100'
-                          }`}
-                          title="Unduh PDF (.pdf) Mutasi Tabungan Langsung"
-                        >
-                          <FileDown className="w-3 h-3" />
-                          <span>PDF</span>
-                        </button>
-                        <button
-                          onClick={() => handleDownloadSavingsPDF(student)}
-                          className={`p-1 rounded-lg border text-[9px] font-bold flex items-center gap-0.5 transition cursor-pointer ${
-                            isDark
-                              ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/30'
-                              : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                          }`}
-                          title="Cetak Mutasi Tabungan PDF"
-                        >
-                          <Printer className="w-3 h-3" />
-                          <span>CETAK</span>
-                        </button>
-                      </div>
-                    </td>
+                    {activeMenu !== 'tabungan' && (
+                      <td className="p-4 text-right font-mono font-bold">
+                        {student.cashBill > 0 ? (
+                          <span className={isDark ? 'text-rose-400' : 'text-rose-600'}>Rp {student.cashBill.toLocaleString('id-ID')}</span>
+                        ) : (
+                          <span className={`px-2 py-0.5 rounded-full font-sans text-[10px] ${
+                            isDark 
+                              ? 'text-teal-400 bg-teal-500/10 border border-teal-500/20' 
+                              : 'text-teal-700 bg-teal-50 border border-teal-200 font-semibold'
+                          }`}>
+                            Lunas
+                          </span>
+                        )}
+                      </td>
+                    )}
+                    {activeMenu !== 'uang-kas' && (
+                      <td className={`p-4 text-right font-mono font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
+                        Rp {student.savings.toLocaleString('id-ID')}
+                      </td>
+                    )}
+                    {activeMenu !== 'uang-kas' && (
+                      <td className="p-4 text-center">
+                        <div className="flex justify-center items-center gap-1">
+                          <button
+                            onClick={() => handleDownloadSavingsExcel(student)}
+                            className={`p-1 rounded-lg border text-[9px] font-bold flex items-center gap-0.5 transition cursor-pointer ${
+                              isDark
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/30'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                            }`}
+                            title="Unduh Excel Mutasi Tabungan"
+                          >
+                            <FileSpreadsheet className="w-3 h-3" />
+                            <span>EXCEL</span>
+                          </button>
+                          <button
+                            onClick={() => handleDirectDownloadSavingsPDF(student)}
+                            className={`p-1 rounded-lg border text-[9px] font-bold flex items-center gap-0.5 transition cursor-pointer ${
+                              isDark
+                                ? 'bg-sky-500/10 text-sky-400 border-sky-500/20 hover:bg-sky-500/30'
+                                : 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100'
+                            }`}
+                            title="Unduh PDF (.pdf) Mutasi Tabungan Langsung"
+                          >
+                            <FileDown className="w-3 h-3" />
+                            <span>PDF</span>
+                          </button>
+                          <button
+                            onClick={() => handleDownloadSavingsPDF(student)}
+                            className={`p-1 rounded-lg border text-[9px] font-bold flex items-center gap-0.5 transition cursor-pointer ${
+                              isDark
+                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/30'
+                                : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
+                            }`}
+                            title="Cetak Mutasi Tabungan PDF"
+                          >
+                            <Printer className="w-3 h-3" />
+                            <span>CETAK</span>
+                          </button>
+                        </div>
+                      </td>
+                    )}
                     {role !== 'SISWA' && (
                       <td className="p-4 text-center">
                         <div className="flex justify-center items-center gap-2">
                           {/* Send Bill Email */}
-                          <button
-                            onClick={() => {
-                              if (student.cashBill === 0) {
-                                toast.warning('Siswa sudah lunas, tidak perlu dikirimi email tagihan.');
-                                return;
-                              }
-                              onSendCashBillEmail(student.nisn, 'Uang Kas');
-                              toast.success(`Email tagihan berhasil disimulasikan untuk dikirim ke ${student.parentEmail}`);
-                            }}
-                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
-                              student.cashBill > 0
-                                ? (isDark 
-                                    ? 'bg-rose-500/10 text-rose-300 border-rose-500/20 hover:bg-rose-500/20'
-                                    : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100')
-                                : (isDark
-                                    ? 'bg-[#121e15] text-slate-600 border-[#17221c] cursor-not-allowed'
-                                    : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed')
-                            }`}
-                            title="Kirim Tagihan Uang Kas"
-                            disabled={student.cashBill === 0}
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                            <span>Tagihan</span>
-                          </button>
+                          {activeMenu !== 'tabungan' && (
+                            <button
+                              onClick={() => {
+                                if (student.cashBill === 0) {
+                                  toast.warning('Siswa sudah lunas, tidak perlu dikirimi email tagihan.');
+                                  return;
+                                }
+                                onSendCashBillEmail(student.nisn, 'Uang Kas');
+                                toast.success(`Email tagihan berhasil disimulasikan untuk dikirim ke ${student.parentEmail}`);
+                              }}
+                              className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
+                                student.cashBill > 0
+                                  ? (isDark 
+                                      ? 'bg-rose-500/10 text-rose-300 border-rose-500/20 hover:bg-rose-500/20'
+                                      : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100')
+                                  : (isDark
+                                      ? 'bg-[#121e15] text-slate-600 border-[#17221c] cursor-not-allowed'
+                                      : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed')
+                              }`}
+                              title="Kirim Tagihan Uang Kas"
+                              disabled={student.cashBill === 0}
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                              <span>Tagihan</span>
+                            </button>
+                          )}
 
                           {/* Send Savings Email */}
-                          <button
-                            onClick={() => {
-                              onSendCashBillEmail(student.nisn, 'Tabungan');
-                              toast.success(`Email laporan tabungan disimulasikan untuk dikirim ke ${student.parentEmail}`);
-                            }}
-                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
-                              isDark
-                                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                            }`}
-                            title="Kirim Laporan Tabungan"
-                          >
-                            <Mail className="w-3.5 h-3.5" />
-                            <span>Tabungan</span>
-                          </button>
+                          {activeMenu !== 'uang-kas' && (
+                            <button
+                              onClick={() => {
+                                onSendCashBillEmail(student.nisn, 'Tabungan');
+                                toast.success(`Email laporan tabungan disimulasikan untuk dikirim ke ${student.parentEmail}`);
+                              }}
+                              className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition cursor-pointer ${
+                                isDark
+                                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              }`}
+                              title="Kirim Laporan Tabungan"
+                            >
+                              <Mail className="w-3.5 h-3.5" />
+                              <span>Tabungan</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     )}
@@ -1024,51 +1070,57 @@ export default function UangKasSec({
                       <td className="p-4">
                         <div className="flex justify-center items-center gap-2">
                           {/* Pay Cash Bill Button */}
-                          <button
-                            onClick={() => openModal(student, 'pay_bill')}
-                            className={`p-1.5 rounded-lg border transition flex items-center gap-1 font-bold text-[10px] uppercase cursor-pointer ${
-                              isDark
-                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20'
-                                : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 shadow-[1px_1px_2px_#cbd5ce]'
-                            }`}
-                            title="Bayar Uang Kas"
-                          >
-                            <CreditCard className="w-3.5 h-3.5" />
-                            <span>Bayar Kas</span>
-                          </button>
+                          {activeMenu !== 'tabungan' && (
+                            <button
+                              onClick={() => openModal(student, 'pay_bill')}
+                              className={`p-1.5 rounded-lg border transition flex items-center gap-1 font-bold text-[10px] uppercase cursor-pointer ${
+                                isDark
+                                  ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500/20'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 shadow-[1px_1px_2px_#cbd5ce]'
+                              }`}
+                              title="Bayar Uang Kas"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>Bayar Kas</span>
+                            </button>
+                          )}
 
                           {/* Deposit Savings */}
-                          <button
-                            onClick={() => openModal(student, 'deposit_savings')}
-                            className={`p-1.5 rounded-lg border transition flex items-center gap-1 font-bold text-[10px] uppercase cursor-pointer ${
-                              isDark
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 shadow-[1px_1px_2px_#cbd5ce]'
-                            }`}
-                            title="Setor Tabungan"
-                          >
-                            <ArrowUpRight className="w-3.5 h-3.5" />
-                            <span>Setor</span>
-                          </button>
+                          {activeMenu !== 'uang-kas' && (
+                            <button
+                              onClick={() => openModal(student, 'deposit_savings')}
+                              className={`p-1.5 rounded-lg border transition flex items-center gap-1 font-bold text-[10px] uppercase cursor-pointer ${
+                                isDark
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 shadow-[1px_1px_2px_#cbd5ce]'
+                              }`}
+                              title="Setor Tabungan"
+                            >
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                              <span>Setor</span>
+                            </button>
+                          )}
 
                           {/* Withdraw Savings */}
-                          <button
-                            onClick={() => openModal(student, 'withdraw_savings')}
-                            className={`p-1.5 rounded-lg border transition flex items-center gap-1 font-bold text-[10px] uppercase cursor-pointer ${
-                              student.savings > 0
-                                ? (isDark
-                                    ? 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-white'
-                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100')
-                                : (isDark
-                                    ? 'bg-slate-950 text-slate-600 border-slate-800 cursor-not-allowed'
-                                    : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed')
-                            }`}
-                            title="Tarik Tabungan"
-                            disabled={student.savings === 0}
-                          >
-                            <ArrowDownLeft className="w-3.5 h-3.5" />
-                            <span>Tarik</span>
-                          </button>
+                          {activeMenu !== 'uang-kas' && (
+                            <button
+                              onClick={() => openModal(student, 'withdraw_savings')}
+                              className={`p-1.5 rounded-lg border transition flex items-center gap-1 font-bold text-[10px] uppercase cursor-pointer ${
+                                student.savings > 0
+                                  ? (isDark
+                                      ? 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-white'
+                                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100')
+                                  : (isDark
+                                      ? 'bg-slate-950 text-slate-600 border-slate-800 cursor-not-allowed'
+                                      : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed')
+                              }`}
+                              title="Tarik Tabungan"
+                              disabled={student.savings === 0}
+                            >
+                              <ArrowDownLeft className="w-3.5 h-3.5" />
+                              <span>Tarik</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     )}
