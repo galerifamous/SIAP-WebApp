@@ -156,8 +156,12 @@ const dbPath = (process.env.VERCEL || process.env.NETLIFY)
   ? path.join('/tmp', 'database.json')
   : baseDbPath;
 
+let cachedDb: any = null;
+
 // Load database safely with .bak recovery support
 const loadDb = () => {
+  if (cachedDb) return cachedDb;
+
   const bakDbPath = dbPath + '.bak';
 
   if ((process.env.VERCEL || process.env.NETLIFY) && !fs.existsSync(dbPath) && fs.existsSync(baseDbPath)) {
@@ -185,7 +189,10 @@ const loadDb = () => {
 
   // 1. Try reading the primary database file
   let parsed = tryParseFile(dbPath);
-  if (parsed) return parsed;
+  if (parsed) {
+    cachedDb = parsed;
+    return parsed;
+  }
 
   // 2. If primary failed, try reading the backup .bak file
   parsed = tryParseFile(bakDbPath);
@@ -197,13 +204,17 @@ const loadDb = () => {
     } catch (e) {
       console.error("Failed to restore primary db file from backup:", e);
     }
+    cachedDb = parsed;
     return parsed;
   }
 
   // 3. Fallback to base database if dbPath is different
   if (dbPath !== baseDbPath) {
     parsed = tryParseFile(baseDbPath);
-    if (parsed) return parsed;
+    if (parsed) {
+      cachedDb = parsed;
+      return parsed;
+    }
   }
 
   return null;
@@ -211,6 +222,7 @@ const loadDb = () => {
 
 // Save database safely using atomic writes and maintaining a backup
 const saveDb = (data: any) => {
+  cachedDb = data;
   const bakDbPath = dbPath + '.bak';
   const tempPath = dbPath + '.tmp';
 
@@ -461,38 +473,68 @@ async function syncCollection(supabase: any, colName: string, list: any[] | unde
 
     const currentIds = new Set(list.map(getId).filter(id => id !== undefined && id !== null && id !== ''));
 
-    for (let i = 0; i < list.length; i += 5) {
-      const batch = list.slice(i, i + 5);
-      await Promise.all(batch.map(async (item) => {
+    // Process photo conversions concurrently first if students
+    if (colName === "students") {
+      await Promise.all(list.map(async (item) => {
         const id = getId(item);
-        if (!id) return;
-
-        let finalItem = { ...item };
-        if (colName === "students" && item.photoUrl && item.photoUrl.length > 200000) {
+        if (id && item.photoUrl && item.photoUrl.length > 200000) {
           await saveLargeField(supabase, { col: "student_photos", id }, item.photoUrl);
-          finalItem.photoUrl = "__EXTERNAL_FIRESTORE_PHOTO__";
         }
-
-        const existingItem = existingMap.get(id);
-        if (existingItem) {
-          if (objectsAreEqual(finalItem, existingItem)) {
-            return;
-          }
-        }
-
-        await writeDocument(supabase, colName, id, finalItem);
       }));
     }
 
+    // Build the bulk upsert array
+    const upsertRows: any[] = [];
+    list.forEach(item => {
+      const id = getId(item);
+      if (!id) return;
+
+      let finalItem = { ...item };
+      if (colName === "students" && item.photoUrl && item.photoUrl.length > 200000) {
+        finalItem.photoUrl = "__EXTERNAL_FIRESTORE_PHOTO__";
+      }
+
+      const existingItem = existingMap.get(id);
+      if (existingItem && objectsAreEqual(finalItem, existingItem)) {
+        return;
+      }
+
+      upsertRows.push({
+        collection: colName,
+        id: id,
+        data: finalItem,
+        updated_at: new Date().toISOString()
+      });
+    });
+
+    // Execute bulk upsert in a single highly-efficient request
+    if (upsertRows.length > 0) {
+      console.log(`[Supabase Sync] Bulk upserting ${upsertRows.length} rows to '${colName}'...`);
+      const { error } = await supabase
+        .from('siap_store')
+        .upsert(upsertRows);
+      if (error) {
+        console.error(`[Supabase syncCollection] Bulk upsert error for ${colName}:`, error);
+        throw error;
+      }
+    }
+
+    // Process bulk deletes in a single highly-efficient request
     const deleteIds = Array.from(existingIds).filter(id => !currentIds.has(id));
-    for (let i = 0; i < deleteIds.length; i += 5) {
-      const batch = deleteIds.slice(i, i + 5);
-      await Promise.all(batch.map(async (id) => {
-        await deleteDocument(supabase, colName, id);
-        if (colName === "students") {
-          await deleteLargeField(supabase, "student_photos", id);
-        }
-      }));
+    if (deleteIds.length > 0) {
+      console.log(`[Supabase Sync] Bulk deleting ${deleteIds.length} rows from '${colName}'...`);
+      const { error } = await supabase
+        .from('siap_store')
+        .delete()
+        .eq('collection', colName)
+        .in('id', deleteIds);
+      if (error) {
+        console.error(`[Supabase syncCollection] Bulk delete error for ${colName}:`, error);
+        throw error;
+      }
+      if (colName === "students") {
+        await Promise.all(deleteIds.map(id => deleteLargeField(supabase, "student_photos", id)));
+      }
     }
   } catch (err) {
     console.error(`Error syncing collection ${colName}:`, err);
@@ -501,52 +543,67 @@ async function syncCollection(supabase: any, colName: string, list: any[] | unde
 
 async function saveToSupabase(supabase: any, payload: any) {
   try {
-    await syncCollection(supabase, "students", payload.siap_students, item => item.nisn);
-    await syncCollection(supabase, "teachers", payload.siap_teachers, item => item.nuptk);
-    await syncCollection(supabase, "attendance", payload.siap_attendance, item => item.id);
-    await syncCollection(supabase, "grades", payload.siap_grades, item => item.id);
-    await syncCollection(supabase, "cases", payload.siap_cases, item => item.id);
-    await syncCollection(supabase, "achievements", payload.siap_achievements, item => item.id);
-    await syncCollection(supabase, "emails", payload.siap_emails, item => item.id);
-    await syncCollection(supabase, "holidays", payload.siap_holidays, item => item.id);
-    await syncCollection(supabase, "class_staffs", payload.siap_class_staffs, item => item.classId);
+    // Run all collection sync operations in parallel
+    await Promise.all([
+      syncCollection(supabase, "students", payload.siap_students, item => item.nisn),
+      syncCollection(supabase, "teachers", payload.siap_teachers, item => item.nuptk),
+      syncCollection(supabase, "attendance", payload.siap_attendance, item => item.id),
+      syncCollection(supabase, "grades", payload.siap_grades, item => item.id),
+      syncCollection(supabase, "cases", payload.siap_cases, item => item.id),
+      syncCollection(supabase, "achievements", payload.siap_achievements, item => item.id),
+      syncCollection(supabase, "emails", payload.siap_emails, item => item.id),
+      syncCollection(supabase, "holidays", payload.siap_holidays, item => item.id),
+      syncCollection(supabase, "class_staffs", payload.siap_class_staffs, item => item.classId),
+    ]);
 
     const existingSettings = await loadSettings(supabase).catch(() => ({}));
+
+    const settingsPromises: Promise<any>[] = [];
 
     if (payload.siap_academic) {
       const existingAcademic = existingSettings["academic"];
       if (!existingAcademic || !objectsAreEqual(payload.siap_academic, existingAcademic)) {
-        await writeDocument(supabase, "settings", "academic", payload.siap_academic);
+        settingsPromises.push(writeDocument(supabase, "settings", "academic", payload.siap_academic));
       }
     }
     if (payload.siap_system) {
       const systemDoc = { ...payload.siap_system };
       const systemLogo = systemDoc.logoUrl || "";
       if (systemLogo && systemLogo !== "__EXTERNAL_FIRESTORE_LOGO__") {
-        await saveLargeField(supabase, { col: "settings", id: "logo" }, systemLogo);
-        systemDoc.logoUrl = "__EXTERNAL_FIRESTORE_LOGO__";
-      }
-      const existingSystem = existingSettings["system"];
-      if (!existingSystem || !objectsAreEqual(systemDoc, existingSystem)) {
-        await writeDocument(supabase, "settings", "system", systemDoc);
+        settingsPromises.push(
+          saveLargeField(supabase, { col: "settings", id: "logo" }, systemLogo)
+            .then(() => {
+              systemDoc.logoUrl = "__EXTERNAL_FIRESTORE_LOGO__";
+              return writeDocument(supabase, "settings", "system", systemDoc);
+            })
+        );
+      } else {
+        const existingSystem = existingSettings["system"];
+        if (!existingSystem || !objectsAreEqual(systemDoc, existingSystem)) {
+          settingsPromises.push(writeDocument(supabase, "settings", "system", systemDoc));
+        }
       }
     }
     const metaDoc = { siap_gas_url: payload.siap_gas_url || "" };
     const existingMeta = existingSettings["meta"];
     if (!existingMeta || !objectsAreEqual(metaDoc, existingMeta)) {
-      await writeDocument(supabase, "settings", "meta", metaDoc);
+      settingsPromises.push(writeDocument(supabase, "settings", "meta", metaDoc));
     }
 
     const currentSignature = payload.siap_card_signature_img || "";
     const existingSignature = await loadLargeField(supabase, "settings", "signature").catch(() => "");
     if (currentSignature !== existingSignature) {
-      await saveLargeField(supabase, { col: "settings", id: "signature" }, currentSignature);
+      settingsPromises.push(saveLargeField(supabase, { col: "settings", id: "signature" }, currentSignature));
     }
 
     const currentStamp = payload.siap_card_stamp_img || "";
     const existingStamp = await loadLargeField(supabase, "settings", "stamp").catch(() => "");
     if (currentStamp !== existingStamp) {
-      await saveLargeField(supabase, { col: "settings", id: "stamp" }, currentStamp);
+      settingsPromises.push(saveLargeField(supabase, { col: "settings", id: "stamp" }, currentStamp));
+    }
+
+    if (settingsPromises.length > 0) {
+      await Promise.all(settingsPromises);
     }
   } catch (err) {
     console.error("Error saving state to Supabase:", err);
