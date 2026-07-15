@@ -96,6 +96,8 @@ export default function NilaiSec({
     ? teachers.find(t => t.nuptk === currentUser?.id || t.username === currentUser?.username)
     : undefined;
 
+  const showClassFilter = role === 'ADMIN' || (role === 'GURU' && loggedTeacher?.dutyType === 'GURU_MAPEL');
+
   const waliClasses = (loggedTeacher && classStaffs)
     ? classStaffs.filter(cs => cs.waliKelasNuptk === loggedTeacher.nuptk).map(cs => cs.classId)
     : [];
@@ -1217,7 +1219,7 @@ export default function NilaiSec({
                 </div>
 
                 {/* Class selector filter */}
-                {role !== 'GURU' && (
+                {showClassFilter && (
                   <div className="flex items-center gap-2">
                     <Filter className="w-4 h-4 text-slate-500" />
                     <select

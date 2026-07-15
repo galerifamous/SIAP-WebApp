@@ -16,17 +16,32 @@ import {
   HelpCircle,
   ExternalLink
 } from 'lucide-react';
-import { Student } from '../types';
+import { Student, Teacher, User as UserType } from '../types';
 
 interface QrCodeSecProps {
   students: Student[];
   availableClasses: string[];
   schoolName: string;
+  role: 'ADMIN' | 'GURU' | 'SISWA';
+  teachers?: Teacher[];
+  currentUser?: UserType;
 }
 
-export default function QrCodeSec({ students, availableClasses, schoolName }: QrCodeSecProps) {
+export default function QrCodeSec({ 
+  students, 
+  availableClasses, 
+  schoolName,
+  role,
+  teachers,
+  currentUser
+}: QrCodeSecProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('');
+
+  const loggedTeacher = (role === 'GURU' && teachers && currentUser)
+    ? teachers.find(t => t.nuptk === currentUser?.id || t.username === currentUser?.username)
+    : undefined;
+  const showClassFilter = role === 'ADMIN' || (role === 'GURU' && loggedTeacher?.dutyType === 'GURU_MAPEL');
 
   // Filter students
   const filteredStudents = students.filter(student => {
@@ -170,21 +185,23 @@ export default function QrCodeSec({ students, availableClasses, schoolName }: Qr
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="text-slate-500 text-xs font-semibold flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5" /> Filter Kelas:
+        {showClassFilter && (
+          <div className="flex items-center gap-2">
+            <div className="text-slate-500 text-xs font-semibold flex items-center gap-1">
+              <Filter className="w-3.5 h-3.5" /> Filter Kelas:
+            </div>
+            <select
+              value={classFilter}
+              onChange={(e) => setClassFilter(e.target.value)}
+              className="bg-slate-950/40 border border-slate-800 rounded-xl py-2 px-4 text-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-500/80"
+            >
+              <option value="">Semua Kelas</option>
+              {availableClasses.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
-          <select
-            value={classFilter}
-            onChange={(e) => setClassFilter(e.target.value)}
-            className="bg-slate-950/40 border border-slate-800 rounded-xl py-2 px-4 text-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-500/80"
-          >
-            <option value="">Semua Kelas</option>
-            {availableClasses.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
+        )}
       </div>
 
       {/* QR Code Grid */}

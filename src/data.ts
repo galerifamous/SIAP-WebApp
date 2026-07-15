@@ -130,7 +130,10 @@ export const INITIAL_ACADEMIC: AcademicSetting = {
   semesters: ['Ganjil', 'Genap'],
   subjects: ['Matematika', 'Bahasa Indonesia', 'IPA', 'IPS', 'Bahasa Inggris', 'Pendidikan Agama', 'PJOK', 'Seni Budaya'],
   classes: ['VII-A', 'VII-B', 'VIII-A', 'VIII-B', 'IX-A', 'IX-B'],
-  kkm: 75
+  kkm: 75,
+  headmaster: 'Makhfud, S.Pd.',
+  headmasterName: 'Makhfud, S.Pd.',
+  headmasterNip: '197812052005011002'
 };
 
 export const INITIAL_SYSTEM: SystemSetting = {

@@ -40,12 +40,27 @@ export function convertToCSV<T extends Record<string, any>>(
   // Dynamic system signature footer retrieved from local storage
   let schoolAddress = '';
   let headmasterName = 'Makhfud, S.Pd.';
+  let headmasterNip = '197812052005011002';
+  
+  try {
+    const acadRaw = localStorage.getItem('siap_academic');
+    if (acadRaw) {
+      const acad = JSON.parse(acadRaw);
+      if (acad.headmasterName) headmasterName = acad.headmasterName;
+      else if (acad.headmaster) headmasterName = acad.headmaster;
+      if (acad.headmasterNip) headmasterNip = acad.headmasterNip;
+    }
+  } catch (e) {}
+
   try {
     const sysRaw = localStorage.getItem('siap_system');
     if (sysRaw) {
       const sys = JSON.parse(sysRaw);
       if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
-      if (sys.headmasterName) headmasterName = sys.headmasterName;
+      const hasAcadHead = localStorage.getItem('siap_academic') && (JSON.parse(localStorage.getItem('siap_academic') || '{}').headmasterName || JSON.parse(localStorage.getItem('siap_academic') || '{}').headmaster);
+      if (!hasAcadHead && sys.headmasterName) {
+        headmasterName = sys.headmasterName;
+      }
     }
   } catch (e) {
     // ignore
@@ -109,7 +124,7 @@ export function convertToCSV<T extends Record<string, any>>(
     "",
     "",
     makeFooterRowDual(headmasterName.toUpperCase(), (resolvedWaliKelas || '........................').toUpperCase()),
-    makeFooterRowDual("NIP. 197812052005011002", "NIP. ................................")
+    makeFooterRowDual("NIP. " + headmasterNip, "NIP. ................................")
   ];
 
   return ["sep=;", headerLine, ...rows, ...footerRows].join('\n');
@@ -137,6 +152,18 @@ export function printToPDF(
   let logoUrl = '';
   let govLogoUrl = '';
   let headmasterName = 'Makhfud, S.Pd.';
+  let headmasterNip = '197812052005011002';
+  
+  try {
+    const acadRaw = localStorage.getItem('siap_academic');
+    if (acadRaw) {
+      const acad = JSON.parse(acadRaw);
+      if (acad.headmasterName) headmasterName = acad.headmasterName;
+      else if (acad.headmaster) headmasterName = acad.headmaster;
+      if (acad.headmasterNip) headmasterNip = acad.headmasterNip;
+    }
+  } catch (e) {}
+
   try {
     const sysRaw = localStorage.getItem('siap_system');
     if (sysRaw) {
@@ -144,7 +171,10 @@ export function printToPDF(
       if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
       if (sys.logoUrl) logoUrl = sys.logoUrl;
       if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
-      if (sys.headmasterName) headmasterName = sys.headmasterName;
+      const hasAcadHead = localStorage.getItem('siap_academic') && (JSON.parse(localStorage.getItem('siap_academic') || '{}').headmasterName || JSON.parse(localStorage.getItem('siap_academic') || '{}').headmaster);
+      if (!hasAcadHead && sys.headmasterName) {
+        headmasterName = sys.headmasterName;
+      }
     }
   } catch (e) {
     // ignore
@@ -524,7 +554,7 @@ export function printToPDF(
             <div style="margin-bottom: 15px; font-weight: bold; text-align: left; color: #0f172a;">Mengetahui,</div>
             <div class="sig-title" style="text-align: left;">Kepala Madrasah,</div>
             <p class="sig-name" style="text-align: left;">${headmasterName}</p>
-            <p class="sig-nip" style="text-align: left;">NIP. 197812052005011002</p>
+            <p class="sig-nip" style="text-align: left;">NIP. ${headmasterNip}</p>
           </div>
 
           <div class="signature-box" style="text-align: right;">
@@ -567,16 +597,31 @@ export function downloadToPDF(
   // Dynamic system signature footer retrieved from local storage
   let schoolAddress = '';
   let headmasterName = 'Makhfud, S.Pd.';
+  let headmasterNip = '197812052005011002';
   let logoUrl = '';
   let govLogoUrl = '';
+
+  try {
+    const acadRaw = localStorage.getItem('siap_academic');
+    if (acadRaw) {
+      const acad = JSON.parse(acadRaw);
+      if (acad.headmasterName) headmasterName = acad.headmasterName;
+      else if (acad.headmaster) headmasterName = acad.headmaster;
+      if (acad.headmasterNip) headmasterNip = acad.headmasterNip;
+    }
+  } catch (e) {}
+
   try {
     const sysRaw = localStorage.getItem('siap_system');
     if (sysRaw) {
       const sys = JSON.parse(sysRaw);
       if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
-      if (sys.headmasterName) headmasterName = sys.headmasterName;
       if (sys.logoUrl) logoUrl = sys.logoUrl;
       if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
+      const hasAcadHead = localStorage.getItem('siap_academic') && (JSON.parse(localStorage.getItem('siap_academic') || '{}').headmasterName || JSON.parse(localStorage.getItem('siap_academic') || '{}').headmaster);
+      if (!hasAcadHead && sys.headmasterName) {
+        headmasterName = sys.headmasterName;
+      }
     }
   } catch (e) {
     // ignore
@@ -698,7 +743,7 @@ export function downloadToPDF(
   doc.text('Mengetahui,', 25, sigY + 5);
   doc.text('Kepala Madrasah,', 25, sigY + 10);
   doc.text(headmasterName, 25, sigY + 30);
-  doc.text('NIP. 197812052005011002', 25, sigY + 34);
+  doc.text(`NIP. ${headmasterNip}`, 25, sigY + 34);
 
   // Save PDF directly
   doc.save(filename);

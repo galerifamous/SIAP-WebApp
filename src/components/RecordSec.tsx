@@ -21,7 +21,7 @@ import {
   BookOpen,
   X
 } from 'lucide-react';
-import { Student, CaseReport, Achievement } from '../types';
+import { Student, CaseReport, Achievement, Teacher, User as UserType } from '../types';
 import { downloadFile, convertToCSV, printToPDF, downloadToPDF } from '../utils/export';
 import * as XLSX from 'xlsx';
 
@@ -42,6 +42,8 @@ interface RecordSecProps {
   role: 'ADMIN' | 'GURU' | 'SISWA';
   studentNisn?: string;
   activeMenu?: string;
+  teachers?: Teacher[];
+  currentUser?: UserType;
 }
 
 export default function RecordSec({
@@ -60,9 +62,16 @@ export default function RecordSec({
   availableClasses,
   role,
   studentNisn,
-  activeMenu: propActiveMenu
+  activeMenu: propActiveMenu,
+  teachers,
+  currentUser
 }: RecordSecProps) {
   const activeMenu = propActiveMenu === 'prestasi' ? 'prestasi' : 'kasus';
+
+  const loggedTeacher = (role === 'GURU' && teachers && currentUser)
+    ? teachers.find(t => t.nuptk === currentUser?.id || t.username === currentUser?.username)
+    : undefined;
+  const showClassFilter = role === 'ADMIN' || (role === 'GURU' && loggedTeacher?.dutyType === 'GURU_MAPEL');
 
   // Search/Filters States
   const [searchQuery, setSearchQuery] = useState('');
@@ -425,7 +434,7 @@ export default function RecordSec({
           </div>
 
           <div className="flex items-center gap-2">
-            {role !== 'GURU' && (
+            {showClassFilter && (
               <select
                 value={classFilter}
                 onChange={(e) => setClassFilter(e.target.value)}

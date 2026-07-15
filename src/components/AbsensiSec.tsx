@@ -29,9 +29,11 @@ import {
   AlertTriangle,
   User,
   Undo,
-  SwitchCamera
+  SwitchCamera,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
-import { Student, Attendance, Holiday, Teacher, ClassStaff } from '../types';
+import { Student, Attendance, Holiday, Teacher, ClassStaff, User as UserType } from '../types';
 import { downloadFile, convertToCSV, printToPDF, downloadToPDF } from '../utils/export';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -54,6 +56,7 @@ interface AbsensiSecProps {
   onDeleteHoliday?: (id: string) => void;
   teachers?: Teacher[];
   classStaffs?: ClassStaff[];
+  currentUser?: UserType;
 }
 
 export default function AbsensiSec({
@@ -72,8 +75,14 @@ export default function AbsensiSec({
   onAddHoliday,
   onDeleteHoliday,
   teachers,
-  classStaffs
+  classStaffs,
+  currentUser
 }: AbsensiSecProps) {
+  const loggedTeacher = (role === 'GURU' && teachers && currentUser)
+    ? teachers.find(t => t.nuptk === currentUser?.id || t.username === currentUser?.username)
+    : undefined;
+  const showClassFilter = role === 'ADMIN' || (role === 'GURU' && loggedTeacher?.dutyType === 'GURU_MAPEL');
+
   const activeTab = activeMenu ? (activeMenu === 'absensi-scan' ? 'scan' : 'list') : (role === 'SISWA' ? 'list' : 'scan');
 
   // Scanner Simulator States
@@ -221,7 +230,7 @@ export default function AbsensiSec({
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
 
   // Sub tabs under the log/list view for GURU and ADMIN
-  const [subTab, setSubTab] = useState<'rekap' | 'manual' | 'holiday'>('rekap');
+  const [subTab, setSubTab] = useState<'rekap' | 'holiday'>('rekap');
 
   // Manual Classroom Matrix states
   const [manualClass, setManualClass] = useState(availableClasses[0] || '');
@@ -1258,20 +1267,7 @@ export default function AbsensiSec({
                 }`}
               >
                 <ClipboardList className="w-4 h-4" />
-                <span>Rekap Log Harian</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSubTab('manual')}
-                className={`px-4 py-2.5 border-b-2 text-xs font-bold transition flex items-center gap-2 flex-shrink-0 ${
-                  subTab === 'manual'
-                    ? 'border-emerald-500 text-emerald-400'
-                    : 'border-transparent text-slate-400 hover:text-white'
-                }`}
-              >
-                <Edit2 className="w-4 h-4" />
-                <span>Absensi Kelas Manual</span>
+                <span>Rekap Absensi Siswa</span>
               </button>
 
               <button
@@ -1291,501 +1287,297 @@ export default function AbsensiSec({
 
           {/* Render Tab Contents */}
           {subTab === 'rekap' || role === 'SISWA' ? (
-            <div className="space-y-4">
-              {/* Controls Bar */}
-              {role !== 'SISWA' && (
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="relative flex-1">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
-                      <Search className="w-4 h-4" />
-                    </span>
-                    <input
-                      type="text"
-                      placeholder="Cari absensi berdasarkan nama, NISN..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-slate-950/40 border border-slate-800 rounded-xl py-2.5 pl-10 pr-4 text-slate-300 text-xs focus:outline-none focus:border-emerald-500/80 transition-all placeholder:text-slate-600"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Date Picker Filter */}
-                    <input
-                      type="date"
-                      value={dateFilter}
-                      onChange={(e) => setDateFilter(e.target.value)}
-                      className="bg-slate-950/40 border border-slate-800 rounded-xl py-2 px-3 text-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-500/80"
-                    />
-
-                    {/* Class filter */}
-                    {role !== 'GURU' && (
-                      <select
-                        value={classFilter}
-                        onChange={(e) => setClassFilter(e.target.value)}
-                        className="bg-slate-950/40 border border-slate-800 rounded-xl py-2 px-3 text-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-500/80"
-                      >
-                        <option value="">Semua Kelas</option>
-                        {availableClasses.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                    )}
-
-                    {/* Status filter */}
+            <div className="space-y-4 animate-fadeIn">
+              {/* Interactive Month/Year/Class Filters and Exports */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-4 bg-slate-950/40 border border-slate-800 rounded-xl">
+                {showClassFilter ? (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rombel / Kelas</label>
                     <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="bg-slate-950/40 border border-slate-800 rounded-xl py-2 px-3 text-slate-300 text-xs font-semibold focus:outline-none focus:border-emerald-500/80"
+                      value={monthlyClass}
+                      onChange={(e) => setMonthlyClass(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                     >
-                      <option value="">Semua Status</option>
-                      <option value="Hadir">Hadir</option>
-                      <option value="Sakit">Sakit</option>
-                      <option value="Izin">Izin</option>
-                      <option value="Alpa">Alpa</option>
-                    </select>
-
-                    {/* Export buttons */}
-                    <button
-                      onClick={handleExportExcel}
-                      className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-emerald-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
-                      title="Unduh Rekap Harian Excel"
-                    >
-                      <FileSpreadsheet className="w-4.5 h-4.5" />
-                    </button>
-
-                    <button
-                      onClick={handleDownloadPDF}
-                      className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-sky-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
-                      title="Unduh Rekap Harian PDF (.pdf) Langsung"
-                    >
-                      <FileDown className="w-4.5 h-4.5" />
-                    </button>
-
-                    <button
-                      onClick={handleExportPDF}
-                      className="p-2.5 bg-slate-800 hover:bg-slate-700/80 text-rose-400 border border-slate-700/60 rounded-xl transition duration-150 cursor-pointer"
-                      title="Cetak Rekap Harian PDF"
-                    >
-                      <Printer className="w-4.5 h-4.5" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Monthly report card */}
-              {role !== 'SISWA' && (
-                <div className="p-5 bg-slate-950/20 border border-slate-800/80 rounded-2xl space-y-3.5">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg">
-                      <FileText className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-white text-xs uppercase tracking-wider">Unduh Rekap Absensi Bulanan</h4>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Dapatkan laporan lengkap kehadiran siswa per kelas tiap bulan</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Pilih Bulan</label>
-                      <select
-                        value={monthlyMonth}
-                        onChange={(e) => setMonthlyMonth(Number(e.target.value))}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-slate-300 font-semibold text-xs focus:outline-none focus:border-slate-700"
-                      >
-                        <option value={1}>Januari</option>
-                        <option value={2}>Februari</option>
-                        <option value={3}>Maret</option>
-                        <option value={4}>April</option>
-                        <option value={5}>Mei</option>
-                        <option value={6}>Juni</option>
-                        <option value={7}>Juli</option>
-                        <option value={8}>Agustus</option>
-                        <option value={9}>September</option>
-                        <option value={10}>Oktober</option>
-                        <option value={11}>November</option>
-                        <option value={12}>Desember</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Pilih Tahun</label>
-                      <select
-                        value={monthlyYear}
-                        onChange={(e) => setMonthlyYear(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-slate-300 font-semibold text-xs focus:outline-none focus:border-slate-700"
-                      >
-                        <option value="2025">2025</option>
-                        <option value="2026">2026</option>
-                        <option value="2027">2027</option>
-                        <option value="2028">2028</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Pilih Kelas</label>
-                      <select
-                        value={monthlyClass}
-                        onChange={(e) => setMonthlyClass(e.target.value)}
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-slate-300 font-semibold text-xs focus:outline-none focus:border-slate-700"
-                      >
-                        <option value="">Semua Kelas</option>
-                        {availableClasses.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="flex gap-1.5 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={handleExportMonthlyCSV}
-                        className="flex-1 min-w-[75px] bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-1.5 rounded-lg text-[9px] uppercase flex items-center justify-center gap-1 transition shadow-lg shadow-emerald-500/10 cursor-pointer"
-                        title="Unduh Excel (.xlsx) Rekap Bulanan"
-                      >
-                        <FileSpreadsheet className="w-3.5 h-3.5" />
-                        <span>Excel</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleDownloadMonthlyPDF}
-                        className="flex-1 min-w-[75px] bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-1.5 rounded-lg text-[9px] uppercase flex items-center justify-center gap-1 transition shadow-lg shadow-sky-500/10 cursor-pointer"
-                        title="Unduh PDF (.pdf) Rekap Bulanan Langsung"
-                      >
-                        <FileDown className="w-3.5 h-3.5" />
-                        <span>PDF</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleExportMonthlyPDF}
-                        className="flex-1 min-w-[75px] bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 rounded-lg font-bold py-1.5 text-[9px] uppercase flex items-center justify-center gap-1 transition cursor-pointer"
-                        title="Cetak Laporan Bulanan PDF / Pratinjau"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                        <span>Cetak</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Quick Record Creator for teachers manually */}
-              {role !== 'SISWA' && (
-                <div className="p-4 bg-slate-950/20 border border-slate-800/80 rounded-xl text-xs flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <h4 className="font-bold text-white uppercase tracking-wider">Pencatatan Cepat Satuan</h4>
-                    <p className="text-slate-500 mt-0.5">Catat kehadiran satu siswa secara langsung</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <select
-                      id="manual-nisn-select"
-                      className="bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-slate-300 font-semibold focus:outline-none"
-                      defaultValue=""
-                    >
-                      <option value="" disabled>Pilih Siswa...</option>
-                      {students.map(s => (
-                        <option key={s.nisn} value={s.nisn}>{s.name} ({s.class})</option>
+                      <option value="">-- Semua Kelas --</option>
+                      {availableClasses.map((cls) => (
+                        <option key={cls} value={cls}>{cls}</option>
                       ))}
                     </select>
-                    <select
-                      id="manual-status-select"
-                      className="bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-slate-300 font-semibold focus:outline-none"
-                      defaultValue="Hadir"
-                    >
-                      <option value="Hadir">Hadir</option>
-                      <option value="Sakit">Sakit</option>
-                      <option value="Izin">Izin</option>
-                      <option value="Alpa">Alpa</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const selectNisn = (document.getElementById('manual-nisn-select') as HTMLSelectElement).value;
-                        const selectStatus = (document.getElementById('manual-status-select') as HTMLSelectElement).value as any;
-                        if (!selectNisn) {
-                          toast.warning('Silakan pilih siswa terlebih dahulu.');
-                          return;
-                        }
-                        onMarkAttendance(selectNisn, selectStatus, dateFilter);
-                        toast.success(`Absensi ${selectStatus} berhasil dicatat.`);
-                      }}
-                      className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-1.5 rounded-lg transition"
-                    >
-                      Catat Kehadiran
-                    </button>
                   </div>
+                ) : role === 'SISWA' ? (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-semibold">Siswa Terpilih</label>
+                    <div className="w-full bg-slate-900 border border-slate-850 px-3.5 py-2 text-xs font-bold text-white rounded-xl">
+                      {students.find(s => s.nisn === studentNisn)?.name || 'Ananda Siswa'}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Bulan</label>
+                  <select
+                    value={monthlyMonth}
+                    onChange={(e) => setMonthlyMonth(Number(e.target.value))}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    {[
+                      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+                    ].map((name, idx) => (
+                      <option key={idx} value={idx + 1}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Tahun</label>
+                  <select
+                    value={monthlyYear}
+                    onChange={(e) => setMonthlyYear(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    {['2025', '2026', '2027', '2028'].map((yr) => (
+                      <option key={yr} value={yr}>{yr}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-end gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleExportMonthlyCSV}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-[11px] font-bold uppercase py-2.5 px-3 rounded-xl transition duration-200 cursor-pointer flex items-center justify-center gap-1 hover:shadow-md active:scale-95"
+                    title="Unduh format Excel sama persis format absensi umum"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>Excel</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportMonthlyPDF}
+                    className="flex-1 bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold uppercase py-2.5 px-3 rounded-xl transition duration-200 cursor-pointer flex items-center justify-center gap-1 hover:shadow-md active:scale-95 border border-sky-500/20"
+                    title="Cetak/Unduh format PDF landscape double-logo madrasah"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Cetak</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* SISWA ROLE PERSONAL BRIEF STATS */}
+              {role === 'SISWA' && (
+                <div className="grid grid-cols-4 gap-3 mb-5">
+                  {(() => {
+                    const studentAtts = attendance.filter(
+                      att => att.nisn === studentNisn && 
+                             att.date.startsWith(`${monthlyYear}-${String(monthlyMonth).padStart(2, '0')}`) && 
+                             att.academicYear === academicYear && 
+                             att.semester === semester
+                    );
+                    const hCount = studentAtts.filter(a => a.status === 'Hadir').length;
+                    const sCount = studentAtts.filter(a => a.status === 'Sakit').length;
+                    const iCount = studentAtts.filter(a => a.status === 'Izin').length;
+                    const aCount = studentAtts.filter(a => a.status === 'Alpa').length;
+
+                    return (
+                      <>
+                        <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-3 text-center">
+                          <span className="text-[10px] font-extrabold uppercase text-emerald-400 flex items-center justify-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Hadir (H)
+                          </span>
+                          <p className="text-xl font-extrabold text-white mt-1">{hCount}</p>
+                          <span className="text-[8px] text-slate-500">Hari</span>
+                        </div>
+                        <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-3 text-center">
+                          <span className="text-[10px] font-extrabold uppercase text-amber-500 flex items-center justify-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5" /> Sakit (S)
+                          </span>
+                          <p className="text-xl font-extrabold text-white mt-1">{sCount}</p>
+                          <span className="text-[8px] text-slate-500">Hari</span>
+                        </div>
+                        <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-3 text-center">
+                          <span className="text-[10px] font-extrabold uppercase text-cyan-400 flex items-center justify-center gap-1">
+                            <AlertCircle className="w-3.5 h-3.5" /> Izin (I)
+                          </span>
+                          <p className="text-xl font-extrabold text-white mt-1">{iCount}</p>
+                          <span className="text-[8px] text-slate-500">Hari</span>
+                        </div>
+                        <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-3 text-center">
+                          <span className="text-[10px] font-extrabold uppercase text-rose-500 flex items-center justify-center gap-1">
+                            <XCircle className="w-3.5 h-3.5" /> Alpa (A)
+                          </span>
+                          <p className="text-xl font-extrabold text-white mt-1">{aCount}</p>
+                          <span className="text-[8px] text-slate-500">Hari</span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 
-              {/* Attendance Log Table */}
-              <div className="overflow-x-auto border border-slate-800 rounded-xl bg-slate-950/10">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-950/40 text-slate-400 border-b border-slate-800 font-bold uppercase tracking-wider">
-                      <th className="p-4 w-12 text-center">No</th>
-                      <th className="p-4">NISN / Nama Siswa</th>
-                      <th className="p-4">Kelas</th>
-                      <th className="p-4">Tanggal Absen</th>
-                      <th className="p-4">Waktu Log</th>
-                      <th className="p-4">Tahun / Semester</th>
-                      <th className="p-4 text-center">Status</th>
-                      {(role === 'ADMIN' || role === 'GURU') && <th className="p-4 text-center w-28">Aksi</th>}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/60">
-                    {filteredAttendance.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} className="p-10 text-center text-slate-500 italic">
-                          {role === 'SISWA' ? 'Anda belum memiliki riwayat absensi di semester ini.' : 'Belum ada rekaman absensi terdaftar untuk kriteria filter ini.'}
-                        </td>
+              {/* Legend Banner */}
+              <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex flex-wrap items-center justify-center gap-6 text-[10px] font-bold text-slate-400">
+                <span className="uppercase text-slate-500">Simbol Tabel:</span>
+                <span className="flex items-center gap-1 text-emerald-400">
+                  <span className="font-extrabold text-xs">H</span> Hadir
+                </span>
+                <span className="flex items-center gap-1 text-amber-500">
+                  <span className="font-extrabold text-xs">S</span> Sakit
+                </span>
+                <span className="flex items-center gap-1 text-cyan-400">
+                  <span className="font-extrabold text-xs">I</span> Izin
+                </span>
+                <span className="flex items-center gap-1 text-rose-500">
+                  <span className="font-extrabold text-xs">A</span> Alpa
+                </span>
+                <span className="flex items-center gap-1 text-slate-500">
+                  <span className="font-extrabold text-xs">-</span> Belum Absen
+                </span>
+                <span className="flex items-center gap-1 text-rose-400">
+                  <span className="font-extrabold text-xs">L</span> Hari Libur / Minggu
+                </span>
+              </div>
+
+              {/* High Fidelity Interactive Rekap Table */}
+              <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/20">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-center border-collapse">
+                    <thead>
+                      {/* Row 1 Headers */}
+                      <tr className="bg-slate-900 border-b border-slate-800 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                        <th rowSpan={2} className="p-2 border-r border-slate-800 w-10 text-center">No</th>
+                        <th rowSpan={2} className="p-2 border-r border-slate-800 w-24 text-center">NISN</th>
+                        <th rowSpan={2} className="p-2 border-r border-slate-800 w-44 text-left">Nama Siswa</th>
+                        <th rowSpan={2} className="p-2 border-r border-slate-800 w-10 text-center">JK</th>
+                        <th colSpan={new Date(Number(monthlyYear), Number(monthlyMonth), 0).getDate()} className="p-2 border-b border-r border-slate-800 text-center">
+                          Tanggal ({[
+                            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+                          ][Number(monthlyMonth)-1].toUpperCase()} {monthlyYear})
+                        </th>
+                        <th colSpan={4} className="p-2 border-b border-slate-800 text-center">Jumlah</th>
                       </tr>
-                    ) : (
-                      filteredAttendance.map((att, idx) => (
-                        <tr key={att.id} className="hover:bg-slate-800/20 text-slate-300 transition duration-100">
-                          <td className="p-4 text-center font-semibold text-slate-500">{idx + 1}</td>
-                          <td className="p-4">
-                            <p className="font-bold text-white text-sm">{att.studentName}</p>
-                            <p className="text-[10px] text-slate-500 font-mono mt-0.5">NISN: {att.nisn}</p>
-                          </td>
-                          <td className="p-4">
-                            <span className="px-2 py-0.5 text-[10px] font-bold text-teal-400 bg-teal-500/10 rounded border border-teal-500/10">
-                              {att.class}
-                            </span>
-                          </td>
-                          <td className="p-4 font-semibold text-slate-300">{att.date}</td>
-                          <td className="p-4 text-slate-400 font-mono">
-                            {new Date(att.timestamp).toLocaleTimeString('id-ID')} WIB
-                          </td>
-                          <td className="p-4">
-                            <p className="text-slate-400">{att.academicYear}</p>
-                            <p className="text-[10px] text-slate-500 mt-0.5">Semester {att.semester}</p>
-                          </td>
-                          <td className="p-4 text-center">
-                            {editingRecordId === att.id ? (
-                              <select
-                                value={att.status}
-                                onChange={(e) => {
-                                  onMarkAttendance(att.nisn, e.target.value as any, att.date);
-                                  setEditingRecordId(null);
-                                }}
-                                className="bg-slate-900 border border-slate-700 text-white rounded text-xs px-2 py-1.5 focus:outline-none"
-                                onBlur={() => setEditingRecordId(null)}
-                                autoFocus
-                              >
-                                <option value="Hadir">Hadir</option>
-                                <option value="Sakit">Sakit</option>
-                                <option value="Izin">Izin</option>
-                                <option value="Alpa">Alpa</option>
-                              </select>
-                            ) : (
-                              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
-                                att.status === 'Hadir'
-                                  ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/10'
-                                  : att.status === 'Sakit'
-                                  ? 'text-amber-400 bg-amber-500/10 border-amber-500/10'
-                                  : att.status === 'Izin'
-                                  ? 'text-cyan-400 bg-cyan-500/10 border-cyan-500/10'
-                                  : 'text-rose-400 bg-rose-500/10 border-rose-500/10'
-                              }`}>
-                                {att.status}
-                              </span>
-                            )}
-                          </td>
-                          {(role === 'ADMIN' || role === 'GURU') && (
-                            <td className="p-4 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingRecordId(editingRecordId === att.id ? null : att.id)}
-                                  className="p-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg transition"
-                                  title="Edit Status"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" />
-                                </button>
-                                {role === 'ADMIN' && (
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      const confirmed = await showConfirm(`Hapus log kehadiran ${att.studentName}?`, {
-                                        title: 'Hapus Log Kehadiran',
-                                        type: 'danger'
-                                      });
-                                      if (confirmed) {
-                                        onDeleteAttendance(att.id);
-                                      }
-                                    }}
-                                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-rose-400 border border-slate-700 rounded-lg transition"
-                                    title="Hapus Log"
+                      {/* Row 2 Headers (Dates 1 to 31) */}
+                      <tr className="bg-slate-900 text-[8px] border-b border-slate-800 font-bold text-slate-500">
+                        {Array.from({ length: new Date(Number(monthlyYear), Number(monthlyMonth), 0).getDate() }).map((_, dIdx) => {
+                          const dateStr = `${monthlyYear}-${String(monthlyMonth).padStart(2, '0')}-${String(dIdx + 1).padStart(2, '0')}`;
+                          const isLibur = getHolidayInfo(dateStr);
+                          return (
+                            <th
+                              key={dIdx}
+                              className={`p-1 border-r border-slate-800/60 w-5 text-center ${
+                                isLibur ? 'text-rose-400 bg-rose-500/5' : ''
+                              }`}
+                              title={isLibur || undefined}
+                            >
+                              {dIdx + 1}
+                            </th>
+                          );
+                        })}
+                        <th className="p-1 border-r border-slate-800/60 w-5 text-center text-emerald-400 bg-emerald-500/5" title="Hadir">H</th>
+                        <th className="p-1 border-r border-slate-800/60 w-5 text-center text-amber-500 bg-amber-500/5" title="Sakit">S</th>
+                        <th className="p-1 border-r border-slate-800/60 w-5 text-center text-cyan-400 bg-cyan-500/5" title="Izin">I</th>
+                        <th className="p-1 w-5 text-center text-rose-500 bg-rose-500/5" title="Alpa">A</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-850 text-[10px]">
+                      {(() => {
+                        const shownStudents = role === 'SISWA'
+                          ? students.filter(s => s.nisn === studentNisn)
+                          : (monthlyClass ? students.filter(s => s.class === monthlyClass) : students);
+
+                        if (shownStudents.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={40} className="p-10 text-xs text-slate-500 italic">
+                                Tidak ada data siswa yang terekam.
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return shownStudents.map((student, sIdx) => {
+                          const studentAtts = attendance.filter(
+                            att => att.nisn === student.nisn && 
+                                   att.date.startsWith(`${monthlyYear}-${String(monthlyMonth).padStart(2, '0')}`) && 
+                                   att.academicYear === academicYear && 
+                                   att.semester === semester
+                          );
+
+                          let hCount = 0;
+                          let sCount = 0;
+                          let iCount = 0;
+                          let aCount = 0;
+
+                          return (
+                            <tr key={student.nisn} className="hover:bg-slate-900/40 transition-colors">
+                              <td className="p-1.5 border-r border-slate-850/60 text-slate-400 text-center font-mono">{sIdx + 1}</td>
+                              <td className="p-1.5 border-r border-slate-850/60 text-slate-300 text-center font-mono">{student.nisn}</td>
+                              <td className="p-1.5 border-r border-slate-850/60 font-bold text-slate-100 text-left truncate max-w-[150px]" title={student.name}>{student.name}</td>
+                              <td className="p-1.5 border-r border-slate-850/60 text-slate-400 text-center">{student.gender === 'Laki-laki' ? 'L' : 'P'}</td>
+                              
+                              {/* Calendar Cells 1 - 28/31 */}
+                              {Array.from({ length: new Date(Number(monthlyYear), Number(monthlyMonth), 0).getDate() }).map((_, dIdx) => {
+                                const dateStr = `${monthlyYear}-${String(monthlyMonth).padStart(2, '0')}-${String(dIdx + 1).padStart(2, '0')}`;
+                                const att = studentAtts.find(a => a.date === dateStr);
+                                const holiday = getHolidayInfo(dateStr);
+
+                                let symbol = '';
+                                let textClass = '';
+
+                                if (att) {
+                                  if (att.status === 'Hadir') {
+                                    symbol = 'H';
+                                    textClass = 'text-emerald-400 font-bold';
+                                    hCount++;
+                                  } else if (att.status === 'Sakit') {
+                                    symbol = 'S';
+                                    textClass = 'text-amber-500 font-bold';
+                                    sCount++;
+                                  } else if (att.status === 'Izin') {
+                                    symbol = 'I';
+                                    textClass = 'text-cyan-400 font-bold';
+                                    iCount++;
+                                  } else if (att.status === 'Alpa') {
+                                    symbol = 'A';
+                                    textClass = 'text-rose-500 font-bold';
+                                    aCount++;
+                                  }
+                                } else if (holiday) {
+                                  symbol = 'L';
+                                  textClass = 'text-rose-400/60 font-medium text-[8px]';
+                                } else {
+                                  symbol = '-';
+                                  textClass = 'text-slate-600';
+                                }
+
+                                return (
+                                  <td
+                                    key={dIdx}
+                                    className={`p-1 border-r border-slate-850/60 text-center text-xs ${textClass} ${
+                                      holiday ? 'bg-rose-500/5' : ''
+                                    }`}
+                                    title={holiday || undefined}
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : subTab === 'manual' ? (
-            // --- SUB-VIEW 2: ABSENSI KELAS MANUAL MATRIX ---
-            <div className="space-y-4">
-              <div className="p-5 bg-slate-950/20 border border-slate-800 rounded-2xl">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-bold text-white text-sm">Absensi Kelas Konvensional</h3>
-                    <p className="text-slate-500 text-xs mt-0.5">Pilih kelas dan tanggal untuk mengisi & mengedit absensi secara massal. Semua perubahan langsung sinkron di akun Guru Kelas, Guru Mapel, & Admin.</p>
-                  </div>
+                                    {symbol}
+                                  </td>
+                                );
+                              })}
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Class Selector */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Kelas</label>
-                      <select
-                        value={manualClass}
-                        onChange={(e) => setManualClass(e.target.value)}
-                        className="bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-3 text-slate-300 font-semibold text-xs focus:outline-none"
-                      >
-                        {availableClasses.map(c => (
-                          <option key={c} value={c}>Kelas {c}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Date Picker */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Tanggal Absen</label>
-                      <input
-                        type="date"
-                        value={manualDate}
-                        onChange={(e) => setManualDate(e.target.value)}
-                        className="bg-slate-950 border border-slate-800 rounded-lg py-1 px-3 text-slate-300 font-semibold text-xs focus:outline-none"
-                      />
-                    </div>
-                  </div>
+                              {/* Totals Columns */}
+                              <td className="p-1.5 border-r border-slate-850/60 text-center font-extrabold text-emerald-400 bg-emerald-500/5">{hCount}</td>
+                              <td className="p-1.5 border-r border-slate-850/60 text-center font-extrabold text-amber-500 bg-amber-500/5">{sCount}</td>
+                              <td className="p-1.5 border-r border-slate-850/60 text-center font-extrabold text-cyan-400 bg-cyan-500/5">{iCount}</td>
+                              <td className="p-1.5 text-center font-extrabold text-rose-500 bg-rose-500/5">{aCount}</td>
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
                 </div>
-
-                {/* Holiday Warning Banner */}
-                {getHolidayInfo(manualDate) && (
-                  <div className="mt-4 flex gap-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 p-3.5 rounded-xl text-xs animate-fadeIn">
-                    <AlertTriangle className="w-4.5 h-4.5 text-amber-400 flex-shrink-0" />
-                    <div>
-                      <p className="font-bold">Perhatian: Hari Libur Terdeteksi</p>
-                      <p className="text-amber-300/80 mt-0.5 leading-relaxed">
-                        Tanggal {manualDate} adalah {getHolidayInfo(manualDate)}. Absensi pada hari libur biasanya tidak diwajibkan. Namun Anda tetap dapat menginput jika diperlukan.
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* Students Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {students.filter(s => s.class === manualClass).length === 0 ? (
-                  <div className="col-span-full p-12 text-center text-slate-500 italic bg-slate-950/10 border border-slate-800/60 rounded-xl">
-                    Tidak ada siswa terdaftar di Kelas {manualClass || '-'}. Silakan tambahkan siswa di menu Manajemen Siswa.
-                  </div>
-                ) : (
-                  students
-                    .filter(s => s.class === manualClass)
-                    .map((student) => {
-                      // Get current record on the selected manualDate
-                      const currentRecord = attendance.find(
-                        a => a.nisn === student.nisn && a.date === manualDate
-                      );
-                      const currentStatus = currentRecord ? currentRecord.status : 'Belum Diabsen';
-
-                      return (
-                        <div
-                          key={student.nisn}
-                          className="p-4 bg-slate-950/40 border border-slate-800/80 rounded-2xl flex flex-col justify-between gap-3"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 uppercase">
-                              {student.name.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="font-bold text-white text-sm">{student.name}</p>
-                              <p className="text-[10px] text-slate-500 font-mono mt-0.5">NISN: {student.nisn} | Kelas {student.class}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-800/50">
-                            <div className="text-xs">
-                              <span className="text-slate-500">Status: </span>
-                              <span className={`font-bold uppercase ${
-                                currentStatus === 'Hadir'
-                                  ? 'text-emerald-400'
-                                  : currentStatus === 'Sakit'
-                                  ? 'text-amber-400'
-                                  : currentStatus === 'Izin'
-                                  ? 'text-cyan-400'
-                                  : currentStatus === 'Alpa'
-                                  ? 'text-rose-400'
-                                  : 'text-slate-400'
-                              }`}>
-                                {currentStatus}
-                              </span>
-                            </div>
-
-                            <div className="flex gap-1">
-                              <button
-                                type="button"
-                                onClick={() => onMarkAttendance(student.nisn, 'Hadir', manualDate)}
-                                className={`px-2.5 py-1 text-[10px] font-bold rounded transition border ${
-                                  currentStatus === 'Hadir'
-                                    ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-md shadow-emerald-500/10'
-                                    : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800'
-                                }`}
-                              >
-                                H
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => onMarkAttendance(student.nisn, 'Sakit', manualDate)}
-                                className={`px-2.5 py-1 text-[10px] font-bold rounded transition border ${
-                                  currentStatus === 'Sakit'
-                                    ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-md shadow-amber-500/10'
-                                    : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800'
-                                }`}
-                                title="Sakit"
-                              >
-                                S
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => onMarkAttendance(student.nisn, 'Izin', manualDate)}
-                                className={`px-2.5 py-1 text-[10px] font-bold rounded transition border ${
-                                  currentStatus === 'Izin'
-                                    ? 'bg-cyan-500 text-slate-950 border-cyan-500 shadow-md shadow-cyan-500/10'
-                                    : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800'
-                                }`}
-                                title="Izin"
-                              >
-                                I
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => onMarkAttendance(student.nisn, 'Alpa', manualDate)}
-                                className={`px-2.5 py-1 text-[10px] font-bold rounded transition border ${
-                                  currentStatus === 'Alpa'
-                                    ? 'bg-rose-500 text-slate-950 border-rose-500 shadow-md shadow-rose-500/10'
-                                    : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800'
-                                }`}
-                                title="Alpa"
-                              >
-                                A
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                )}
-              </div>
             </div>
           ) : (
             // --- SUB-VIEW 3: HARI LIBUR MADRASAH ---

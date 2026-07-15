@@ -500,9 +500,9 @@ export default function SettingsSec({
           {/* Active Settings Selector */}
           <div className="p-5 bg-slate-950/40 border border-slate-800 rounded-2xl">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-emerald-400" /> Penyetelan Tahun Pelajaran & Semester Aktif
+              <Calendar className="w-4 h-4 text-emerald-400" /> Penyetelan Tahun Pelajaran, Semester & Kepala Madrasah
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <label className="block text-slate-400 font-semibold mb-1.5">Tahun Pelajaran Utama</label>
                 <select
@@ -529,7 +529,7 @@ export default function SettingsSec({
               </div>
 
               <div>
-                <label className="block text-slate-400 font-semibold mb-1.5">Kriteria Ketuntasan Minimal (KKM)</label>
+                <label className="block text-slate-400 font-semibold mb-1.5">KKM Utama</label>
                 <input
                   type="number"
                   min="0"
@@ -537,6 +537,32 @@ export default function SettingsSec({
                   step="1"
                   value={academicSetting.kkm !== undefined ? academicSetting.kkm : 75}
                   onChange={(e) => onUpdateAcademic({ ...academicSetting, kkm: Number(e.target.value) })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1.5">Nama Kepala Madrasah</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Makhfud, S.Pd."
+                  value={academicSetting.headmasterName || academicSetting.headmaster || ''}
+                  onChange={(e) => onUpdateAcademic({ 
+                    ...academicSetting, 
+                    headmasterName: e.target.value,
+                    headmaster: e.target.value 
+                  })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-semibold mb-1.5">NIP Kepala Madrasah</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: 197812052005011002"
+                  value={academicSetting.headmasterNip || ''}
+                  onChange={(e) => onUpdateAcademic({ ...academicSetting, headmasterNip: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
                 />
               </div>

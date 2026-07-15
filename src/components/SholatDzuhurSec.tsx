@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import * as XLSX from 'xlsx';
-import { Student, Teacher, ClassStaff, EmailLog } from '../types';
+import { Student, Teacher, ClassStaff, EmailLog, User as UserType } from '../types';
 
 // Toast Notification System
 const showToast = (message: string, type: 'success' | 'warning' | 'info' = 'success') => {
@@ -98,6 +98,7 @@ interface SholatDzuhurSecProps {
   teachers: Teacher[];
   classStaffs: ClassStaff[];
   activeMenu?: string;
+  currentUser?: UserType;
 }
 
 export default function SholatDzuhurSec({
@@ -110,8 +111,14 @@ export default function SholatDzuhurSec({
   studentNisn,
   teachers,
   classStaffs,
-  activeMenu
+  activeMenu,
+  currentUser
 }: SholatDzuhurSecProps) {
+  const loggedTeacher = (role === 'GURU' && teachers && currentUser)
+    ? teachers.find(t => t.nuptk === currentUser?.id || t.username === currentUser?.username)
+    : undefined;
+  const showClassFilter = role === 'ADMIN' || (role === 'GURU' && loggedTeacher?.dutyType === 'GURU_MAPEL');
+
   const [activeTab, setActiveTab] = useState<'scan' | 'manual' | 'rekap'>(() => {
     if (activeMenu === 'sholat-rekap') return 'rekap';
     if (activeMenu === 'sholat-scan') return 'scan';
@@ -1190,22 +1197,24 @@ ${schoolName}`;
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pilih Rombel / Kelas</label>
-              <div className="relative">
-                <Users className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-500" />
-                <select
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-3.5 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
-                >
-                  <option value="">-- Semua Kelas --</option>
-                  {availableClasses.map((cls) => (
-                    <option key={cls} value={cls}>{cls}</option>
-                  ))}
-                </select>
+            {showClassFilter && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pilih Rombel / Kelas</label>
+                <div className="relative">
+                  <Users className="absolute left-3.5 top-2.5 w-4 h-4 text-slate-500" />
+                  <select
+                    value={selectedClass}
+                    onChange={(e) => setSelectedClass(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-3.5 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    <option value="">-- Semua Kelas --</option>
+                    {availableClasses.map((cls) => (
+                      <option key={cls} value={cls}>{cls}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cari Nama / NISN</label>

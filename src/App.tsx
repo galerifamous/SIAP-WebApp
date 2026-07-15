@@ -1475,13 +1475,11 @@ export default function App() {
       'Mengubah Profil Siswa...',
       'Menyimpan pembaharuan biodata dan data wali murid ke dalam database...'
     );
-    const activeY = academicSetting.activeYear;
     const updated = students.map(s => {
-      const year = s.academicYear || '2025/2026';
-      if (s.nisn === nisn && year === activeY) {
+      if (s.nisn === nisn) {
         return {
           ...updatedStudent,
-          academicYear: activeY // preserve key
+          academicYear: s.academicYear || academicSetting.activeYear
         };
       }
       return s;
@@ -1495,45 +1493,29 @@ export default function App() {
       'Menghapus Data Siswa...',
       'Sedang menghapus profil siswa beserta riwayat nilai, absensi, dan bimbingan konseling...'
     );
-    const activeY = academicSetting.activeYear;
     
     // 1. Delete student from students master list
-    const updated = students.filter(s => {
-      const year = s.academicYear || activeY || '2025/2026';
-      return !(s.nisn === nisn && year === activeY);
-    });
+    const updated = students.filter(s => s.nisn !== nisn);
     setStudents(updated);
     saveState('siap_students', updated);
 
     // 2. Cascade delete Attendance records
-    const updatedAttendance = attendance.filter(a => {
-      const year = a.academicYear || activeY || '2025/2026';
-      return !(a.nisn === nisn && year === activeY);
-    });
+    const updatedAttendance = attendance.filter(a => a.nisn !== nisn);
     setAttendance(updatedAttendance);
     saveState('siap_attendance', updatedAttendance);
 
     // 3. Cascade delete Grades records
-    const updatedGrades = grades.filter(g => {
-      const year = g.academicYear || activeY || '2025/2026';
-      return !(g.nisn === nisn && year === activeY);
-    });
+    const updatedGrades = grades.filter(g => g.nisn !== nisn);
     setGrades(updatedGrades);
     saveState('siap_grades', updatedGrades);
 
     // 4. Cascade delete Case reports
-    const updatedCases = cases.filter(c => {
-      const year = c.academicYear || activeY || '2025/2026';
-      return !(c.nisn === nisn && year === activeY);
-    });
+    const updatedCases = cases.filter(c => c.nisn !== nisn);
     setCases(updatedCases);
     saveState('siap_cases', updatedCases);
 
     // 5. Cascade delete Achievements
-    const updatedAchievements = achievements.filter(ac => {
-      const year = ac.academicYear || activeY || '2025/2026';
-      return !(ac.nisn === nisn && year === activeY);
-    });
+    const updatedAchievements = achievements.filter(ac => ac.nisn !== nisn);
     setAchievements(updatedAchievements);
     saveState('siap_achievements', updatedAchievements);
   };
@@ -2137,6 +2119,7 @@ export default function App() {
             role={currentUser.role}
             teachers={teachers}
             classStaffs={classStaffs}
+            currentUser={currentUser}
           />
         );
 
@@ -2177,6 +2160,7 @@ export default function App() {
             teachers={teachers}
             classStaffs={classStaffs}
             activeMenu={activeMenu}
+            currentUser={currentUser}
           />
         );
 
@@ -2224,6 +2208,8 @@ export default function App() {
             role={currentUser.role}
             studentNisn={currentUser.studentNisn}
             activeMenu={activeMenu}
+            teachers={teachers}
+            currentUser={currentUser}
           />
         );
 
@@ -2246,6 +2232,7 @@ export default function App() {
             teachers={teachers}
             classStaffs={classStaffs}
             activeMenu={activeMenu}
+            currentUser={currentUser}
           />
         );
 
@@ -2255,6 +2242,9 @@ export default function App() {
             students={displayedStudents}
             availableClasses={displayedClasses}
             schoolName={systemSetting.schoolName}
+            role={currentUser.role}
+            teachers={teachers}
+            currentUser={currentUser}
           />
         );
 
@@ -2264,6 +2254,10 @@ export default function App() {
             students={displayedStudents}
             availableClasses={displayedClasses}
             systemSetting={systemSetting}
+            role={currentUser.role}
+            teachers={teachers}
+            currentUser={currentUser}
+            academicSetting={academicSetting}
           />
         );
 

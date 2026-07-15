@@ -22,7 +22,7 @@ import {
   AlertCircle,
   HelpCircle
 } from 'lucide-react';
-import { Student, Teacher, ClassStaff } from '../types';
+import { Student, Teacher, ClassStaff, User } from '../types';
 import { downloadFile, convertToCSV, printToPDF, downloadToPDF } from '../utils/export';
 import * as XLSX from 'xlsx';
 
@@ -39,6 +39,7 @@ interface SiswaListProps {
   role: 'ADMIN' | 'GURU' | 'SISWA';
   teachers?: Teacher[];
   classStaffs?: ClassStaff[];
+  currentUser?: User;
 }
 
 export default function SiswaList({
@@ -53,7 +54,8 @@ export default function SiswaList({
   availableClasses,
   role,
   teachers,
-  classStaffs
+  classStaffs,
+  currentUser
 }: SiswaListProps) {
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
   React.useEffect(() => {
@@ -63,6 +65,13 @@ export default function SiswaList({
     window.addEventListener('theme-change', handleThemeChange);
     return () => window.removeEventListener('theme-change', handleThemeChange);
   }, []);
+
+  const loggedTeacher = (role === 'GURU' && teachers && currentUser)
+    ? teachers.find(t => t.nuptk === currentUser?.id || t.username === currentUser?.username)
+    : undefined;
+  const isGuruKelas = loggedTeacher?.dutyType === 'GURU_KELAS';
+  const showClassFilter = role === 'ADMIN' || (role === 'GURU' && loggedTeacher?.dutyType === 'GURU_MAPEL');
+  const canManageStudents = role === 'ADMIN' || isGuruKelas;
 
   // Navigation & Search State
   const [searchQuery, setSearchQuery] = useState('');
@@ -508,7 +517,7 @@ export default function SiswaList({
           <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Kelola seluruh data siswa, unggah foto, dan lakukan ekspor/impor masal</p>
         </div>
 
-        {role === 'ADMIN' && (
+        {canManageStudents && (
           <div className="flex flex-wrap gap-2.5">
             {/* Import Bulk Button */}
             <label className={`cursor-pointer font-bold text-xs py-2 px-3 rounded-xl flex items-center gap-2 transition duration-150 border ${
@@ -572,7 +581,7 @@ export default function SiswaList({
           />
         </div>
 
-        {role !== 'GURU' && (
+        {showClassFilter && (
           <div className="flex items-center gap-2">
             <div className="flex-shrink-0 text-slate-500 text-xs flex items-center gap-1 font-semibold">
               <Filter className="w-3.5 h-3.5" /> Filter Kelas:
@@ -649,13 +658,13 @@ export default function SiswaList({
               <th className="p-4">Jenis Kelamin</th>
               <th className="p-4">TTL</th>
               <th className="p-4">Orangtua / Wali</th>
-              {role === 'ADMIN' && <th className="p-4 text-center w-24">Aksi</th>}
+              {canManageStudents && <th className="p-4 text-center w-24">Aksi</th>}
             </tr>
           </thead>
           <tbody className={`divide-y transition ${isDark ? 'divide-slate-800/60' : 'divide-[#cbd5ce]/50'}`}>
             {filteredStudents.length === 0 ? (
               <tr>
-                <td colSpan={role === 'ADMIN' ? 7 : 6} className="p-10 text-center text-slate-500 italic">
+                <td colSpan={canManageStudents ? 7 : 6} className="p-10 text-center text-slate-500 italic">
                   Data siswa tidak ditemukan atau database masih kosong.
                 </td>
               </tr>
@@ -702,7 +711,7 @@ export default function SiswaList({
                       {student.parentEmail}
                     </p>
                   </td>
-                  {role === 'ADMIN' && (
+                  {canManageStudents && (
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-1.5">
                         <button

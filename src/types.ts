@@ -123,6 +123,9 @@ export interface AcademicSetting {
   classes: string[];
   subjectExclusions?: { className: string; subject: string }[];
   kkm?: number;
+  headmaster?: string;
+  headmasterName?: string;
+  headmasterNip?: string;
 }
 
 export interface SystemSetting {

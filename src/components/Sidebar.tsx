@@ -341,7 +341,7 @@ export default function Sidebar({
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('absensi-siswa')}`}
                     >
                       <ClipboardList className="w-3.5 h-3.5" />
-                      <span>Absensi Siswa</span>
+                      <span>Rekap Absensi Siswa</span>
                     </button>
                   </div>
                 )}
@@ -353,7 +353,7 @@ export default function Sidebar({
               >
                 <div className="flex items-center gap-3">
                   <CalendarCheck className="w-4.5 h-4.5" />
-                  <span>Absensi Siswa</span>
+                  <span>Rekap Absensi Siswa</span>
                 </div>
               </button>
             )}
@@ -367,7 +367,7 @@ export default function Sidebar({
                   className={getHeaderItemClass('sholat')}
                 >
                   <div className="flex items-center gap-3">
-                    <CalendarCheck className="w-4.5 h-4.5 text-emerald-400" />
+                    <CalendarCheck className="w-4.5 h-4.5" />
                     <span>Absen Sholat Dzuhur</span>
                   </div>
                   {expandedMenus.sholat ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -379,7 +379,7 @@ export default function Sidebar({
                       onClick={() => handleMenuClick('sholat-scan')}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('sholat-scan')}`}
                     >
-                      <QrCode className="w-3.5 h-3.5 text-emerald-400" />
+                      <QrCode className="w-3.5 h-3.5" />
                       <span>Scan & Absen Sholat</span>
                     </button>
                     <button
@@ -387,7 +387,7 @@ export default function Sidebar({
                       onClick={() => handleMenuClick('sholat-rekap')}
                       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 ${getSubmenuItemClass('sholat-rekap')}`}
                     >
-                      <ClipboardList className="w-3.5 h-3.5 text-emerald-400" />
+                      <ClipboardList className="w-3.5 h-3.5" />
                       <span>Rekap Absen Sholat</span>
                     </button>
                   </div>
@@ -400,7 +400,7 @@ export default function Sidebar({
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${getMenuItemClass('sholat-rekap')}`}
               >
                 <div className="flex items-center gap-3">
-                  <CalendarCheck className="w-4.5 h-4.5 text-emerald-400" />
+                  <CalendarCheck className="w-4.5 h-4.5" />
                   <span>Absen Sholat Dzuhur</span>
                 </div>
               </button>
