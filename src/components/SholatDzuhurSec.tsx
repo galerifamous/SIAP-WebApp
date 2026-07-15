@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Student, Teacher, ClassStaff, EmailLog, User as UserType } from '../types';
 
 // Toast Notification System
@@ -603,6 +605,227 @@ ${schoolName}`;
     XLSX.utils.book_append_sheet(wb, ws, 'Absen Sholat Dzuhur');
     XLSX.writeFile(wb, `Rekap_Sholat_Dzuhur_${rekapClass || 'Semua'}_${monthName}_${rekapYear}.xlsx`);
     showToast('Rekap data sholat dalam bentuk Excel berhasil diunduh.', 'success');
+  };
+
+  // Direct PDF Download (high fidelity landscape PDF file download via jsPDF & autoTable)
+  const handleDownloadSholatPDF = () => {
+    const yearNum = Number(rekapYear);
+    const monthNum = Number(rekapMonth);
+    const daysInMonth = new Date(yearNum, monthNum, 0).getDate();
+    const targetPrefix = `${rekapYear}-${String(rekapMonth).padStart(2, '0')}`;
+    const targetStudents = rekapClass 
+      ? students.filter(s => s.class === rekapClass)
+      : students;
+
+    const monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    const monthName = monthNames[monthNum - 1];
+
+    let schoolAddress = '';
+    let logoUrl = '';
+    let govLogoUrl = '';
+    let headmasterName = 'Makhfud, S.Pd.';
+    let headmasterNip = '197812052005011002';
+    try {
+      const sysRaw = localStorage.getItem('siap_system');
+      if (sysRaw) {
+        const sys = JSON.parse(sysRaw);
+        if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
+        if (sys.logoUrl) logoUrl = sys.logoUrl;
+        if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
+        if (sys.headmasterName) headmasterName = sys.headmasterName;
+        if (sys.headmasterNip) headmasterNip = sys.headmasterNip;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    let cityName = 'Indonesia';
+    if (schoolAddress) {
+      const parts = schoolAddress.split(',');
+      if (parts.length > 1) {
+        cityName = parts[parts.length - 2].trim().replace(/Kec\.|Kab\.|Kota/g, '').trim();
+      } else if (parts.length > 0) {
+        cityName = parts[0].trim();
+      }
+    }
+    if (!cityName || cityName.length > 20) {
+      cityName = 'Kota Sekolah';
+    }
+
+    const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    let waliKelasName = '';
+    if (rekapClass && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === rekapClass);
+      if (staff) {
+        const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
+        if (teacher) {
+          waliKelasName = teacher.name;
+        }
+      }
+    }
+
+    const doc = new jsPDF('l', 'mm', 'a4');
+
+    // Ministry logo left
+    if (govLogoUrl) {
+      try {
+        doc.addImage(govLogoUrl, 'PNG', 15, 10, 18, 18);
+      } catch (e) {
+        console.error("Error adding gov logo to PDF:", e);
+      }
+    }
+    // School logo right
+    if (logoUrl) {
+      try {
+        doc.addImage(logoUrl, 'PNG', 264, 10, 18, 18);
+      } catch (e) {
+        console.error("Error adding school logo to PDF:", e);
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('KEMENTERIAN AGAMA REPUBLIK INDONESIA', 148, 14, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.text(schoolName || 'MADRASAH TSANAWIYAH', 148, 20, { align: 'center' });
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    if (schoolAddress) {
+      const wrappedAddress = doc.splitTextToSize(schoolAddress, 220);
+      doc.text(wrappedAddress, 148, 24, { align: 'center' });
+    }
+
+    // Double lines
+    doc.setLineWidth(0.8);
+    doc.line(15, 29, 282, 29);
+    doc.setLineWidth(0.2);
+    doc.line(15, 30, 282, 30);
+
+    // Title Section
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(`REKAPITULASI ABSENSI SHOLAT DZUHUR BERJAMA'AH SISWA`, 148, 36, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(`Bulan: ${monthName} ${rekapYear} | Kelas: ${rekapClass || 'Semua Kelas'} | Semester: ${semester} | TP: ${academicYear}`, 148, 41, { align: 'center' });
+
+    // Rows data
+    const bodyRows = targetStudents.map((student, idx) => {
+      const studentAtts = sholatAttendance.filter(
+        att => att.nisn === student.nisn && att.date.startsWith(targetPrefix) && att.academicYear === academicYear && att.semester === semester
+      );
+
+      let hCount = 0;
+      let iCount = 0;
+      let bCount = 0;
+
+      const dailyStatuses = [];
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateStr = `${targetPrefix}-${String(d).padStart(2, '0')}`;
+        const att = studentAtts.find(a => a.date === dateStr);
+        let char = '';
+        if (att) {
+          if (att.status === 'Hadir') { char = 'H'; hCount++; }
+          else if (att.status === 'Izin') { char = 'I'; iCount++; }
+          else if (att.status === 'Bolos') { char = 'B'; bCount++; }
+        }
+        dailyStatuses.push(char);
+      }
+
+      return [
+        String(idx + 1),
+        student.nisn,
+        student.name,
+        student.gender === 'Laki-laki' ? 'L' : 'P',
+        ...dailyStatuses,
+        String(hCount),
+        String(iCount),
+        String(bCount)
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 46,
+      head: [['No', 'NISN', 'Nama Siswa', 'JK', ...Array.from({ length: daysInMonth }, (_, i) => String(i + 1)), 'H', 'I', 'B']],
+      body: bodyRows,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42], fontSize: 6.5, fontStyle: 'bold', halign: 'center', valign: 'middle' },
+      bodyStyles: { fontSize: 6.5, cellPadding: 1, textColor: [30, 41, 59] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 15, right: 15 },
+      columnStyles: {
+        0: { cellWidth: 7, halign: 'center' }, // No
+        1: { cellWidth: 16, halign: 'center' }, // NISN
+        2: { cellWidth: 36 }, // Nama
+        3: { cellWidth: 6, halign: 'center' }, // JK
+      },
+      didParseCell: function (data) {
+        if (data.row.section === 'head') return;
+        const colIndex = data.column.index;
+        if (colIndex >= 4 && colIndex < 4 + daysInMonth) {
+          const dNum = colIndex - 3;
+          const dateObj = new Date(yearNum, monthNum - 1, dNum);
+          const isSunday = dateObj.getDay() === 0;
+          if (isSunday) {
+            data.cell.styles.fillColor = [254, 226, 226]; // fee2e2 light red
+          }
+          if (data.cell.text[0] === 'H') {
+            data.cell.styles.textColor = [16, 185, 129]; // emerald
+            data.cell.styles.fontStyle = 'bold';
+          } else if (data.cell.text[0] === 'I') {
+            data.cell.styles.textColor = [217, 119, 6]; // amber
+            data.cell.styles.fontStyle = 'bold';
+          } else if (data.cell.text[0] === 'B') {
+            data.cell.styles.textColor = [239, 68, 68]; // red
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+        if (colIndex >= 4 + daysInMonth) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.halign = 'center';
+          data.cell.styles.fillColor = [241, 245, 249]; // f1f5f9
+          if (colIndex === 4 + daysInMonth) {
+            data.cell.styles.textColor = [16, 185, 129]; // emerald
+          } else if (colIndex === 4 + daysInMonth + 1) {
+            data.cell.styles.textColor = [217, 119, 6]; // amber
+          } else if (colIndex === 4 + daysInMonth + 2) {
+            data.cell.styles.textColor = [239, 68, 68]; // red
+          }
+        }
+      }
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 12;
+    const pageHeight = doc.internal.pageSize.height;
+    let sigY = finalY;
+    if (finalY + 35 > pageHeight) {
+      doc.addPage();
+      sigY = 20;
+    }
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    
+    // Left Signature (Kepala Madrasah)
+    doc.text('Mengetahui,', 25, sigY);
+    doc.text('Kepala Madrasah,', 25, sigY + 5);
+    doc.text(headmasterName, 25, sigY + 25);
+    doc.text(`NIP. ${headmasterNip}`, 25, sigY + 29);
+
+    // Right Signature (Wali Kelas)
+    doc.text(`${cityName}, ${formattedDate}`, 215, sigY);
+    doc.text('Wali Kelas,', 215, sigY + 5);
+    doc.text(waliKelasName || '........................', 215, sigY + 25);
+    doc.text('NIP. ................................', 215, sigY + 29);
+
+    doc.save(`Rekap_Sholat_Dzuhur_${rekapClass || 'Semua'}_${monthName}_${rekapYear}.pdf`);
+    showToast('Rekap data sholat dalam bentuk PDF berhasil diunduh langsung.', 'success');
   };
 
   // HIGH FIDELITY PRINTABLE LANDSCAPE PDF - Exact same size, double logo, signature as standard attendance
@@ -1385,12 +1608,20 @@ ${schoolName}`;
                 <span>Excel</span>
               </button>
               <button
+                onClick={handleDownloadSholatPDF}
+                className="flex-1 bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold uppercase py-2 px-3 rounded-xl transition duration-200 cursor-pointer flex items-center justify-center gap-1 hover:shadow-md active:scale-95 border border-red-500/20"
+                title="Unduh format PDF landscape langsung"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>PDF</span>
+              </button>
+              <button
                 onClick={handleExportPDF}
                 className="flex-1 bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold uppercase py-2 px-3 rounded-xl transition duration-200 cursor-pointer flex items-center justify-center gap-1 hover:shadow-md active:scale-95 border border-sky-500/20"
                 title="Cetak/Unduh format PDF landscape double-logo madrasah"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>PDF / Cetak</span>
+                <span>Cetak</span>
               </button>
             </div>
           </div>

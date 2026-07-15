@@ -1342,7 +1342,7 @@ export default function AbsensiSec({
                   </select>
                 </div>
 
-                <div className="flex items-end gap-1.5">
+                <div className="flex items-end gap-1.5 col-span-1 sm:col-span-1">
                   <button
                     type="button"
                     onClick={handleExportMonthlyCSV}
@@ -1351,6 +1351,15 @@ export default function AbsensiSec({
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5" />
                     <span>Excel</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadMonthlyPDF}
+                    className="flex-1 bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold uppercase py-2.5 px-3 rounded-xl transition duration-200 cursor-pointer flex items-center justify-center gap-1 hover:shadow-md active:scale-95 border border-red-500/20"
+                    title="Unduh format PDF landscape langsung"
+                  >
+                    <FileDown className="w-3.5 h-3.5" />
+                    <span>PDF</span>
                   </button>
                   <button
                     type="button"
