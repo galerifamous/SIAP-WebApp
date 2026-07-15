@@ -81,6 +81,16 @@ export default function RecordSec({
       : '';
   });
 
+  const teacherClass = (role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS')
+    ? (loggedTeacher.assignedClass || '')
+    : '';
+
+  React.useEffect(() => {
+    if (teacherClass) {
+      setClassFilter(teacherClass);
+    }
+  }, [teacherClass]);
+
   // Add States
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedStudentNisn, setSelectedStudentNisn] = useState('');
@@ -215,8 +225,10 @@ export default function RecordSec({
         [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
         [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
         [],
-        [`LAPORAN KASUS DAN PELANGGARAN SISWA - KELAS ${classFilter || 'SEMUA KELAS'}`],
-        [`Tahun Pelajaran: ${academicYear} | Semester: ${semester}`],
+        [`LAPORAN KASUS DAN PELANGGARAN SISWA`],
+        [`Kelas: ${classFilter || 'SEMUA KELAS'}`],
+        [`Tahun Pelajaran: ${academicYear}`],
+        [`Semester: ${semester}`],
         [],
         headers
       ];
@@ -261,8 +273,10 @@ export default function RecordSec({
         [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
         [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
         [],
-        [`LAPORAN PRESTASI DAN PENGHARGAAN SISWA - KELAS ${classFilter || 'SEMUA KELAS'}`],
-        [`Tahun Pelajaran: ${academicYear} | Semester: ${semester}`],
+        [`LAPORAN PRESTASI DAN PENGHARGAAN SISWA`],
+        [`Kelas: ${classFilter || 'SEMUA KELAS'}`],
+        [`Tahun Pelajaran: ${academicYear}`],
+        [`Semester: ${semester}`],
         [],
         headers
       ];

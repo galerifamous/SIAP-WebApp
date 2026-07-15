@@ -120,11 +120,24 @@ export default function SholatDzuhurSec({
     ? teachers.find(t => t.nuptk === currentUser?.id || t.username === currentUser?.username)
     : undefined;
   const showClassFilter = role === 'ADMIN' || (role === 'GURU' && loggedTeacher?.dutyType === 'GURU_MAPEL');
+  const teacherClass = (role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS')
+    ? (loggedTeacher.assignedClass || (classStaffs ? classStaffs.find(cs => cs.waliKelasNuptk === loggedTeacher.nuptk)?.classId : '') || '')
+    : '';
 
   const [activeTab, setActiveTab] = useState<'scan' | 'manual' | 'rekap'>(() => {
     if (activeMenu === 'sholat-rekap') return 'rekap';
     if (activeMenu === 'sholat-scan') return 'scan';
     return role === 'SISWA' ? 'rekap' : 'scan';
+  });
+
+  // Load holidays list from localStorage
+  const [holidays] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem('siap_holidays');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   // Sync activeTab when activeMenu prop changes
@@ -184,6 +197,12 @@ export default function SholatDzuhurSec({
   const [rekapClass, setRekapClass] = useState(() => {
     return (availableClasses && availableClasses.length > 0) ? availableClasses[0] : '';
   });
+
+  useEffect(() => {
+    if (teacherClass) {
+      setRekapClass(teacherClass);
+    }
+  }, [teacherClass]);
 
   const scanStatusRef = useRef(scanStatus);
   useEffect(() => {
@@ -570,8 +589,11 @@ ${schoolName}`;
       [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
       [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
       [],
-      [`REKAP BULANAN ABSEN SHOLAT DZUHUR BERJAMA'AH - KELAS ${rekapClass || 'SEMUA KELAS'}`],
-      [`Bulan: ${monthName} ${rekapYear} | TP: ${academicYear} | Semester: ${semester}`],
+      [`REKAP BULANAN ABSEN SHOLAT DZUHUR BERJAMA'AH`],
+      [`Bulan: ${monthName} ${rekapYear}`],
+      [`Kelas: ${rekapClass || 'SEMUA KELAS'}`],
+      [`Tahun Pelajaran: ${academicYear}`],
+      [`Semester: ${semester}`],
       [],
     ];
 
@@ -591,14 +613,14 @@ ${schoolName}`;
     cols.push({ wch: 4 }, { wch: 4 }, { wch: 4 }); // H, I, B totals
     ws['!cols'] = cols;
 
-    // Set merges shifted by 8 header rows
+    // Set merges shifted by 11 header rows
     ws['!merges'] = [
-      { s: { r: 8, c: 0 }, e: { r: 9, c: 0 } }, // No
-      { s: { r: 8, c: 1 }, e: { r: 9, c: 1 } }, // NISN
-      { s: { r: 8, c: 2 }, e: { r: 9, c: 2 } }, // Nama Siswa
-      { s: { r: 8, c: 3 }, e: { r: 9, c: 3 } }, // JK
-      { s: { r: 8, c: 4 }, e: { r: 8, c: 4 + daysInMonth - 1 } }, // Date headers
-      { s: { r: 8, c: 4 + daysInMonth }, e: { r: 8, c: 4 + daysInMonth + 2 } } // Totals
+      { s: { r: 11, c: 0 }, e: { r: 12, c: 0 } }, // No
+      { s: { r: 11, c: 1 }, e: { r: 12, c: 1 } }, // NISN
+      { s: { r: 11, c: 2 }, e: { r: 12, c: 2 } }, // Nama Siswa
+      { s: { r: 11, c: 3 }, e: { r: 12, c: 3 } }, // JK
+      { s: { r: 11, c: 4 }, e: { r: 11, c: 4 + daysInMonth - 1 } }, // Date headers
+      { s: { r: 11, c: 4 + daysInMonth }, e: { r: 11, c: 4 + daysInMonth + 2 } } // Totals
     ];
 
     const wb = XLSX.utils.book_new();
@@ -712,8 +734,11 @@ ${schoolName}`;
     doc.setFontSize(11);
     doc.text(`REKAPITULASI ABSENSI SHOLAT DZUHUR BERJAMA'AH SISWA`, 148, 36, { align: 'center' });
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text(`Bulan: ${monthName} ${rekapYear} | Kelas: ${rekapClass || 'Semua Kelas'} | Semester: ${semester} | TP: ${academicYear}`, 148, 41, { align: 'center' });
+    doc.setFontSize(8.5);
+    doc.text(`Bulan: ${monthName} ${rekapYear}`, 15, 41);
+    doc.text(`Kelas: ${rekapClass || 'Semua Kelas'}`, 15, 45);
+    doc.text(`Tahun Pelajaran: ${academicYear}`, 148, 41);
+    doc.text(`Semester: ${semester}`, 148, 45);
 
     // Rows data
     const bodyRows = targetStudents.map((student, idx) => {
@@ -751,7 +776,7 @@ ${schoolName}`;
     });
 
     autoTable(doc, {
-      startY: 46,
+      startY: 50,
       head: [['No', 'NISN', 'Nama Siswa', 'JK', ...Array.from({ length: daysInMonth }, (_, i) => String(i + 1)), 'H', 'I', 'B']],
       body: bodyRows,
       theme: 'grid',
@@ -766,27 +791,40 @@ ${schoolName}`;
         3: { cellWidth: 6, halign: 'center' }, // JK
       },
       didParseCell: function (data) {
-        if (data.row.section === 'head') return;
         const colIndex = data.column.index;
+        const isHeader = data.row.section === 'head' || data.section === 'head';
+
         if (colIndex >= 4 && colIndex < 4 + daysInMonth) {
           const dNum = colIndex - 3;
+          const dateStr = `${targetPrefix}-${String(dNum).padStart(2, '0')}`;
           const dateObj = new Date(yearNum, monthNum - 1, dNum);
           const isSunday = dateObj.getDay() === 0;
-          if (isSunday) {
-            data.cell.styles.fillColor = [254, 226, 226]; // fee2e2 light red
+          const holiday = holidays.find(h => h.date === dateStr);
+          const isHoliday = isSunday || !!holiday;
+
+          if (isHoliday) {
+            if (isHeader) {
+              data.cell.styles.fillColor = [220, 38, 38]; // Bright red header
+              data.cell.styles.textColor = [255, 255, 255];
+            } else {
+              data.cell.styles.fillColor = [254, 226, 226]; // fee2e2 light red background
+            }
           }
-          if (data.cell.text[0] === 'H') {
-            data.cell.styles.textColor = [16, 185, 129]; // emerald
-            data.cell.styles.fontStyle = 'bold';
-          } else if (data.cell.text[0] === 'I') {
-            data.cell.styles.textColor = [217, 119, 6]; // amber
-            data.cell.styles.fontStyle = 'bold';
-          } else if (data.cell.text[0] === 'B') {
-            data.cell.styles.textColor = [239, 68, 68]; // red
-            data.cell.styles.fontStyle = 'bold';
+
+          if (!isHeader) {
+            if (data.cell.text[0] === 'H') {
+              data.cell.styles.textColor = [16, 185, 129]; // emerald
+              data.cell.styles.fontStyle = 'bold';
+            } else if (data.cell.text[0] === 'I') {
+              data.cell.styles.textColor = [217, 119, 6]; // amber
+              data.cell.styles.fontStyle = 'bold';
+            } else if (data.cell.text[0] === 'B') {
+              data.cell.styles.textColor = [239, 68, 68]; // red
+              data.cell.styles.fontStyle = 'bold';
+            }
           }
         }
-        if (colIndex >= 4 + daysInMonth) {
+        if (!isHeader && colIndex >= 4 + daysInMonth) {
           data.cell.styles.fontStyle = 'bold';
           data.cell.styles.halign = 'center';
           data.cell.styles.fillColor = [241, 245, 249]; // f1f5f9
@@ -898,9 +936,11 @@ ${schoolName}`;
 
       const dateObj = new Date(yearNum, monthNum - 1, d);
       const isSunday = dateObj.getDay() === 0;
+      const holiday = holidays.find(h => h.date === dateStr);
+      const isHoliday = isSunday || !!holiday;
 
-      // Sundays are shaded red slightly
-      const bgStyle = isSunday ? 'background-color: #fee2e2; color: #dc2626; font-weight: bold;' : '';
+      // Sundays and holidays are shaded red slightly
+      const bgStyle = isHoliday ? 'background-color: #fee2e2; color: #dc2626; font-weight: bold;' : '';
       dateSubHeadersHtml.push(
         `<th style="padding: 4px; border: 1px solid #94a3b8; text-align: center; font-size: 8px; width: 18px; ${bgStyle}">${d}</th>`
       );
@@ -918,6 +958,8 @@ ${schoolName}`;
       const cellsHtml = dateKeys.map((dateStr, dIdx) => {
         const dateObj = new Date(yearNum, monthNum - 1, dIdx + 1);
         const isSunday = dateObj.getDay() === 0;
+        const holiday = holidays.find(h => h.date === dateStr);
+        const isHoliday = isSunday || !!holiday;
 
         const att = studentAtts.find(a => a.date === dateStr);
         let statusChar = '';
@@ -941,7 +983,7 @@ ${schoolName}`;
           }
         }
 
-        const bgStyle = isSunday ? 'background-color: #fca5a5;' : '';
+        const bgStyle = isHoliday ? 'background-color: #fca5a5;' : '';
         return `<td style="padding: 4px; border: 1px solid #cbd5e1; text-align: center; ${bgStyle} ${colorClass}">${statusChar}</td>`;
       }).join('');
 
@@ -968,6 +1010,12 @@ ${schoolName}`;
             @page {
               size: A4 landscape;
               margin: 8mm 8mm 12mm 8mm;
+            }
+            @media print {
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
             }
             body {
               font-family: 'Inter', sans-serif;
@@ -1105,9 +1153,12 @@ ${schoolName}`;
             `}
           </div>
 
-          <div class="title-section">
-            <h2 class="title-main">REKAPITULASI ABSENSI SHOLAT DZUHUR BERJAMA'AH SISWA</h2>
-            <p class="title-sub">Bulan: <strong>${monthName.toUpperCase()} ${rekapYear}</strong> | Kelas: <strong>${rekapClass || 'SEMUA KELAS'}</strong> | TP: <strong>${academicYear}</strong></p>
+          <div class="title-section" style="line-height: 1.5; font-size: 10px;">
+            <h2 class="title-main" style="margin-bottom: 6px;">REKAPITULASI ABSENSI SHOLAT DZUHUR BERJAMA'AH SISWA</h2>
+            <div>Bulan: <strong>${monthName.toUpperCase()} ${rekapYear}</strong></div>
+            <div>Kelas: <strong>${rekapClass || 'SEMUA KELAS'}</strong></div>
+            <div>Tahun Pelajaran: <strong>${academicYear}</strong></div>
+            <div>Semester: <strong>${semester}</strong></div>
           </div>
 
           <table>

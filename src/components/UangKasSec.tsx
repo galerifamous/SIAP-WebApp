@@ -75,7 +75,10 @@ export default function UangKasSec({
   const loggedTeacher = (role === 'GURU' && teachers && currentUser)
     ? teachers.find(t => t.nuptk === currentUser?.id || t.username === currentUser?.username)
     : undefined;
-  const showClassFilter = role === 'ADMIN';
+  const showClassFilter = role === 'ADMIN' || (role === 'GURU' && loggedTeacher?.dutyType === 'GURU_MAPEL');
+  const teacherClass = (role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS')
+    ? (loggedTeacher.assignedClass || (classStaffs ? classStaffs.find(cs => cs.waliKelasNuptk === loggedTeacher.nuptk)?.classId : '') || '')
+    : '';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState(() => {
@@ -105,6 +108,13 @@ export default function UangKasSec({
       ? availableClasses[0]
       : (availableClasses[0] || '');
   });
+
+  useEffect(() => {
+    if (teacherClass) {
+      setClassFilter(teacherClass);
+      setMonthlyClass(teacherClass);
+    }
+  }, [teacherClass]);
 
   // Pengeluaran Kas State
   interface CashExpense {
@@ -1039,8 +1049,11 @@ export default function UangKasSec({
       [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
       [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
       [],
-      [`REKAP BULANAN ${isUangKas ? 'UANG KAS' : 'TABUNGAN'} SISWA - KELAS ${monthlyClass || 'SEMUA KELAS'}`],
-      [`Bulan: ${monthName} ${monthlyYear} | TP: ${academicYear} | Semester: ${semester}`],
+      [`REKAP BULANAN ${isUangKas ? 'UANG KAS' : 'TABUNGAN'} SISWA`],
+      [`Bulan: ${monthName} ${monthlyYear}`],
+      [`Kelas: ${monthlyClass || 'SEMUA KELAS'}`],
+      [`Tahun Pelajaran: ${academicYear}`],
+      [`Semester: ${semester}`],
       [],
     ];
 
@@ -1097,14 +1110,14 @@ export default function UangKasSec({
     }
     ws['!cols'] = cols;
 
-    // Set merges
+    // Set merges shifted by 11 header rows
     ws['!merges'] = [
-      { s: { r: 8, c: 0 }, e: { r: 9, c: 0 } }, // No
-      { s: { r: 8, c: 1 }, e: { r: 9, c: 1 } }, // NISN
-      { s: { r: 8, c: 2 }, e: { r: 9, c: 2 } }, // Nama Siswa
-      { s: { r: 8, c: 3 }, e: { r: 9, c: 3 } }, // JK
-      { s: { r: 8, c: 4 }, e: { r: 8, c: 4 + activeDatesLength - 1 } }, // Bulan dynamic
-      { s: { r: 8, c: 4 + activeDatesLength }, e: { r: 8, c: 4 + activeDatesLength + (isUangKas ? 1 : 2) } } // Jumlah columns
+      { s: { r: 11, c: 0 }, e: { r: 12, c: 0 } }, // No
+      { s: { r: 11, c: 1 }, e: { r: 12, c: 1 } }, // NISN
+      { s: { r: 11, c: 2 }, e: { r: 12, c: 2 } }, // Nama Siswa
+      { s: { r: 11, c: 3 }, e: { r: 12, c: 3 } }, // JK
+      { s: { r: 11, c: 4 }, e: { r: 11, c: 4 + activeDatesLength - 1 } }, // Bulan dynamic
+      { s: { r: 11, c: 4 + activeDatesLength }, e: { r: 11, c: 4 + activeDatesLength + (isUangKas ? 1 : 2) } } // Jumlah columns
     ];
 
     // Configure for landscape & folio/F4 size
@@ -1478,12 +1491,12 @@ export default function UangKasSec({
             ${logoUrl ? `<img class="kop-logo kop-logo-right" src="${logoUrl}" referrerPolicy="no-referrer" />` : '<div style="width: 50px;"></div>'}
           </div>
 
-          <div class="title-section">
-            <h2 class="title-main">REKAPITULASI BULANAN ${isUangKas ? 'UANG KAS' : 'TABUNGAN'} SISWA</h2>
-            <p class="title-sub">
-              Bulan: <strong>${monthName} ${monthlyYear}</strong> | Kelas: <strong>${monthlyClass || 'Semua Kelas'}</strong> | 
-              TP: <strong>${academicYear}</strong> | Semester: <strong>${semester}</strong>
-            </p>
+          <div class="title-section" style="line-height: 1.5; font-size: 10px;">
+            <h2 class="title-main" style="margin-bottom: 6px;">REKAPITULASI BULANAN ${isUangKas ? 'UANG KAS' : 'TABUNGAN'} SISWA</h2>
+            <div>Bulan: <strong>${monthName} ${monthlyYear}</strong></div>
+            <div>Kelas: <strong>${monthlyClass || 'Semua Kelas'}</strong></div>
+            <div>Tahun Pelajaran: <strong>${academicYear}</strong></div>
+            <div>Semester: <strong>${semester}</strong></div>
           </div>
 
           <table>

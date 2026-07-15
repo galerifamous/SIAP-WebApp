@@ -311,8 +311,8 @@ export function printToPDF(
 
           .meta-grid {
             display: grid;
-            grid-template-cols: 1fr 1fr;
-            gap: 15px;
+            grid-template-cols: 1fr;
+            gap: 8px;
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
@@ -680,14 +680,18 @@ export function downloadToPDF(
   let yPos = 48;
   if (academicYear || semester || classFilter) {
     doc.text(`Tahun Pelajaran : ${academicYear || '-'}`, 15, yPos);
-    doc.text(`Semester          : ${semester || '-'}`, 15, yPos + 4);
+    doc.text(`Semester          : ${semester || '-'}`, 15, yPos + 5);
     if (classFilter) {
-      doc.text(`Kelas                : ${classFilter}`, 115, yPos);
+      doc.text(`Kelas                : ${classFilter}`, 15, yPos + 10);
+    } else {
+      yPos -= 5;
     }
     if (waliKelas) {
-      doc.text(`Wali Kelas        : ${waliKelas}`, 115, yPos + 4);
+      doc.text(`Wali Kelas        : ${waliKelas}`, 15, yPos + 15);
+    } else {
+      yPos -= 5;
     }
-    yPos += 12;
+    yPos += 22;
   } else {
     doc.text(`Tanggal Unduh   : ${new Date().toLocaleDateString('id-ID')}`, 15, yPos);
     yPos += 8;

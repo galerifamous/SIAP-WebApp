@@ -398,8 +398,11 @@ export default function NilaiSec({
       [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
       [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
       [],
-      [`REKAP NILAI RAPOR SISWA - KELAS ${classFilter || 'SEMUA KELAS'}`],
-      [`Mata Pelajaran: ${subjectFilter || 'Semua'} | TP: ${academicYear} | Semester: ${semester}`],
+      [`REKAP NILAI RAPOR SISWA`],
+      [`Mata Pelajaran: ${subjectFilter || 'Semua'}`],
+      [`Kelas: ${classFilter || 'SEMUA KELAS'}`],
+      [`Tahun Pelajaran: ${academicYear}`],
+      [`Semester: ${semester}`],
       [],
     ];
 
@@ -424,16 +427,16 @@ export default function NilaiSec({
 
     ws['!cols'] = cols;
 
-    // Set merges shifted by 8 header rows
+    // Set merges shifted by 11 header rows
     ws['!merges'] = [
-      { s: { r: 8, c: 0 }, e: { r: 9, c: 0 } }, // NISN
-      { s: { r: 8, c: 1 }, e: { r: 9, c: 1 } }, // Nama Siswa
-      { s: { r: 8, c: 2 }, e: { r: 9, c: 2 } }, // JK
-      { s: { r: 8, c: 3 }, e: { r: 8, c: 3 + maxSums - 1 } }, // Subject name
-      { s: { r: 8, c: 3 + maxSums }, e: { r: 9, c: 3 + maxSums } }, // Rata-Rata SUM
-      { s: { r: 8, c: 3 + maxSums + 1 }, e: { r: 9, c: 3 + maxSums + 1 } }, // STS
-      { s: { r: 8, c: 3 + maxSums + 2 }, e: { r: 9, c: 3 + maxSums + 2 } }, // ASAS
-      { s: { r: 8, c: 3 + maxSums + 3 }, e: { r: 9, c: 3 + maxSums + 3 } }  // Rata-Rata ASAS
+      { s: { r: 11, c: 0 }, e: { r: 12, c: 0 } }, // NISN
+      { s: { r: 11, c: 1 }, e: { r: 12, c: 1 } }, // Nama Siswa
+      { s: { r: 11, c: 2 }, e: { r: 12, c: 2 } }, // JK
+      { s: { r: 11, c: 3 }, e: { r: 11, c: 3 + maxSums - 1 } }, // Subject name
+      { s: { r: 11, c: 3 + maxSums }, e: { r: 12, c: 3 + maxSums } }, // Rata-Rata SUM
+      { s: { r: 11, c: 3 + maxSums + 1 }, e: { r: 12, c: 3 + maxSums + 1 } }, // STS
+      { s: { r: 11, c: 3 + maxSums + 2 }, e: { r: 12, c: 3 + maxSums + 2 } }, // ASAS
+      { s: { r: 11, c: 3 + maxSums + 3 }, e: { r: 12, c: 3 + maxSums + 3 } }  // Rata-Rata ASAS
     ];
 
     const wb = XLSX.utils.book_new();
@@ -706,9 +709,12 @@ export default function NilaiSec({
             `}
           </div>
 
-          <div class="title-section">
-            <h2 class="title-main">DAFTAR NILAI DAN HASIL ASESMEN AKADEMIK</h2>
-            <p class="title-sub">Kelas: <strong>${classFilter || 'SEMUA KELAS'}</strong> | Mapel: <strong>${subjectFilter || 'SEMUA MAPEL'}</strong> | TP: <strong>${academicYear}</strong></p>
+          <div class="title-section" style="line-height: 1.5; font-size: 10px;">
+            <h2 class="title-main" style="margin-bottom: 6px;">DAFTAR NILAI DAN HASIL ASESMEN AKADEMIK</h2>
+            <div>Kelas: <strong>${classFilter || 'SEMUA KELAS'}</strong></div>
+            <div>Mata Pelajaran: <strong>${subjectFilter || 'SEMUA MAPEL'}</strong></div>
+            <div>Tahun Pelajaran: <strong>${academicYear}</strong></div>
+            <div>Semester: <strong>${semester}</strong></div>
           </div>
 
           <table>

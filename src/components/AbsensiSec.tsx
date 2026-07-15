@@ -82,6 +82,9 @@ export default function AbsensiSec({
     ? teachers.find(t => t.nuptk === currentUser?.id || t.username === currentUser?.username)
     : undefined;
   const showClassFilter = role === 'ADMIN' || (role === 'GURU' && loggedTeacher?.dutyType === 'GURU_MAPEL');
+  const teacherClass = (role === 'GURU' && loggedTeacher && loggedTeacher.dutyType === 'GURU_KELAS')
+    ? (loggedTeacher.assignedClass || (classStaffs ? classStaffs.find(cs => cs.waliKelasNuptk === loggedTeacher.nuptk)?.classId : '') || '')
+    : '';
 
   const activeTab = activeMenu ? (activeMenu === 'absensi-scan' ? 'scan' : 'list') : (role === 'SISWA' ? 'list' : 'scan');
 
@@ -248,6 +251,14 @@ export default function AbsensiSec({
   const [monthlyYear, setMonthlyYear] = useState(new Date().getFullYear().toString());
   const [monthlyClass, setMonthlyClass] = useState('');
 
+  React.useEffect(() => {
+    if (teacherClass) {
+      setMonthlyClass(teacherClass);
+      setClassFilter(teacherClass);
+      setManualClass(teacherClass);
+    }
+  }, [teacherClass]);
+
   // Check holiday or Sunday info
   const getHolidayInfo = (dateStr: string) => {
     if (!dateStr) return null;
@@ -353,8 +364,11 @@ export default function AbsensiSec({
       [schoolAddress || 'Alamat lengkap instansi sekolah belum disetting.'],
       [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
       [],
-      [`REKAP BULANAN PRESENSI SISWA - KELAS ${monthlyClass || 'SEMUA KELAS'}`],
-      [`Bulan: ${monthName} ${monthlyYear} | TP: ${academicYear} | Semester: ${semester}`],
+      [`REKAP BULANAN PRESENSI SISWA`],
+      [`Bulan: ${monthName} ${monthlyYear}`],
+      [`Kelas: ${monthlyClass || 'SEMUA KELAS'}`],
+      [`Tahun Pelajaran: ${academicYear}`],
+      [`Semester: ${semester}`],
       [],
     ];
 
@@ -374,14 +388,14 @@ export default function AbsensiSec({
     cols.push({ wch: 4 }, { wch: 4 }, { wch: 4 }, { wch: 4 }); // H, S, I, A count columns
     ws['!cols'] = cols;
 
-    // Set merges shifted by 8 header rows
+    // Set merges shifted by 11 header rows
     ws['!merges'] = [
-      { s: { r: 8, c: 0 }, e: { r: 9, c: 0 } }, // No
-      { s: { r: 8, c: 1 }, e: { r: 9, c: 1 } }, // NISN
-      { s: { r: 8, c: 2 }, e: { r: 9, c: 2 } }, // Nama Siswa
-      { s: { r: 8, c: 3 }, e: { r: 9, c: 3 } }, // JK
-      { s: { r: 8, c: 4 }, e: { r: 8, c: 4 + daysInMonth - 1 } }, // Bulan 1-31
-      { s: { r: 8, c: 4 + daysInMonth }, e: { r: 8, c: 4 + daysInMonth + 3 } } // Jumlah
+      { s: { r: 11, c: 0 }, e: { r: 12, c: 0 } }, // No
+      { s: { r: 11, c: 1 }, e: { r: 12, c: 1 } }, // NISN
+      { s: { r: 11, c: 2 }, e: { r: 12, c: 2 } }, // Nama Siswa
+      { s: { r: 11, c: 3 }, e: { r: 12, c: 3 } }, // JK
+      { s: { r: 11, c: 4 }, e: { r: 11, c: 4 + daysInMonth - 1 } }, // Bulan 1-31
+      { s: { r: 11, c: 4 + daysInMonth }, e: { r: 11, c: 4 + daysInMonth + 3 } } // Jumlah
     ];
 
     const wb = XLSX.utils.book_new();
@@ -527,6 +541,12 @@ export default function AbsensiSec({
               size: A4 landscape;
               margin: 8mm 8mm 12mm 8mm;
             }
+            @media print {
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+            }
             body {
               font-family: 'Inter', sans-serif;
               color: #1e293b;
@@ -663,9 +683,12 @@ export default function AbsensiSec({
             `}
           </div>
 
-          <div class="title-section">
-            <h2 class="title-main">REKAPITULASI PRESENSI BULANAN SISWA</h2>
-            <p class="title-sub">Bulan: <strong>${monthName.toUpperCase()} ${monthlyYear}</strong> | Kelas: <strong>${monthlyClass || 'SEMUA KELAS'}</strong> | TP: <strong>${academicYear}</strong></p>
+          <div class="title-section" style="line-height: 1.5; font-size: 10px;">
+            <h2 class="title-main" style="margin-bottom: 6px;">REKAPITULASI PRESENSI BULANAN SISWA</h2>
+            <div>Bulan: <strong>${monthName.toUpperCase()} ${monthlyYear}</strong></div>
+            <div>Kelas: <strong>${monthlyClass || 'SEMUA KELAS'}</strong></div>
+            <div>Tahun Pelajaran: <strong>${academicYear}</strong></div>
+            <div>Semester: <strong>${semester}</strong></div>
           </div>
 
           <table>
@@ -867,10 +890,13 @@ export default function AbsensiSec({
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.text(`Bulan: ${monthName} ${monthlyYear} | Kelas: ${monthlyClass || 'Semua Kelas'} | TP: ${academicYear} | Semester: ${semester}`, 15, 42);
+    doc.text(`Bulan: ${monthName} ${monthlyYear}`, 15, 41);
+    doc.text(`Kelas: ${monthlyClass || 'Semua Kelas'}`, 15, 45);
+    doc.text(`Tahun Pelajaran: ${academicYear}`, 148, 41);
+    doc.text(`Semester: ${semester}`, 148, 45);
 
     autoTable(doc, {
-      startY: 46,
+      startY: 50,
       head: [headers],
       body: rows,
       theme: 'grid',
@@ -881,6 +907,27 @@ export default function AbsensiSec({
       },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       margin: { left: 15, right: 15 },
+      didParseCell: (data) => {
+        const colIdx = data.column.index;
+        if (colIdx >= 4 && colIdx < 4 + daysInMonth) {
+          const d = colIdx - 4 + 1;
+          const dateStr = `${targetPrefix}-${String(d).padStart(2, '0')}`;
+          const dateObj = new Date(yearNum, monthNum - 1, d);
+          const isSunday = dateObj.getDay() === 0;
+          const holiday = holidays.find(h => h.date === dateStr);
+          const isHoliday = isSunday || !!holiday;
+          if (isHoliday) {
+            if (data.section === 'head') {
+              data.cell.styles.fillColor = [220, 38, 38]; // Bright red header
+              data.cell.styles.textColor = [255, 255, 255];
+            } else if (data.section === 'body') {
+              data.cell.styles.fillColor = [254, 226, 226]; // Light red bg
+              data.cell.styles.textColor = [185, 28, 28];   // Dark red text
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        }
+      },
     });
 
     const finalY = (doc as any).lastAutoTable.finalY + 12;
