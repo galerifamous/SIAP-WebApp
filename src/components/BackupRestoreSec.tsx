@@ -102,14 +102,32 @@ function doPost(e) {
           emailOptions.replyTo = payload.senderEmail;
         }
         
-        // Coba kirim via GmailApp agar tersimpan di folder "Sent" (Terkirim),
-        // jika gagal, otomatis gunakan MailApp sebagai fallback
+        // Coba kirim via GmailApp agar tersimpan di folder "Sent" (Terkirim).
+        // Kita coba kirim dengan parameter 'from' jika disetel dan merupakan alias Gmail Anda,
+        // jika gagal, otomatis gunakan replyTo sebagai fallback yang andal.
+        let sentViaGmail = false;
         try {
-          GmailApp.sendEmail(payload.recipient, payload.subject, payload.content, {
-            htmlBody: emailOptions.htmlBody,
-            name: emailOptions.name,
-            replyTo: emailOptions.replyTo
-          });
+          if (payload.senderEmail) {
+            try {
+              GmailApp.sendEmail(payload.recipient, payload.subject, payload.content, {
+                htmlBody: emailOptions.htmlBody,
+                name: emailOptions.name,
+                replyTo: emailOptions.replyTo,
+                from: payload.senderEmail
+              });
+              sentViaGmail = true;
+            } catch (aliasErr) {
+              // Jika email pengirim bukan alias resmi Gmail Anda, kirim dengan default dari Anda dengan replyTo
+            }
+          }
+          if (!sentViaGmail) {
+            GmailApp.sendEmail(payload.recipient, payload.subject, payload.content, {
+              htmlBody: emailOptions.htmlBody,
+              name: emailOptions.name,
+              replyTo: emailOptions.replyTo
+            });
+            sentViaGmail = true;
+          }
         } catch (gmailErr) {
           MailApp.sendEmail(emailOptions);
         }

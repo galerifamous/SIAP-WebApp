@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Student, Teacher, ClassStaff, User } from '../types';
 import { downloadFile, convertToCSV, printToPDF, downloadToPDF } from '../utils/export';
+import { resizeAndCompressImage } from '../utils/image';
 import * as XLSX from 'xlsx';
 
 interface SiswaListProps {
@@ -434,21 +435,33 @@ export default function SiswaList({
     );
   };
 
-  // Convert uploaded image to Base64
+  // Convert uploaded image to Base64 (resized & compressed)
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>, isEditing = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      if (isEditing) {
-        setEditingStudent(prev => prev ? { ...prev, photoUrl: base64String } : null);
-      } else {
-        setFormData(prev => ({ ...prev, photoUrl: base64String }));
-      }
-    };
-    reader.readAsDataURL(file);
+    resizeAndCompressImage(file)
+      .then((compressedBase64) => {
+        if (isEditing) {
+          setEditingStudent(prev => prev ? { ...prev, photoUrl: compressedBase64 } : null);
+        } else {
+          setFormData(prev => ({ ...prev, photoUrl: compressedBase64 }));
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to compress uploaded photo:", err);
+        // Fallback to raw base64 if compression fails
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          if (isEditing) {
+            setEditingStudent(prev => prev ? { ...prev, photoUrl: base64String } : null);
+          } else {
+            setFormData(prev => ({ ...prev, photoUrl: base64String }));
+          }
+        };
+        reader.readAsDataURL(file);
+      });
   };
 
   // Submit new student form

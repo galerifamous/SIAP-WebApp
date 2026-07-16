@@ -679,19 +679,28 @@ export function downloadToPDF(
   
   let yPos = 48;
   if (academicYear || semester || classFilter) {
-    doc.text(`Tahun Pelajaran : ${academicYear || '-'}`, 15, yPos);
-    doc.text(`Semester          : ${semester || '-'}`, 15, yPos + 5);
+    const monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    const currentMonthName = monthNames[new Date().getMonth()];
+    const currentYear = new Date().getFullYear();
+    const bulanStr = `${currentMonthName.toUpperCase()} ${currentYear}`;
+
+    doc.text(`Bulan               : ${bulanStr}`, 15, yPos);
+    doc.text(`Tahun Pelajaran : ${academicYear || '-'}`, 15, yPos + 5);
+    doc.text(`Semester          : ${semester || '-'}`, 15, yPos + 10);
     if (classFilter) {
-      doc.text(`Kelas                : ${classFilter}`, 15, yPos + 10);
+      doc.text(`Kelas                : ${classFilter}`, 15, yPos + 15);
     } else {
       yPos -= 5;
     }
     if (waliKelas) {
-      doc.text(`Wali Kelas        : ${waliKelas}`, 15, yPos + 15);
+      doc.text(`Wali Kelas        : ${waliKelas}`, 15, yPos + 20);
     } else {
       yPos -= 5;
     }
-    yPos += 22;
+    yPos += 27;
   } else {
     doc.text(`Tanggal Unduh   : ${new Date().toLocaleDateString('id-ID')}`, 15, yPos);
     yPos += 8;

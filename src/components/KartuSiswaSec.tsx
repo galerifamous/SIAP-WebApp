@@ -1126,7 +1126,7 @@ export default function KartuSiswaSec({
             }
             .btn-print:hover { opacity: 0.9; }
 
-            @page {
+             @page {
               size: 215mm 330mm portrait;
               margin: 0;
             }
@@ -1140,8 +1140,8 @@ export default function KartuSiswaSec({
               display: grid;
               grid-template-columns: repeat(2, 55mm);
               grid-template-rows: repeat(3, 85mm);
-              gap: 10mm 15mm;
-              padding: 25mm 30mm;
+              gap: 6mm 10mm;
+              padding: 12mm 15mm;
               justify-content: center;
               align-content: center;
               page-break-after: always;
@@ -1596,11 +1596,22 @@ export default function KartuSiswaSec({
               flex-shrink: 0;
             }
 
+            .print-container {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+
             @media print {
               body {
                 background-color: #ffffff;
                 padding: 0;
                 margin: 0;
+                display: block !important;
+              }
+              .print-container {
+                display: block !important;
+                width: auto !important;
               }
               .no-print-bar {
                 display: none;
@@ -1608,7 +1619,7 @@ export default function KartuSiswaSec({
               .f4-page {
                 page-break-after: always;
                 page-break-inside: avoid;
-                margin: 0;
+                margin: 0 auto !important; /* Center the grid on the printed page */
                 border: none;
                 box-shadow: none;
               }
@@ -1626,7 +1637,7 @@ export default function KartuSiswaSec({
             <button class="btn-print" onclick="window.print()">Mulai Cetak Kartu Massal</button>
           </div>
 
-          <div style="display: flex; flex-direction: column; align-items: center;">
+          <div class="print-container">
             ${pagesHtml}
           </div>
         </body>

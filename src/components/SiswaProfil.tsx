@@ -17,6 +17,7 @@ import {
   Clock
 } from 'lucide-react';
 import { Student } from '../types';
+import { resizeAndCompressImage } from '../utils/image';
 
 interface SiswaProfilProps {
   student: Student;
@@ -44,17 +45,28 @@ export default function SiswaProfil({ student, onUpdatePhoto, academicYear, seme
 
     setSyncStatus('syncing');
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64String = reader.result as string;
-      onUpdatePhoto(student.nisn, base64String);
-
-      setTimeout(() => {
-        setSyncStatus('success');
-        setTimeout(() => setSyncStatus('idle'), 3500);
-      }, 1200); // realistic Google Drive delay
-    };
-    reader.readAsDataURL(file);
+    resizeAndCompressImage(file)
+      .then((compressedBase64) => {
+        onUpdatePhoto(student.nisn, compressedBase64);
+        setTimeout(() => {
+          setSyncStatus('success');
+          setTimeout(() => setSyncStatus('idle'), 3500);
+        }, 1200); // realistic Google Drive delay
+      })
+      .catch((err) => {
+        console.error("Failed to compress profile photo:", err);
+        // Fallback
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result as string;
+          onUpdatePhoto(student.nisn, base64String);
+          setTimeout(() => {
+            setSyncStatus('success');
+            setTimeout(() => setSyncStatus('idle'), 3500);
+          }, 1200);
+        };
+        reader.readAsDataURL(file);
+      });
   };
 
   return (

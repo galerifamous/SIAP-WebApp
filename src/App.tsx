@@ -43,6 +43,7 @@ import {
   isClientSupabaseActive,
   SupabaseConfig
 } from './utils/supabase';
+import { resizeAndCompressImage } from './utils/image';
 import { createClient } from '@supabase/supabase-js';
 
 const LOADING_TIPS = [
@@ -790,6 +791,10 @@ export default function App() {
                 let academicSetObj: AcademicSetting | null = null;
                 let systemSetObj: SystemSetting | null = null;
                 let gasUrlStr: string = "";
+                let signatureImgStr: string = "";
+                let stampImgStr: string = "";
+                let logoImgStr: string = "";
+                const studentPhotosMap = new Map<string, string>();
                 
                 rows.forEach((row: any) => {
                   const col = row.collection;
@@ -808,9 +813,34 @@ export default function App() {
                   else if (col === "settings" && row.id === "academic") academicSetObj = itemData;
                   else if (col === "settings" && row.id === "system") systemSetObj = itemData;
                   else if (col === "settings" && row.id === "meta") gasUrlStr = itemData.siap_gas_url || "";
+                  else if (col === "settings" && row.id === "signature") {
+                    if (itemData.type === "simple") signatureImgStr = itemData.value || "";
+                  }
+                  else if (col === "settings" && row.id === "stamp") {
+                    if (itemData.type === "simple") stampImgStr = itemData.value || "";
+                  }
+                  else if (col === "settings" && row.id === "logo") {
+                    if (itemData.type === "simple") logoImgStr = itemData.value || "";
+                  }
+                  else if (col === "student_photos") {
+                    if (itemData.type === "simple") {
+                      studentPhotosMap.set(String(row.id).trim(), itemData.value || "");
+                    }
+                  }
+                });
+
+                // Resolve student photos
+                studentsList.forEach((student: any) => {
+                  if (student.photoUrl === "__EXTERNAL_FIRESTORE_PHOTO__") {
+                    const studentId = String(student.nisn).trim();
+                    student.photoUrl = studentPhotosMap.get(studentId) || "";
+                  }
                 });
                 
                 if (systemSetObj) {
+                  if (logoImgStr) {
+                    systemSetObj.logoUrl = logoImgStr;
+                  }
                   setSystemSetting(systemSetObj);
                   localStorage.setItem('siap_system', JSON.stringify(systemSetObj));
                 }
@@ -856,6 +886,12 @@ export default function App() {
                 }
                 if (gasUrlStr) {
                   localStorage.setItem('siap_gas_url', gasUrlStr);
+                }
+                if (signatureImgStr) {
+                  localStorage.setItem('siap_card_signature_img', signatureImgStr);
+                }
+                if (stampImgStr) {
+                  localStorage.setItem('siap_card_stamp_img', stampImgStr);
                 }
                 
                 setSyncEnabled(true);
@@ -967,6 +1003,7 @@ export default function App() {
             const classStaffsList: ClassStaff[] = [];
             let academicSetObj: AcademicSetting | null = null;
             let systemSetObj: SystemSetting | null = null;
+            const studentPhotosMap = new Map<string, string>();
             
             rows.forEach((row: any) => {
               const col = row.collection;
@@ -983,6 +1020,19 @@ export default function App() {
               else if (col === "class_staffs") classStaffsList.push(itemData);
               else if (col === "settings" && row.id === "academic") academicSetObj = itemData;
               else if (col === "settings" && row.id === "system") systemSetObj = itemData;
+              else if (col === "student_photos") {
+                if (itemData.type === "simple") {
+                  studentPhotosMap.set(String(row.id).trim(), itemData.value || "");
+                }
+              }
+            });
+
+            // Resolve student photos
+            studentsList.forEach((student: any) => {
+              if (student.photoUrl === "__EXTERNAL_FIRESTORE_PHOTO__") {
+                const studentId = String(student.nisn).trim();
+                student.photoUrl = studentPhotosMap.get(studentId) || "";
+              }
             });
             
             if (systemSetObj) setSystemSetting(systemSetObj);
@@ -1167,6 +1217,47 @@ export default function App() {
 
     return () => clearTimeout(timer);
   }, [isLoaded, syncEnabled, students, teachers, attendance, grades, cases, achievements, emails, academicSetting, systemSetting, holidays, classStaffs]);
+
+  // --- AUTOMATIC PHOTO COMPRESSION (SELF-HEALING SYSTEM) ---
+  useEffect(() => {
+    if (!isLoaded || students.length === 0) return;
+
+    // Find any student with a large uncompressed Base64 photo
+    const largePhotoStudents = students.filter(s => 
+      s.photoUrl && 
+      s.photoUrl.startsWith('data:image/') && 
+      s.photoUrl.length > 35000
+    );
+
+    if (largePhotoStudents.length === 0) return;
+
+    console.log(`[Self-Healing] Found ${largePhotoStudents.length} student(s) with uncompressed photos. Resizing & compressing...`);
+
+    const compressAll = async () => {
+      let updatedAny = false;
+      const updatedStudents = await Promise.all(students.map(async (student) => {
+        if (student.photoUrl && student.photoUrl.startsWith('data:image/') && student.photoUrl.length > 35000) {
+          try {
+            const compressed = await resizeAndCompressImage(student.photoUrl);
+            console.log(`[Self-Healing] Successfully compressed photo for NISN ${student.nisn} from ${student.photoUrl.length} to ${compressed.length} characters.`);
+            updatedAny = true;
+            return { ...student, photoUrl: compressed };
+          } catch (err) {
+            console.warn(`[Self-Healing] Failed to compress photo for student ${student.nisn}:`, err);
+            return student;
+          }
+        }
+        return student;
+      }));
+
+      if (updatedAny) {
+        setStudents(updatedStudents);
+        saveState('siap_students', updatedStudents);
+      }
+    };
+
+    compressAll();
+  }, [isLoaded, students]);
 
   // --- LOCAL PERSISTENCE WRITERS ---
   const saveState = (key: string, data: any) => {
@@ -1401,11 +1492,10 @@ export default function App() {
         })
         .catch((gasErr) => {
           console.error("[Client Direct Email] Direct client-side GAS email failed:", gasErr);
-          // Fallback to success simulation to keep offline demo functional
-          simulateSuccessState();
+          triggerFailureState("Gagal mengirim email via Google Apps Script (Client Fallback).");
         });
       } else {
-        simulateSuccessState();
+        triggerFailureState("Gagal mengirim email: Google Apps Script (GAS) belum dikonfigurasi.");
       }
     });
 

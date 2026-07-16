@@ -63,11 +63,25 @@ export default function SettingsSec({
   const [newSubject, setNewSubject] = useState('');
   const [newClass, setNewClass] = useState('');
 
+  // --- LOCAL ACADEMIC STATE FOR SAVE BUTTON ---
+  const [acadYear, setAcadYear] = useState(academicSetting.activeYear);
+  const [acadSemester, setAcadSemester] = useState(academicSetting.activeSemester);
+  const [acadKkm, setAcadKkm] = useState(academicSetting.kkm !== undefined ? academicSetting.kkm : 75);
+  const [acadHeadName, setAcadHeadName] = useState(academicSetting.headmasterName || academicSetting.headmaster || '');
+  const [acadHeadNip, setAcadHeadNip] = useState(academicSetting.headmasterNip || '');
+
+  React.useEffect(() => {
+    setAcadYear(academicSetting.activeYear);
+    setAcadSemester(academicSetting.activeSemester);
+    setAcadKkm(academicSetting.kkm !== undefined ? academicSetting.kkm : 75);
+    setAcadHeadName(academicSetting.headmasterName || academicSetting.headmaster || '');
+    setAcadHeadNip(academicSetting.headmasterNip || '');
+  }, [academicSetting]);
+
   // --- SYSTEM SETTINGS STATE ---
   const [sysName, setSysName] = useState(systemSetting.schoolName);
   const [sysAddress, setSysAddress] = useState(systemSetting.schoolAddress);
   const [sysEmail, setSysEmail] = useState(systemSetting.adminEmail);
-  const [sysHead, setSysHead] = useState(systemSetting.headmasterName);
   const [sysLogo, setSysLogo] = useState(systemSetting.logoUrl);
   const [sysGovLogo, setSysGovLogo] = useState(systemSetting.govLogoUrl || '');
   const [sysAdminUser, setSysAdminUser] = useState(systemSetting.adminUsername || 'admin');
@@ -126,6 +140,21 @@ export default function SettingsSec({
     onUpdateClassStaffs(updatedList);
   };
 
+  // Save Academic Settings
+  const handleSaveAcademic = (e: React.FormEvent) => {
+    e.preventDefault();
+    onUpdateAcademic({
+      ...academicSetting,
+      activeYear: acadYear,
+      activeSemester: acadSemester as 'Ganjil' | 'Genap',
+      kkm: Number(acadKkm),
+      headmasterName: acadHeadName,
+      headmaster: acadHeadName,
+      headmasterNip: acadHeadNip
+    });
+    toast.success('Pengaturan parameter akademik berhasil diperbarui dan disinkronkan!');
+  };
+
   // Save System Settings
   const handleSaveSystem = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,7 +162,7 @@ export default function SettingsSec({
       schoolName: sysName,
       schoolAddress: sysAddress,
       adminEmail: sysEmail,
-      headmasterName: sysHead,
+      headmasterName: acadHeadName, // keep in sync with unified headmaster setting
       logoUrl: sysLogo,
       govLogoUrl: sysGovLogo,
       adminUsername: sysAdminUser,
@@ -498,7 +527,7 @@ export default function SettingsSec({
         // --- TAB 1: ACADEMIC SETTINGS ---
         <div className="space-y-6">
           {/* Active Settings Selector */}
-          <div className="p-5 bg-slate-950/40 border border-slate-800 rounded-2xl">
+          <form onSubmit={handleSaveAcademic} className="p-5 bg-slate-950/40 border border-slate-800 rounded-2xl">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-emerald-400" /> Penyetelan Tahun Pelajaran, Semester & Kepala Madrasah
             </h3>
@@ -506,8 +535,8 @@ export default function SettingsSec({
               <div>
                 <label className="block text-slate-400 font-semibold mb-1.5">Tahun Pelajaran Utama</label>
                 <select
-                  value={academicSetting.activeYear}
-                  onChange={(e) => onUpdateAcademic({ ...academicSetting, activeYear: e.target.value })}
+                  value={acadYear}
+                  onChange={(e) => setAcadYear(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
                 >
                   {academicSetting.years.map(y => (
@@ -519,8 +548,8 @@ export default function SettingsSec({
               <div>
                 <label className="block text-slate-400 font-semibold mb-1.5">Semester Utama</label>
                 <select
-                  value={academicSetting.activeSemester}
-                  onChange={(e) => onUpdateAcademic({ ...academicSetting, activeSemester: e.target.value as any })}
+                  value={acadSemester}
+                  onChange={(e) => setAcadSemester(e.target.value as any)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
                 >
                   <option value="Ganjil">Ganjil</option>
@@ -535,8 +564,8 @@ export default function SettingsSec({
                   min="0"
                   max="100"
                   step="1"
-                  value={academicSetting.kkm !== undefined ? academicSetting.kkm : 75}
-                  onChange={(e) => onUpdateAcademic({ ...academicSetting, kkm: Number(e.target.value) })}
+                  value={acadKkm}
+                  onChange={(e) => setAcadKkm(Number(e.target.value))}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
                 />
               </div>
@@ -546,12 +575,8 @@ export default function SettingsSec({
                 <input
                   type="text"
                   placeholder="Contoh: Makhfud, S.Pd."
-                  value={academicSetting.headmasterName || academicSetting.headmaster || ''}
-                  onChange={(e) => onUpdateAcademic({ 
-                    ...academicSetting, 
-                    headmasterName: e.target.value,
-                    headmaster: e.target.value 
-                  })}
+                  value={acadHeadName}
+                  onChange={(e) => setAcadHeadName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
                 />
               </div>
@@ -561,16 +586,26 @@ export default function SettingsSec({
                 <input
                   type="text"
                   placeholder="Contoh: 197812052005011002"
-                  value={academicSetting.headmasterNip || ''}
-                  onChange={(e) => onUpdateAcademic({ ...academicSetting, headmasterNip: e.target.value })}
+                  value={acadHeadNip}
+                  onChange={(e) => setAcadHeadNip(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
                 />
               </div>
             </div>
+
+            <div className="flex justify-end mt-4 pt-4 border-t border-slate-800/60">
+              <button
+                type="submit"
+                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold transition duration-150 cursor-pointer shadow-lg shadow-emerald-950/20"
+              >
+                <Save className="w-4 h-4" /> Simpan Pengaturan Akademik
+              </button>
+            </div>
+
             <p className="text-[10px] text-slate-500 mt-3 leading-relaxed italic">
-              *CATATAN AHLI CODING: Merubah Tahun Pelajaran atau Semester di atas akan otomatis mengaktifkan ruang data (Absensi, Nilai, Kasus, Prestasi) yang baru khusus untuk periode terpilih, sehingga histori data sebelumnya tersimpan rapi tanpa tumpang tindih. Data direktori siswa tetap konsisten dipertahankan.
+              *CATATAN: Merubah Tahun Pelajaran atau Semester di atas akan otomatis mengaktifkan ruang data (Absensi, Nilai, Kasus, Prestasi) yang baru khusus untuk periode terpilih. Silakan klik tombol "Simpan Pengaturan Akademik" untuk menyimpan perubahan.
             </p>
-          </div>
+          </form>
 
           {/* Directory Multipliers */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -927,18 +962,6 @@ export default function SettingsSec({
                 value={sysName}
                 onChange={(e) => setSysName(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 font-bold focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* School Headmaster */}
-            <div>
-              <label className="block text-slate-400 font-semibold mb-1">Nama Kepala Sekolah *</label>
-              <input
-                type="text"
-                required
-                value={sysHead}
-                onChange={(e) => setSysHead(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 font-semibold focus:outline-none focus:border-emerald-500"
               />
             </div>
 

@@ -449,11 +449,22 @@ export default function NilaiSec({
     const targetGrades = filteredGrades;
     const maxSums = Math.max(...targetGrades.map(g => g.sumatif?.length || 0), 4);
 
-    // Retrieve system settings
+    // Retrieve system/academic settings
     let schoolAddress = '';
     let logoUrl = '';
     let govLogoUrl = '';
     let headmasterName = 'Makhfud, S.Pd.';
+    let headmasterNip = '197812052005011002';
+
+    if (academicSetting) {
+      if (academicSetting.headmasterName || academicSetting.headmaster) {
+        headmasterName = academicSetting.headmasterName || academicSetting.headmaster || '';
+      }
+      if (academicSetting.headmasterNip) {
+        headmasterNip = academicSetting.headmasterNip;
+      }
+    }
+
     try {
       const sysRaw = localStorage.getItem('siap_system');
       if (sysRaw) {
@@ -461,7 +472,12 @@ export default function NilaiSec({
         if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
         if (sys.logoUrl) logoUrl = sys.logoUrl;
         if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
-        if (sys.headmasterName) headmasterName = sys.headmasterName;
+        
+        // fallback if academic not set
+        const hasAcadHead = academicSetting?.headmasterName || academicSetting?.headmaster;
+        if (!hasAcadHead && sys.headmasterName) {
+          headmasterName = sys.headmasterName;
+        }
       }
     } catch (e) {
       // ignore
@@ -483,8 +499,9 @@ export default function NilaiSec({
     const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
     let waliKelasName = '';
-    if (classFilter && classStaffs && teachers) {
-      const staff = classStaffs.find(cs => cs.classId === classFilter);
+    const activeClass = classFilter || (role === 'GURU' && allowedClasses && allowedClasses.length > 0 ? allowedClasses[0] : '');
+    if (activeClass && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === activeClass);
       if (staff) {
         const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
         if (teacher) {
@@ -492,6 +509,13 @@ export default function NilaiSec({
         }
       }
     }
+
+    const monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    const currentMonthName = monthNames[new Date().getMonth()];
+    const currentYear = new Date().getFullYear();
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -709,12 +733,21 @@ export default function NilaiSec({
             `}
           </div>
 
-          <div class="title-section" style="line-height: 1.5; font-size: 10px;">
-            <h2 class="title-main" style="margin-bottom: 6px;">DAFTAR NILAI DAN HASIL ASESMEN AKADEMIK</h2>
-            <div>Kelas: <strong>${classFilter || 'SEMUA KELAS'}</strong></div>
-            <div>Mata Pelajaran: <strong>${subjectFilter || 'SEMUA MAPEL'}</strong></div>
-            <div>Tahun Pelajaran: <strong>${academicYear}</strong></div>
-            <div>Semester: <strong>${semester}</strong></div>
+          <div class="title-section" style="line-height: 1.5; font-size: 10px; text-align: center; margin-bottom: 15px;">
+            <h2 class="title-main" style="margin-bottom: 12px; font-size: 12px; font-weight: 800; text-transform: uppercase;">DAFTAR NILAI DAN HASIL ASESMEN AKADEMIK SISWA</h2>
+          </div>
+
+          <div class="meta-grid" style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 15px; font-size: 10px; width: 100%; box-sizing: border-box; text-align: left;">
+            <span style="color: #64748b; font-weight: 500;">Bulan</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${currentMonthName.toUpperCase()} ${currentYear}</span>
+            <span style="color: #64748b; font-weight: 500;">Kelas</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${classFilter || 'SEMUA KELAS'}</span>
+            <span style="color: #64748b; font-weight: 500;">Tahun Pelajaran</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${academicYear}</span>
+            <span style="color: #64748b; font-weight: 500;">Semester</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${semester}</span>
+            <span style="color: #64748b; font-weight: 500;">Mata Pelajaran</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${subjectFilter || 'SEMUA MAPEL'}</span>
           </div>
 
           <table>
@@ -747,7 +780,7 @@ export default function NilaiSec({
               <p style="margin-top: 3px; font-weight: bold;">Kepala Madrasah,</p>
               <div class="signature-space" style="height: 50px;"></div>
               <p style="font-weight: bold; text-decoration: underline; margin: 0; text-transform: uppercase;">${headmasterName}</p>
-              <p style="color: #64748b; margin: 2px 0 0 0;">NIP. 197812052005011002</p>
+              <p style="color: #64748b; margin: 2px 0 0 0;">NIP. ${headmasterNip}</p>
             </div>
 
             <div class="signature-box" style="width: 250px; text-align: right;">
@@ -787,8 +820,9 @@ export default function NilaiSec({
     const headers = ['No', 'NISN', 'Nama Siswa', 'JK', ...sumHeaders, 'Rata Sum', 'STS', 'SAS', 'Rapor'];
 
     let waliKelasName = '';
-    if (classFilter && classStaffs && teachers) {
-      const staff = classStaffs.find(cs => cs.classId === classFilter);
+    const activeClass = classFilter || (role === 'GURU' && allowedClasses && allowedClasses.length > 0 ? allowedClasses[0] : '');
+    if (activeClass && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === activeClass);
       if (staff) {
         const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
         if (teacher) {

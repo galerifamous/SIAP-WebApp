@@ -299,7 +299,10 @@ async function loadCollection(supabase: any, colName: string): Promise<any[]> {
     if (colName === "students") {
       const fetchPhotoPromises = result.map(async (student: any) => {
         if (student.photoUrl === "__EXTERNAL_FIRESTORE_PHOTO__") {
-          student.photoUrl = await loadLargeField(supabase, "student_photos", student.nisn);
+          const studentId = String(student.nisn || student.id || "").trim();
+          if (studentId) {
+            student.photoUrl = await loadLargeField(supabase, "student_photos", studentId);
+          }
         }
       });
       await Promise.all(fetchPhotoPromises);
@@ -465,20 +468,27 @@ async function syncCollection(supabase: any, colName: string, list: any[] | unde
     
     existingItems.forEach(item => {
       const id = getId(item);
-      if (id) {
-        existingIds.add(id);
-        existingMap.set(id, item);
+      if (id !== undefined && id !== null && id !== '') {
+        const idStr = String(id).trim();
+        existingIds.add(idStr);
+        existingMap.set(idStr, item);
       }
     });
 
-    const currentIds = new Set(list.map(getId).filter(id => id !== undefined && id !== null && id !== ''));
+    const currentIds = new Set(list.map(item => {
+      const id = getId(item);
+      return id !== undefined && id !== null ? String(id).trim() : '';
+    }).filter(idStr => idStr !== ''));
 
     // Process photo conversions concurrently first if students
     if (colName === "students") {
       await Promise.all(list.map(async (item) => {
         const id = getId(item);
-        if (id && item.photoUrl && item.photoUrl.length > 200000) {
-          await saveLargeField(supabase, { col: "student_photos", id }, item.photoUrl);
+        if (id !== undefined && id !== null && id !== '') {
+          const idStr = String(id).trim();
+          if (item.photoUrl && item.photoUrl.length > 200000) {
+            await saveLargeField(supabase, { col: "student_photos", id: idStr }, item.photoUrl);
+          }
         }
       }));
     }
@@ -487,21 +497,22 @@ async function syncCollection(supabase: any, colName: string, list: any[] | unde
     const upsertRows: any[] = [];
     list.forEach(item => {
       const id = getId(item);
-      if (!id) return;
+      if (id === undefined || id === null || id === '') return;
+      const idStr = String(id).trim();
 
       let finalItem = { ...item };
       if (colName === "students" && item.photoUrl && item.photoUrl.length > 200000) {
         finalItem.photoUrl = "__EXTERNAL_FIRESTORE_PHOTO__";
       }
 
-      const existingItem = existingMap.get(id);
+      const existingItem = existingMap.get(idStr);
       if (existingItem && objectsAreEqual(finalItem, existingItem)) {
         return;
       }
 
       upsertRows.push({
         collection: colName,
-        id: id,
+        id: idStr,
         data: finalItem,
         updated_at: new Date().toISOString()
       });
@@ -663,6 +674,9 @@ app.get("/api/load", async (req, res) => {
           }
         }
 
+        const gasUrlLoaded = settingsMap["meta"]?.siap_gas_url || "";
+        cachedGasUrl = gasUrlLoaded;
+
         const assembledData = {
           siap_students: students,
           siap_teachers: teachers,
@@ -675,7 +689,7 @@ app.get("/api/load", async (req, res) => {
           siap_class_staffs: classStaffs,
           siap_academic: settingsMap["academic"] || null,
           siap_system: system,
-          siap_gas_url: settingsMap["meta"]?.siap_gas_url || "",
+          siap_gas_url: gasUrlLoaded,
           siap_card_signature_img: signatureImg,
           siap_card_stamp_img: stampImg
         };
@@ -798,6 +812,9 @@ app.get("/api/status", async (req, res) => {
   });
 });
 
+// Cache the Google Apps Script URL in-memory to prevent blocking Supabase queries during save operations
+let cachedGasUrl: string | null = null;
+
 // Background Sync Queue for Supabase
 let syncQueue: { supabase: any; payload: any }[] = [];
 let isSyncing = false;
@@ -869,13 +886,22 @@ app.post("/api/save", async (req, res) => {
     queueSupabaseSync(supabase, payload);
   }
 
+  if (payload.siap_gas_url) {
+    cachedGasUrl = payload.siap_gas_url;
+  }
+
   // Automatic Realtime Sync to Google Apps Script (Spreadsheet) in background
   let gasUrl = payload.siap_gas_url || current.siap_gas_url || "";
-  if (!gasUrl && supabase) {
-    try {
-      const settingsMap = await loadSettings(supabase).catch(() => ({}));
-      gasUrl = settingsMap["meta"]?.siap_gas_url || "";
-    } catch (err) {}
+  if (!gasUrl) {
+    if (cachedGasUrl !== null) {
+      gasUrl = cachedGasUrl;
+    } else if (supabase) {
+      try {
+        const settingsMap = await loadSettings(supabase).catch(() => ({}));
+        cachedGasUrl = settingsMap["meta"]?.siap_gas_url || "";
+        gasUrl = cachedGasUrl;
+      } catch (err) {}
+    }
   }
 
   if (gasUrl) {
@@ -1263,11 +1289,10 @@ app.post("/api/send-email", async (req, res) => {
   }
 
   // Fallback if GAS is not configured at all
-  console.log(`[SIMULATION] GAS URL is not configured. Simulating email to ${recipient}: ${subject}`);
-  res.json({ 
-    success: true, 
-    simulated: true, 
-    message: "Aplikasi belum terhubung ke Google Apps Script. Pengiriman disimulasikan." 
+  console.log(`[SIMULATION] GAS URL is not configured. Email to ${recipient} failed because GAS is required.`);
+  res.status(400).json({ 
+    success: false, 
+    message: "Google Apps Script (GAS) belum dikonfigurasi di Pengaturan oleh Admin. Hubungkan Web App URL untuk mengaktifkan pengiriman email asli ke orang tua." 
   });
 });
 

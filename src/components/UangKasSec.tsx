@@ -1201,8 +1201,9 @@ export default function UangKasSec({
     const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
     let waliKelasName = '';
-    if (monthlyClass && classStaffs && teachers) {
-      const staff = classStaffs.find(cs => cs.classId === monthlyClass);
+    const activeClass = monthlyClass || teacherClass;
+    if (activeClass && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === activeClass);
       if (staff) {
         const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
         if (teacher) {
@@ -1491,12 +1492,19 @@ export default function UangKasSec({
             ${logoUrl ? `<img class="kop-logo kop-logo-right" src="${logoUrl}" referrerPolicy="no-referrer" />` : '<div style="width: 50px;"></div>'}
           </div>
 
-          <div class="title-section" style="line-height: 1.5; font-size: 10px;">
-            <h2 class="title-main" style="margin-bottom: 6px;">REKAPITULASI BULANAN ${isUangKas ? 'UANG KAS' : 'TABUNGAN'} SISWA</h2>
-            <div>Bulan: <strong>${monthName} ${monthlyYear}</strong></div>
-            <div>Kelas: <strong>${monthlyClass || 'Semua Kelas'}</strong></div>
-            <div>Tahun Pelajaran: <strong>${academicYear}</strong></div>
-            <div>Semester: <strong>${semester}</strong></div>
+          <div class="title-section" style="line-height: 1.5; font-size: 10px; text-align: center; margin-bottom: 15px;">
+            <h2 class="title-main" style="margin-bottom: 12px; font-size: 11px; font-weight: 800; text-transform: uppercase;">REKAPITULASI BULANAN ${isUangKas ? 'UANG KAS' : 'TABUNGAN'} SISWA</h2>
+          </div>
+
+          <div class="meta-grid" style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 15px; font-size: 9px; width: 100%; box-sizing: border-box; text-align: left;">
+            <span style="color: #64748b; font-weight: 500;">Bulan</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${monthName} ${monthlyYear}</span>
+            <span style="color: #64748b; font-weight: 500;">Kelas</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${monthlyClass || 'Semua Kelas'}</span>
+            <span style="color: #64748b; font-weight: 500;">Tahun Pelajaran</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${academicYear}</span>
+            <span style="color: #64748b; font-weight: 500;">Semester</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${semester}</span>
           </div>
 
           <table>

@@ -522,6 +522,7 @@ ${schoolName}`;
     let schoolAddress = '';
     let logoUrl = '';
     let govLogoUrl = '';
+    let headmasterName = 'Makhfud, S.Pd.';
     try {
       const sysRaw = localStorage.getItem('siap_system');
       if (sysRaw) {
@@ -529,8 +530,35 @@ ${schoolName}`;
         if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
         if (sys.logoUrl) logoUrl = sys.logoUrl;
         if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
+        if (sys.headmasterName) headmasterName = sys.headmasterName;
       }
     } catch (e) {}
+
+    let cityName = 'Indonesia';
+    if (schoolAddress) {
+      const parts = schoolAddress.split(',');
+      if (parts.length > 1) {
+        cityName = parts[parts.length - 2].trim().replace(/Kec\.|Kab\.|Kota/g, '').trim();
+      } else if (parts.length > 0) {
+        cityName = parts[0].trim();
+      }
+    }
+    if (!cityName || cityName.length > 20) {
+      cityName = 'Kota Sekolah';
+    }
+    const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    let waliKelasName = '';
+    const activeClass = rekapClass || teacherClass;
+    if (activeClass && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === activeClass);
+      if (staff) {
+        const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
+        if (teacher) {
+          waliKelasName = teacher.name;
+        }
+      }
+    }
 
     // Headers Row 1
     const row1 = ['No', 'NISN', 'Nama Siswa', 'JK (L/P)', `${monthName.toUpperCase()} ${rekapYear}`];
@@ -590,6 +618,8 @@ ${schoolName}`;
       [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
       [],
       [`REKAP BULANAN ABSEN SHOLAT DZUHUR BERJAMA'AH`],
+      [], // Jarak 1 (Enter 1)
+      [], // Jarak 2 (Enter 2)
       [`Bulan: ${monthName} ${rekapYear}`],
       [`Kelas: ${rekapClass || 'SEMUA KELAS'}`],
       [`Tahun Pelajaran: ${academicYear}`],
@@ -597,7 +627,24 @@ ${schoolName}`;
       [],
     ];
 
-    const aoa = [...headerRows, row1, row2, ...dataRows];
+    // Aligned Dual Signature Footer rows inside Excel
+    const rightColIndex = 4 + daysInMonth - 5;
+    const spacesInBetween = Array(Math.max(1, rightColIndex - 2)).fill('');
+    const emptyColsLeft = ['', ''];
+
+    const bottomRows = [
+      [],
+      [],
+      [...emptyColsLeft, 'Mengetahui,', ...spacesInBetween, `${cityName}, ${formattedDate}`],
+      [...emptyColsLeft, 'Kepala Madrasah,', ...spacesInBetween, 'Wali Kelas,'],
+      [],
+      [],
+      [],
+      [...emptyColsLeft, headmasterName, ...spacesInBetween, waliKelasName || '........................'],
+      [...emptyColsLeft, 'NIP. 197812052005011002', ...spacesInBetween, 'NIP. ................................']
+    ];
+
+    const aoa = [...headerRows, row1, row2, ...dataRows, ...bottomRows];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
     // Set Column Widths
@@ -613,14 +660,14 @@ ${schoolName}`;
     cols.push({ wch: 4 }, { wch: 4 }, { wch: 4 }); // H, I, B totals
     ws['!cols'] = cols;
 
-    // Set merges shifted by 11 header rows
+    // Set merges shifted by 13 header rows (including the 2 times enter spacer)
     ws['!merges'] = [
-      { s: { r: 11, c: 0 }, e: { r: 12, c: 0 } }, // No
-      { s: { r: 11, c: 1 }, e: { r: 12, c: 1 } }, // NISN
-      { s: { r: 11, c: 2 }, e: { r: 12, c: 2 } }, // Nama Siswa
-      { s: { r: 11, c: 3 }, e: { r: 12, c: 3 } }, // JK
-      { s: { r: 11, c: 4 }, e: { r: 11, c: 4 + daysInMonth - 1 } }, // Date headers
-      { s: { r: 11, c: 4 + daysInMonth }, e: { r: 11, c: 4 + daysInMonth + 2 } } // Totals
+      { s: { r: 13, c: 0 }, e: { r: 14, c: 0 } }, // No
+      { s: { r: 13, c: 1 }, e: { r: 14, c: 1 } }, // NISN
+      { s: { r: 13, c: 2 }, e: { r: 14, c: 2 } }, // Nama Siswa
+      { s: { r: 13, c: 3 }, e: { r: 14, c: 3 } }, // JK
+      { s: { r: 13, c: 4 }, e: { r: 13, c: 4 + daysInMonth - 1 } }, // Date headers
+      { s: { r: 13, c: 4 + daysInMonth }, e: { r: 13, c: 4 + daysInMonth + 2 } } // Totals
     ];
 
     const wb = XLSX.utils.book_new();
@@ -680,8 +727,9 @@ ${schoolName}`;
     const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
     let waliKelasName = '';
-    if (rekapClass && classStaffs && teachers) {
-      const staff = classStaffs.find(cs => cs.classId === rekapClass);
+    const activeClass = rekapClass || teacherClass;
+    if (activeClass && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === activeClass);
       if (staff) {
         const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
         if (teacher) {
@@ -732,13 +780,22 @@ ${schoolName}`;
     // Title Section
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.text(`REKAPITULASI ABSENSI SHOLAT DZUHUR BERJAMA'AH SISWA`, 148, 36, { align: 'center' });
+    doc.text(`REKAPITULASI ABSENSI SHOLAT DZUHUR BERJAMA'AH SISWA`, 148, 35, { align: 'center' });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.text(`Bulan: ${monthName} ${rekapYear}`, 15, 41);
-    doc.text(`Kelas: ${rekapClass || 'Semua Kelas'}`, 15, 45);
-    doc.text(`Tahun Pelajaran: ${academicYear}`, 148, 41);
-    doc.text(`Semester: ${semester}`, 148, 45);
+
+    // Draw background box for metadata matching table width exactly
+    doc.setFillColor(248, 250, 252); // #f8fafc
+    doc.setDrawColor(226, 232, 240); // #e2e8f0
+    doc.roundedRect(15, 37, 267, 19, 2, 2, 'FD'); // x, y, width, height, rx, ry, style
+
+    // Write text inside the box (padded)
+    doc.setTextColor(51, 65, 85); // Slate-700
+    doc.text(`Bulan                : ${monthName} ${rekapYear}`, 20, 42);
+    doc.text(`Kelas                : ${rekapClass || 'Semua Kelas'}`, 20, 46);
+    doc.text(`Tahun Pelajaran : ${academicYear}`, 20, 50);
+    doc.text(`Semester          : ${semester}`, 20, 54);
+    doc.setTextColor(0, 0, 0); // Reset to black
 
     // Rows data
     const bodyRows = targetStudents.map((student, idx) => {
@@ -776,7 +833,7 @@ ${schoolName}`;
     });
 
     autoTable(doc, {
-      startY: 50,
+      startY: 58,
       head: [['No', 'NISN', 'Nama Siswa', 'JK', ...Array.from({ length: daysInMonth }, (_, i) => String(i + 1)), 'H', 'I', 'B']],
       body: bodyRows,
       theme: 'grid',
@@ -913,8 +970,9 @@ ${schoolName}`;
     const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
     let waliKelasName = '';
-    if (rekapClass && classStaffs && teachers) {
-      const staff = classStaffs.find(cs => cs.classId === rekapClass);
+    const activeClass = rekapClass || teacherClass;
+    if (activeClass && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === activeClass);
       if (staff) {
         const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
         if (teacher) waliKelasName = teacher.name;
@@ -1153,12 +1211,19 @@ ${schoolName}`;
             `}
           </div>
 
-          <div class="title-section" style="line-height: 1.5; font-size: 10px;">
-            <h2 class="title-main" style="margin-bottom: 6px;">REKAPITULASI ABSENSI SHOLAT DZUHUR BERJAMA'AH SISWA</h2>
-            <div>Bulan: <strong>${monthName.toUpperCase()} ${rekapYear}</strong></div>
-            <div>Kelas: <strong>${rekapClass || 'SEMUA KELAS'}</strong></div>
-            <div>Tahun Pelajaran: <strong>${academicYear}</strong></div>
-            <div>Semester: <strong>${semester}</strong></div>
+          <div class="title-section" style="line-height: 1.5; font-size: 10px; text-align: center; margin-bottom: 15px;">
+            <h2 class="title-main" style="margin-bottom: 12px; font-size: 12px; font-weight: 800; text-transform: uppercase;">REKAPITULASI ABSENSI SHOLAT DZUHUR BERJAMA'AH SISWA</h2>
+          </div>
+
+          <div class="meta-grid" style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 15px; font-size: 10px; width: 100%; box-sizing: border-box; text-align: left;">
+            <span style="color: #64748b; font-weight: 500;">Bulan</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${monthName.toUpperCase()} ${rekapYear}</span>
+            <span style="color: #64748b; font-weight: 500;">Kelas</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${rekapClass || 'SEMUA KELAS'}</span>
+            <span style="color: #64748b; font-weight: 500;">Tahun Pelajaran</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${academicYear}</span>
+            <span style="color: #64748b; font-weight: 500;">Semester</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${semester}</span>
           </div>
 
           <table>

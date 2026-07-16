@@ -238,6 +238,7 @@ export default function AbsensiSec({
   // Manual Classroom Matrix states
   const [manualClass, setManualClass] = useState(availableClasses[0] || '');
   const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0]);
+  const [manualSearchQuery, setManualSearchQuery] = useState('');
 
   // Inline editing state for table records
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
@@ -292,6 +293,7 @@ export default function AbsensiSec({
     let schoolAddress = '';
     let logoUrl = '';
     let govLogoUrl = '';
+    let headmasterName = 'Makhfud, S.Pd.';
     try {
       const sysRaw = localStorage.getItem('siap_system');
       if (sysRaw) {
@@ -299,9 +301,36 @@ export default function AbsensiSec({
         if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
         if (sys.logoUrl) logoUrl = sys.logoUrl;
         if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
+        if (sys.headmasterName) headmasterName = sys.headmasterName;
       }
     } catch (e) {
       // ignore
+    }
+
+    let cityName = 'Indonesia';
+    if (schoolAddress) {
+      const parts = schoolAddress.split(',');
+      if (parts.length > 1) {
+        cityName = parts[parts.length - 2].trim().replace(/Kec\.|Kab\.|Kota/g, '').trim();
+      } else if (parts.length > 0) {
+        cityName = parts[0].trim();
+      }
+    }
+    if (!cityName || cityName.length > 20) {
+      cityName = 'Kota Sekolah';
+    }
+    const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    let waliKelasName = '';
+    const activeClass = monthlyClass || teacherClass;
+    if (activeClass && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === activeClass);
+      if (staff) {
+        const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
+        if (teacher) {
+          waliKelasName = teacher.name;
+        }
+      }
     }
 
     // Header 1
@@ -365,6 +394,8 @@ export default function AbsensiSec({
       [`STATUS LOGO INSTANSI/DINAS: ${govLogoStatus} | STATUS LOGO MADRASAH: ${logoStatus}`],
       [],
       [`REKAP BULANAN PRESENSI SISWA`],
+      [], // Jarak 1 (Enter 1)
+      [], // Jarak 2 (Enter 2)
       [`Bulan: ${monthName} ${monthlyYear}`],
       [`Kelas: ${monthlyClass || 'SEMUA KELAS'}`],
       [`Tahun Pelajaran: ${academicYear}`],
@@ -372,7 +403,24 @@ export default function AbsensiSec({
       [],
     ];
 
-    const aoa = [...headerRows, row1, row2, ...dataRows];
+    // Aligned Dual Signature Footer rows inside Excel
+    const rightColIndex = 4 + daysInMonth - 6;
+    const spacesInBetween = Array(Math.max(1, rightColIndex - 2)).fill('');
+    const emptyColsLeft = ['', ''];
+
+    const bottomRows = [
+      [],
+      [],
+      [...emptyColsLeft, 'Mengetahui,', ...spacesInBetween, `${cityName}, ${formattedDate}`],
+      [...emptyColsLeft, 'Kepala Madrasah,', ...spacesInBetween, 'Wali Kelas,'],
+      [],
+      [],
+      [],
+      [...emptyColsLeft, headmasterName, ...spacesInBetween, waliKelasName || '........................'],
+      [...emptyColsLeft, 'NIP. 197812052005011002', ...spacesInBetween, 'NIP. ................................']
+    ];
+
+    const aoa = [...headerRows, row1, row2, ...dataRows, ...bottomRows];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
     // Set neat, fixed column widths (paten) so user doesn't need to resize manually
@@ -388,14 +436,14 @@ export default function AbsensiSec({
     cols.push({ wch: 4 }, { wch: 4 }, { wch: 4 }, { wch: 4 }); // H, S, I, A count columns
     ws['!cols'] = cols;
 
-    // Set merges shifted by 11 header rows
+    // Set merges shifted by 13 header rows (including the 2 times enter spacer)
     ws['!merges'] = [
-      { s: { r: 11, c: 0 }, e: { r: 12, c: 0 } }, // No
-      { s: { r: 11, c: 1 }, e: { r: 12, c: 1 } }, // NISN
-      { s: { r: 11, c: 2 }, e: { r: 12, c: 2 } }, // Nama Siswa
-      { s: { r: 11, c: 3 }, e: { r: 12, c: 3 } }, // JK
-      { s: { r: 11, c: 4 }, e: { r: 11, c: 4 + daysInMonth - 1 } }, // Bulan 1-31
-      { s: { r: 11, c: 4 + daysInMonth }, e: { r: 11, c: 4 + daysInMonth + 3 } } // Jumlah
+      { s: { r: 13, c: 0 }, e: { r: 14, c: 0 } }, // No
+      { s: { r: 13, c: 1 }, e: { r: 14, c: 1 } }, // NISN
+      { s: { r: 13, c: 2 }, e: { r: 14, c: 2 } }, // Nama Siswa
+      { s: { r: 13, c: 3 }, e: { r: 14, c: 3 } }, // JK
+      { s: { r: 13, c: 4 }, e: { r: 13, c: 4 + daysInMonth - 1 } }, // Bulan 1-31
+      { s: { r: 13, c: 4 + daysInMonth }, e: { r: 13, c: 4 + daysInMonth + 3 } } // Jumlah
     ];
 
     const wb = XLSX.utils.book_new();
@@ -453,8 +501,9 @@ export default function AbsensiSec({
     const formattedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
     let waliKelasName = '';
-    if (monthlyClass && classStaffs && teachers) {
-      const staff = classStaffs.find(cs => cs.classId === monthlyClass);
+    const activeClass = monthlyClass || teacherClass;
+    if (activeClass && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === activeClass);
       if (staff) {
         const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
         if (teacher) {
@@ -683,12 +732,19 @@ export default function AbsensiSec({
             `}
           </div>
 
-          <div class="title-section" style="line-height: 1.5; font-size: 10px;">
-            <h2 class="title-main" style="margin-bottom: 6px;">REKAPITULASI PRESENSI BULANAN SISWA</h2>
-            <div>Bulan: <strong>${monthName.toUpperCase()} ${monthlyYear}</strong></div>
-            <div>Kelas: <strong>${monthlyClass || 'SEMUA KELAS'}</strong></div>
-            <div>Tahun Pelajaran: <strong>${academicYear}</strong></div>
-            <div>Semester: <strong>${semester}</strong></div>
+          <div class="title-section" style="line-height: 1.5; font-size: 10px; text-align: center; margin-bottom: 15px;">
+            <h2 class="title-main" style="margin-bottom: 12px; font-size: 12px; font-weight: 800; text-transform: uppercase;">REKAPITULASI PRESENSI BULANAN SISWA</h2>
+          </div>
+
+          <div class="meta-grid" style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 15px; font-size: 10px; width: 100%; box-sizing: border-box; text-align: left;">
+            <span style="color: #64748b; font-weight: 500;">Bulan</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${monthName.toUpperCase()} ${monthlyYear}</span>
+            <span style="color: #64748b; font-weight: 500;">Kelas</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${monthlyClass || 'SEMUA KELAS'}</span>
+            <span style="color: #64748b; font-weight: 500;">Tahun Pelajaran</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${academicYear}</span>
+            <span style="color: #64748b; font-weight: 500;">Semester</span>
+            <span style="color: #0f172a; font-weight: 700;">: ${semester}</span>
           </div>
 
           <table>
@@ -766,8 +822,9 @@ export default function AbsensiSec({
     const monthName = monthNames[monthNum - 1];
 
     let waliKelasName = '';
-    if (monthlyClass && classStaffs && teachers) {
-      const staff = classStaffs.find(cs => cs.classId === monthlyClass);
+    const activeClass = monthlyClass || teacherClass;
+    if (activeClass && classStaffs && teachers) {
+      const staff = classStaffs.find(cs => cs.classId === activeClass);
       if (staff) {
         const teacher = teachers.find(t => t.nuptk === staff.waliKelasNuptk);
         if (teacher) {
@@ -890,13 +947,22 @@ export default function AbsensiSec({
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
-    doc.text(`Bulan: ${monthName} ${monthlyYear}`, 15, 41);
-    doc.text(`Kelas: ${monthlyClass || 'Semua Kelas'}`, 15, 45);
-    doc.text(`Tahun Pelajaran: ${academicYear}`, 148, 41);
-    doc.text(`Semester: ${semester}`, 148, 45);
+
+    // Draw background box for metadata matching table width exactly
+    doc.setFillColor(248, 250, 252); // #f8fafc
+    doc.setDrawColor(226, 232, 240); // #e2e8f0
+    doc.roundedRect(15, 37, 267, 19, 2, 2, 'FD'); // x, y, width, height, rx, ry, style
+
+    // Write text inside the box (padded)
+    doc.setTextColor(51, 65, 85); // Slate-700
+    doc.text(`Bulan                : ${monthName} ${monthlyYear}`, 20, 42);
+    doc.text(`Kelas                : ${monthlyClass || 'Semua Kelas'}`, 20, 46);
+    doc.text(`Tahun Pelajaran : ${academicYear}`, 20, 50);
+    doc.text(`Semester          : ${semester}`, 20, 54);
+    doc.setTextColor(0, 0, 0); // Reset to black
 
     autoTable(doc, {
-      startY: 50,
+      startY: 58,
       head: [headers],
       body: rows,
       theme: 'grid',
@@ -988,6 +1054,30 @@ export default function AbsensiSec({
 
   const handleQuickScan = (nisn: string, status: 'Hadir' | 'Sakit' | 'Izin' | 'Alpa' = 'Hadir') => {
     handleScanWithStatus(nisn, status);
+  };
+
+  const shownManualStudents = React.useMemo(() => {
+    let filtered = students;
+    if (role === 'GURU' && teacherClass) {
+      filtered = filtered.filter(s => s.class === teacherClass);
+    } else if (manualClass) {
+      filtered = filtered.filter(s => s.class === manualClass);
+    }
+
+    if (manualSearchQuery.trim()) {
+      const q = manualSearchQuery.toLowerCase();
+      filtered = filtered.filter(s => 
+        s.name.toLowerCase().includes(q) || 
+        s.nisn.includes(q)
+      );
+    }
+
+    return filtered;
+  }, [students, role, teacherClass, manualClass, manualSearchQuery]);
+
+  const handleManualMark = (nisn: string, name: string, status: 'Hadir' | 'Sakit' | 'Izin' | 'Alpa') => {
+    onMarkAttendance(nisn, status, manualDate);
+    toast.success(`Berhasil mencatat ${name} (${status}) pada ${manualDate}`);
   };
 
   // Filter Attendance Logs
@@ -1214,86 +1304,145 @@ export default function AbsensiSec({
             </div>
           </div>
 
-          {/* Quick Attendance Selector */}
-          <div className="p-5 bg-slate-950/20 border border-slate-800 rounded-2xl flex flex-col justify-between">
+          {/* Interactive Manual Attendance Panel */}
+          <div className="p-5 bg-slate-950/20 border border-slate-800 rounded-2xl flex flex-col gap-4">
             <div>
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-1">Daftar Pintasan Absen</h3>
-              <p className="text-[10px] text-slate-500 mb-4">Klik tombol H, S, I, atau A untuk mencatat status siswa secara manual. Data otomatis sinkron real-time di semua akun Guru Kelas, Guru Mapel, & Admin.</p>
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-1">Absensi Manual</h3>
+              <p className="text-[10px] text-slate-500 mb-4">Cari siswa, pilih rombel/kelas, dan sesuaikan tanggal untuk pencatatan kehadiran manual.</p>
 
-              <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
-                {students.map((student) => {
-                  const existingAtt = attendance.find(
-                    att => att.nisn === student.nisn && att.date === new Date().toISOString().split('T')[0] && att.academicYear === academicYear && att.semester === semester
-                  );
-                  const currentStatus = existingAtt ? existingAtt.status : null;
+              {/* Filters Staggered */}
+              <div className="space-y-3 mb-4">
+                {/* Date Picker */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Tanggal Presensi</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-500" />
+                    <input
+                      type="date"
+                      value={manualDate}
+                      onChange={(e) => setManualDate(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs font-mono text-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                    />
+                  </div>
+                </div>
 
-                  return (
-                    <div
-                      key={student.nisn}
-                      className="p-2.5 bg-slate-900 border border-slate-800/60 rounded-xl flex items-center justify-between gap-2 text-xs"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-slate-200 truncate">{student.name}</p>
-                        <p className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">NISN: {student.nisn} ({student.class})</p>
-                      </div>
-
-                      <div className="flex gap-1 flex-shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleQuickScan(student.nisn, 'Hadir')}
-                          className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border ${
-                            currentStatus === 'Hadir'
-                              ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-md shadow-emerald-500/10 scale-105'
-                              : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-emerald-400 hover:border-emerald-500/30'
-                          }`}
-                          title="Hadir"
-                        >
-                          H
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickScan(student.nisn, 'Sakit')}
-                          className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border ${
-                            currentStatus === 'Sakit'
-                              ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-md shadow-amber-500/10 scale-105'
-                              : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-amber-400 hover:border-amber-500/30'
-                          }`}
-                          title="Sakit"
-                        >
-                          S
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickScan(student.nisn, 'Izin')}
-                          className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border ${
-                            currentStatus === 'Izin'
-                              ? 'bg-sky-500 text-slate-950 border-sky-500 shadow-md shadow-sky-500/10 scale-105'
-                              : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-sky-400 hover:border-sky-500/30'
-                          }`}
-                          title="Izin"
-                        >
-                          I
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleQuickScan(student.nisn, 'Alpa')}
-                          className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border ${
-                            currentStatus === 'Alpa'
-                              ? 'bg-rose-500 text-slate-950 border-rose-500 shadow-md shadow-rose-500/10 scale-105'
-                              : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-rose-400 hover:border-rose-500/30'
-                          }`}
-                          title="Alpa"
-                        >
-                          A
-                        </button>
-                      </div>
+                {/* Class Selector for Admin or Guru Mapel */}
+                {showClassFilter && (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Rombel / Kelas</label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-500" />
+                      <select
+                        value={manualClass}
+                        onChange={(e) => setManualClass(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                      >
+                        <option value="">-- Semua Kelas --</option>
+                        {availableClasses.map((cls) => (
+                          <option key={cls} value={cls}>{cls}</option>
+                        ))}
+                      </select>
                     </div>
-                  );
-                })}
+                  </div>
+                )}
+
+                {/* Search query input */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Cari Nama / NISN</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-slate-500" />
+                    <input
+                      type="text"
+                      placeholder="Cari nama atau NISN..."
+                      value={manualSearchQuery}
+                      onChange={(e) => setManualSearchQuery(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Student Manual List */}
+              <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+                {shownManualStudents.length === 0 ? (
+                  <div className="text-center p-6 bg-slate-900/40 border border-slate-800/60 rounded-xl text-xs text-slate-500 italic">
+                    Tidak ada siswa yang cocok dengan filter atau pencarian.
+                  </div>
+                ) : (
+                  shownManualStudents.map((student) => {
+                    const existingAtt = attendance.find(
+                      att => att.nisn === student.nisn && att.date === manualDate && att.academicYear === academicYear && att.semester === semester
+                    );
+                    const currentStatus = existingAtt ? existingAtt.status : null;
+
+                    return (
+                      <div
+                        key={student.nisn}
+                        className="p-2.5 bg-slate-900 border border-slate-800/60 rounded-xl flex items-center justify-between gap-2 text-xs hover:bg-slate-900/80 transition-all"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-slate-200 truncate">{student.name}</p>
+                          <p className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">NISN: {student.nisn} ({student.class})</p>
+                        </div>
+
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleManualMark(student.nisn, student.name, 'Hadir')}
+                            className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border cursor-pointer ${
+                              currentStatus === 'Hadir'
+                                ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-md shadow-emerald-500/10 scale-105 font-black'
+                                : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-emerald-400 hover:border-emerald-500/30'
+                            }`}
+                            title="Hadir"
+                          >
+                            H
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleManualMark(student.nisn, student.name, 'Sakit')}
+                            className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border cursor-pointer ${
+                              currentStatus === 'Sakit'
+                                ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-md shadow-amber-500/10 scale-105 font-black'
+                                : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-amber-400 hover:border-amber-500/30'
+                            }`}
+                            title="Sakit"
+                          >
+                            S
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleManualMark(student.nisn, student.name, 'Izin')}
+                            className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border cursor-pointer ${
+                              currentStatus === 'Izin'
+                                ? 'bg-sky-500 text-slate-950 border-sky-500 shadow-md shadow-sky-500/10 scale-105 font-black'
+                                : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-sky-400 hover:border-sky-500/30'
+                            }`}
+                            title="Izin"
+                          >
+                            I
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleManualMark(student.nisn, student.name, 'Alpa')}
+                            className={`w-7 h-7 flex items-center justify-center text-[10px] font-extrabold rounded-lg transition-all border cursor-pointer ${
+                              currentStatus === 'Alpa'
+                                ? 'bg-rose-500 text-slate-950 border-rose-500 shadow-md shadow-rose-500/10 scale-105 font-black'
+                                : 'bg-slate-950/40 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-rose-400 hover:border-rose-500/30'
+                            }`}
+                            title="Alpa"
+                          >
+                            A
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
-            <p className="text-[10px] text-slate-500 mt-4 leading-normal italic text-center">
+            <p className="text-[10px] text-slate-500 leading-normal italic text-center border-t border-slate-800/60 pt-3">
               *Setelah diklik, data absensi langsung terhubung ke tabel log dan memicu pengiriman email otomatis.
             </p>
           </div>
