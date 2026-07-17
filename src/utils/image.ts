@@ -4,9 +4,9 @@
  */
 export function resizeAndCompressImage(
   source: File | string,
-  maxWidth = 150,
-  maxHeight = 180,
-  quality = 0.75
+  maxWidth = 1000,
+  maxHeight = 1250,
+  quality = 0.95
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const processImage = (base64Str: string) => {

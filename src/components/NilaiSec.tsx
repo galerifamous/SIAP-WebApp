@@ -456,15 +456,6 @@ export default function NilaiSec({
     let headmasterName = 'Makhfud, S.Pd.';
     let headmasterNip = '197812052005011002';
 
-    if (academicSetting) {
-      if (academicSetting.headmasterName || academicSetting.headmaster) {
-        headmasterName = academicSetting.headmasterName || academicSetting.headmaster || '';
-      }
-      if (academicSetting.headmasterNip) {
-        headmasterNip = academicSetting.headmasterNip;
-      }
-    }
-
     try {
       const sysRaw = localStorage.getItem('siap_system');
       if (sysRaw) {
@@ -472,15 +463,18 @@ export default function NilaiSec({
         if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
         if (sys.logoUrl) logoUrl = sys.logoUrl;
         if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
-        
-        // fallback if academic not set
-        const hasAcadHead = academicSetting?.headmasterName || academicSetting?.headmaster;
-        if (!hasAcadHead && sys.headmasterName) {
-          headmasterName = sys.headmasterName;
-        }
+        if (sys.headmasterName) headmasterName = sys.headmasterName;
+        if (sys.headmasterNip) headmasterNip = sys.headmasterNip;
       }
-    } catch (e) {
-      // ignore
+    } catch (e) {}
+
+    if (academicSetting) {
+      if (headmasterName === 'Makhfud, S.Pd.' && (academicSetting.headmasterName || academicSetting.headmaster)) {
+        headmasterName = academicSetting.headmasterName || academicSetting.headmaster || '';
+      }
+      if (headmasterNip === '197812052005011002' && academicSetting.headmasterNip) {
+        headmasterNip = academicSetting.headmasterNip;
+      }
     }
 
     let cityName = 'Indonesia';

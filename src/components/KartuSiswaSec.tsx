@@ -36,6 +36,14 @@ interface KartuSiswaSecProps {
   academicSetting?: AcademicSetting;
 }
 
+const getDynamicFontSize = (name: string): string => {
+  const len = name?.length || 0;
+  if (len <= 15) return '8px';
+  if (len <= 22) return '7px';
+  if (len <= 30) return '6.2px';
+  return '5.2px';
+};
+
 type CardTheme = 'emerald' | 'blue' | 'crimson' | 'indigo' | 'dark' | 'amber';
 
 export default function KartuSiswaSec({ 
@@ -72,23 +80,10 @@ export default function KartuSiswaSec({
   const [cardTitle, setCardTitle] = useState('KARTU TANDA SISWA');
   const [customSchoolName, setCustomSchoolName] = useState(systemSetting.schoolName || "MI Asy-Syafi'iyyah 02");
   const [customSchoolAddress, setCustomSchoolAddress] = useState(systemSetting.schoolAddress || 'Jl. Pendidikan No. 45, Jakarta, Indonesia');
-  const [customHeadmasterName, setCustomHeadmasterName] = useState(() => {
-    return academicSetting?.headmasterName || academicSetting?.headmaster || systemSetting.headmasterName || 'Makhfud, S.Pd.';
-  });
-  const [customHeadmasterNip, setCustomHeadmasterNip] = useState(() => {
-    return academicSetting?.headmasterNip || '197812052005011002';
-  });
+  
+  const customHeadmasterName = systemSetting.headmasterName || 'Makhfud, S.Pd.';
+  const customHeadmasterNip = systemSetting.headmasterNip || '197812052005011002';
 
-  useEffect(() => {
-    if (academicSetting) {
-      if (academicSetting.headmasterName || academicSetting.headmaster) {
-        setCustomHeadmasterName(academicSetting.headmasterName || academicSetting.headmaster || '');
-      }
-      if (academicSetting.headmasterNip) {
-        setCustomHeadmasterNip(academicSetting.headmasterNip);
-      }
-    }
-  }, [academicSetting]);
   const [customStampText, setCustomStampText] = useState('SIAP OFFICIAL\nSEAL');
   
   // Custom Signature & Stamp Image States
@@ -457,6 +452,8 @@ export default function KartuSiswaSec({
               width: 100%;
               height: 100%;
               object-fit: cover;
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
             }
             .photo-placeholder {
               width: 100%;
@@ -478,16 +475,22 @@ export default function KartuSiswaSec({
               flex-shrink: 0;
             }
             .student-name {
-              font-size: 8px;
               font-weight: 800;
               color: ${cardTextPrimaryHex};
               margin: 0;
               text-transform: uppercase;
               letter-spacing: -0.1px;
-              white-space: nowrap;
+              white-space: normal;
+              word-break: break-word;
+              line-height: 1.1;
+              display: -webkit-box;
+              -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical;
               overflow: hidden;
-              text-overflow: ellipsis;
-              line-height: 1.2;
+              height: 18px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
             }
             .student-class-badge {
               display: inline-block;
@@ -666,6 +669,8 @@ export default function KartuSiswaSec({
               object-fit: contain;
               z-index: 10;
               pointer-events: none;
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
             }
             .stamp-seal-img {
               position: absolute;
@@ -677,6 +682,8 @@ export default function KartuSiswaSec({
               z-index: 5;
               opacity: 0.8;
               pointer-events: none;
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
             }
             .sig-name {
               font-size: 6px;
@@ -788,7 +795,7 @@ export default function KartuSiswaSec({
                 </div>
 
                 <div class="student-name-box">
-                  <h3 class="student-name">${student.name}</h3>
+                  <h3 class="student-name" style="font-size: ${getDynamicFontSize(student.name)}">${student.name}</h3>
                   <span class="student-class-badge">KELAS ${student.class}</span>
                 </div>
 
@@ -963,7 +970,7 @@ export default function KartuSiswaSec({
             </div>
 
             <div class="student-name-box">
-              <h3 class="student-name">${student.name}</h3>
+              <h3 class="student-name" style="font-size: ${getDynamicFontSize(student.name)}">${student.name}</h3>
               <span class="student-class-badge">KELAS ${student.class}</span>
             </div>
 
@@ -1053,38 +1060,44 @@ export default function KartuSiswaSec({
       `;
     };
 
-    // Chunk students into groups of 6 to fit F4 Portrait beautifully (2 columns x 3 rows = 6 cards)
+    // Chunk students into groups of 9 to fit A4 Portrait beautifully (3 columns x 3 rows = 9 cards)
     const chunks: Student[][] = [];
-    for (let i = 0; i < sortedStudents.length; i += 6) {
-      chunks.push(sortedStudents.slice(i, i + 6));
+    for (let i = 0; i < sortedStudents.length; i += 9) {
+      chunks.push(sortedStudents.slice(i, i + 9));
     }
 
     let pagesHtml = '';
     chunks.forEach((chunk) => {
-      // 1. FRONT PAGE (Odd Page) - Standard 2x3 grid order (0 to 5)
+      // 1. FRONT PAGE (Odd Page) - Standard 3x3 grid order (0 to 8)
       pagesHtml += `
-        <div class="f4-page">
+        <div class="a4-page">
           ${getFrontCardHtml(chunk[0])}
           ${getFrontCardHtml(chunk[1])}
           ${getFrontCardHtml(chunk[2])}
           ${getFrontCardHtml(chunk[3])}
           ${getFrontCardHtml(chunk[4])}
           ${getFrontCardHtml(chunk[5])}
+          ${getFrontCardHtml(chunk[6])}
+          ${getFrontCardHtml(chunk[7])}
+          ${getFrontCardHtml(chunk[8])}
         </div>
       `;
 
       // 2. BACK PAGE (Even Page) - Horizontally mirrored order per row to line up front and back cards beautifully in double-sided printing!
-      // Row 1 (0-1) fronts mirror to (1, 0) back
-      // Row 2 (2-3) fronts mirror to (3, 2) back
-      // Row 3 (4-5) fronts mirror to (5, 4) back
+      // Row 1 (0-1-2) fronts mirror to (2, 1, 0) back
+      // Row 2 (3-4-5) fronts mirror to (5, 4, 3) back
+      // Row 3 (6-7-8) fronts mirror to (8, 7, 6) back
       pagesHtml += `
-        <div class="f4-page">
+        <div class="a4-page">
+          ${getBackCardHtml(chunk[2])}
           ${getBackCardHtml(chunk[1])}
           ${getBackCardHtml(chunk[0])}
-          ${getBackCardHtml(chunk[3])}
-          ${getBackCardHtml(chunk[2])}
           ${getBackCardHtml(chunk[5])}
           ${getBackCardHtml(chunk[4])}
+          ${getBackCardHtml(chunk[3])}
+          ${getBackCardHtml(chunk[8])}
+          ${getBackCardHtml(chunk[7])}
+          ${getBackCardHtml(chunk[6])}
         </div>
       `;
     });
@@ -1133,21 +1146,21 @@ export default function KartuSiswaSec({
             .btn-print:hover { opacity: 0.9; }
 
              @page {
-              size: 215mm 330mm portrait;
+              size: A4 portrait;
               margin: 0;
             }
 
-            /* Optimized Portrait F4 grid layout for 6 ID Cards (2 columns x 3 rows) at exact 100% scale (55mm x 85mm) */
-            .f4-page {
-              width: 215mm;
-              height: 330mm;
+            /* Optimized Portrait A4 grid layout for 9 ID Cards (3 columns x 3 rows) at exact 100% scale (55mm x 85mm) */
+            .a4-page {
+              width: 210mm;
+              height: 297mm;
               box-sizing: border-box;
               background-color: #ffffff;
               display: grid;
-              grid-template-columns: repeat(2, 55mm);
+              grid-template-columns: repeat(3, 55mm);
               grid-template-rows: repeat(3, 85mm);
-              gap: 6mm 10mm;
-              padding: 12mm 15mm;
+              gap: 2mm 4mm;
+              padding: 19mm 18.5mm;
               justify-content: center;
               align-content: center;
               page-break-after: always;
@@ -1323,6 +1336,8 @@ export default function KartuSiswaSec({
               width: 100%;
               height: 100%;
               object-fit: cover;
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
             }
             .photo-placeholder {
               width: 100%;
@@ -1344,16 +1359,22 @@ export default function KartuSiswaSec({
               flex-shrink: 0;
             }
             .student-name {
-              font-size: 8px;
               font-weight: 800;
               color: ${cardTextPrimaryHex};
               margin: 0;
               text-transform: uppercase;
               letter-spacing: -0.1px;
-              white-space: nowrap;
+              white-space: normal;
+              word-break: break-word;
+              line-height: 1.1;
+              display: -webkit-box;
+              -webkit-line-clamp: 2;
+              -webkit-box-orient: vertical;
               overflow: hidden;
-              text-overflow: ellipsis;
-              line-height: 1.2;
+              height: 18px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
             }
             .student-class-badge {
               display: inline-block;
@@ -1529,6 +1550,8 @@ export default function KartuSiswaSec({
               object-fit: contain;
               z-index: 10;
               pointer-events: none;
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
             }
             .stamp-seal-img {
               position: absolute;
@@ -1540,6 +1563,8 @@ export default function KartuSiswaSec({
               z-index: 5;
               opacity: 0.8;
               pointer-events: none;
+              image-rendering: -webkit-optimize-contrast;
+              image-rendering: crisp-edges;
             }
             .sig-name {
               font-size: 6px;
@@ -1608,7 +1633,7 @@ export default function KartuSiswaSec({
               align-items: center;
             }
 
-            @media print {
+             @media print {
               body {
                 background-color: #ffffff;
                 padding: 0;
@@ -1622,12 +1647,13 @@ export default function KartuSiswaSec({
               .no-print-bar {
                 display: none;
               }
-              .f4-page {
+              .a4-page {
                 page-break-after: always;
                 page-break-inside: avoid;
                 margin: 0 auto !important; /* Center the grid on the printed page */
-                border: none;
-                box-shadow: none;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 19mm 18.5mm !important;
               }
             }
           </style>
@@ -1635,9 +1661,9 @@ export default function KartuSiswaSec({
         <body>
           <div class="no-print-bar">
             <div>
-              <strong style="font-size: 15px;">Mode Cetak Massal Kartu Siswa SIAP (B1 / CR-80 Standard - 55 mm x 85 mm - Kertas F4)</strong>
+              <strong style="font-size: 15px;">Mode Cetak Massal Kartu Siswa SIAP (B1 / CR-80 Standard - 55 mm x 85 mm - Kertas A4 - 9 Kartu Per Halaman)</strong>
               <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
-                Silakan klik tombol cetak. <strong>PANDUAN DUPLEX (BOLAK-BALIK):</strong> Setel orientasi pencetakan ke <strong>"Portrait"</strong>, ukuran kertas <strong>"F4 / Folio"</strong> (atau ukuran kustom 215 mm x 330 mm), margin <strong>"None"</strong>, centang opsi <strong>"Background graphics"</strong>, dan pilih pencetakan dua sisi (duplex) dengan opsi <strong>"Flip on long edge"</strong> (atau long-edge binding) agar bagian depan (halaman ganjil) dan belakang (halaman genap) sejajar, presisi, tegak, dan siap untuk dipotong langsung!
+                Silakan klik tombol cetak. <strong>PANDUAN DUPLEX (BOLAK-BALIK):</strong> Setel orientasi pencetakan ke <strong>"Portrait"</strong>, ukuran kertas <strong>"A4"</strong>, margin <strong>"None"</strong>, centang opsi <strong>"Background graphics"</strong>, dan pilih pencetakan dua sisi (duplex) dengan opsi <strong>"Flip on long edge"</strong> agar bagian depan (halaman ganjil) dan belakang (halaman genap) sejajar presisi, tegak, dan siap cetak!
               </div>
             </div>
             <button class="btn-print" onclick="window.print()">Mulai Cetak Kartu Massal</button>
@@ -1673,35 +1699,49 @@ export default function KartuSiswaSec({
         }
       });
       
-      // Fetch, patch and substitute <link> stylesheets with temporary <style> tags
-      for (const link of linkTags) {
+      // Fetch and patch <link> stylesheets in parallel with a strict 800ms timeout
+      const fetchPromises = linkTags.map(async (link) => {
         if (!link.disabled && link.href) {
           try {
-            // Only attempt to fetch if it's on the same origin (to avoid CORS issues)
             const linkUrl = new URL(link.href, window.location.origin);
             if (linkUrl.origin === window.location.origin) {
-              const response = await fetch(link.href);
-              if (response.ok) {
-                const cssText = await response.text();
-                const patchedCss = cssText.replace(/oklch\([^)]+\)/g, 'rgb(100, 116, 139)');
-                
-                const tempStyle = document.createElement('style');
-                tempStyle.setAttribute('data-temp-patched', 'true');
-                tempStyle.textContent = patchedCss;
-                document.head.appendChild(tempStyle);
-                tempStyleTags.push(tempStyle);
-                
-                // Disable the original link stylesheet so html2canvas doesn't crash on it
-                link.disabled = true;
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 800);
+              try {
+                const response = await fetch(link.href, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (response.ok) {
+                  const cssText = await response.text();
+                  return { link, cssText };
+                }
+              } catch (e) {
+                clearTimeout(timeoutId);
               }
             }
-          } catch (fetchErr) {
-            console.warn("Failed to fetch/patch link stylesheet (might be CORS or external):", link.href, fetchErr);
-            // We do NOT disable the link tag if it fails or is external (like Google Fonts)
-            // since those rarely use oklch anyway and we want to keep them loaded.
+          } catch (err) {
+            console.warn("Failed to check or fetch link:", link.href, err);
           }
         }
-      }
+        return null;
+      });
+
+      const fetchedResults = await Promise.all(fetchPromises);
+
+      fetchedResults.forEach(result => {
+        if (result) {
+          const { link, cssText } = result;
+          const patchedCss = cssText.replace(/oklch\([^)]+\)/g, 'rgb(100, 116, 139)');
+          
+          const tempStyle = document.createElement('style');
+          tempStyle.setAttribute('data-temp-patched', 'true');
+          tempStyle.textContent = patchedCss;
+          document.head.appendChild(tempStyle);
+          tempStyleTags.push(tempStyle);
+          
+          // Disable the original link stylesheet so html2canvas doesn't crash on it
+          link.disabled = true;
+        }
+      });
       
       return await action();
     } finally {
@@ -1750,16 +1790,20 @@ export default function KartuSiswaSec({
       
       const { frontImg, backImg } = await runWithOklchWorkaround(async () => {
         const frontCanvas = await html2canvas(frontEl, {
-          scale: 3,
+          scale: 4,
           useCORS: true,
           allowTaint: true,
-          backgroundColor: null
+          backgroundColor: null,
+          logging: false,
+          imageTimeout: 0
         });
         const backCanvas = await html2canvas(backEl, {
-          scale: 3,
+          scale: 4,
           useCORS: true,
           allowTaint: true,
-          backgroundColor: null
+          backgroundColor: null,
+          logging: false,
+          imageTimeout: 0
         });
         return {
           frontImg: frontCanvas.toDataURL('image/png'),
@@ -1834,18 +1878,22 @@ export default function KartuSiswaSec({
       await runWithOklchWorkaround(async () => {
         for (let i = 0; i < sortedStudents.length; i++) {
           const frontCanvas = await html2canvas(frontEls[i], {
-            scale: 2.5,
+            scale: 4,
             useCORS: true,
             allowTaint: true,
-            backgroundColor: null
+            backgroundColor: null,
+            logging: false,
+            imageTimeout: 0
           });
           frontImages.push(frontCanvas.toDataURL('image/png'));
           
           const backCanvas = await html2canvas(backEls[i], {
-            scale: 2.5,
+            scale: 4,
             useCORS: true,
             allowTaint: true,
-            backgroundColor: null
+            backgroundColor: null,
+            logging: false,
+            imageTimeout: 0
           });
           backImages.push(backCanvas.toDataURL('image/png'));
         }
@@ -2012,7 +2060,12 @@ export default function KartuSiswaSec({
               }}
             >
               {student.photoUrl ? (
-                <img src={student.photoUrl} className="w-full h-full object-cover" alt="Student" crossOrigin="anonymous" />
+                <img 
+                  src={student.photoUrl} 
+                  className="w-full h-full object-cover" 
+                  alt="Student" 
+                  crossOrigin="anonymous" 
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-slate-100">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: '8mm', height: '8mm' }}>
@@ -2025,7 +2078,20 @@ export default function KartuSiswaSec({
 
             {/* Student Name & Class */}
             <div className="text-center w-full flex-shrink-0 mb-1">
-              <h3 className="font-extrabold uppercase tracking-tight truncate leading-tight m-0" style={{ fontSize: '8px', color: cardTextPrimaryHex }}>
+              <h3 
+                className="font-extrabold uppercase tracking-tight leading-tight m-0 flex items-center justify-center" 
+                style={{ 
+                  fontSize: getDynamicFontSize(student.name), 
+                  color: cardTextPrimaryHex,
+                  whiteSpace: 'normal',
+                  wordBreak: 'break-word',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  height: '18px'
+                }}
+              >
                 {student.name}
               </h3>
               <span 
@@ -2411,34 +2477,6 @@ export default function KartuSiswaSec({
               </div>
 
               <div>
-                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Nama Kepala Sekolah / Madrasah</label>
-                <input
-                  type="text"
-                  value={customHeadmasterName}
-                  onChange={(e) => setCustomHeadmasterName(e.target.value)}
-                  className={`w-full border rounded-lg p-2 focus:outline-none focus:border-emerald-500 text-[10px] ${
-                    isDark 
-                      ? 'bg-slate-900 border-slate-800 text-slate-200' 
-                      : 'bg-white border-[#cbd5ce] text-slate-850 shadow-[inset_1px_1px_2px_#cbd5ce]'
-                  }`}
-                />
-              </div>
-
-              <div>
-                <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>NIP Kepala Madrasah</label>
-                <input
-                  type="text"
-                  value={customHeadmasterNip}
-                  onChange={(e) => setCustomHeadmasterNip(e.target.value)}
-                  className={`w-full border rounded-lg p-2 focus:outline-none focus:border-emerald-500 text-[10px] font-mono ${
-                    isDark 
-                      ? 'bg-slate-900 border-slate-800 text-slate-200' 
-                      : 'bg-white border-[#cbd5ce] text-slate-850 shadow-[inset_1px_1px_2px_#cbd5ce]'
-                  }`}
-                />
-              </div>
-
-              <div>
                 <label className={`block font-semibold mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Upload Gambar TTD Kepala</label>
                 <div className="flex gap-1.5 items-center">
                   <input
@@ -2705,8 +2743,8 @@ export default function KartuSiswaSec({
                       </div>
 
                       {/* Name Header */}
-                      <div className="text-center w-full mb-1">
-                        <h3 className="text-[11px] font-black text-white uppercase tracking-tight truncate leading-none mb-1">
+                      <div className="text-center w-full mb-1 min-h-[22px] flex flex-col items-center justify-center">
+                        <h3 className="text-[10px] font-black text-white uppercase tracking-tight leading-snug break-words whitespace-normal line-clamp-2 m-0 mb-1">
                           {selectedStudent.name}
                         </h3>
                         <span className={`inline-block text-[7.5px] font-bold px-1.5 py-0.5 rounded-full ${activeTheme.badge}`}>

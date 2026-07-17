@@ -1222,11 +1222,11 @@ export default function App() {
   useEffect(() => {
     if (!isLoaded || students.length === 0) return;
 
-    // Find any student with a large uncompressed Base64 photo
+    // Find any student with a large uncompressed Base64 photo (over 90KB)
     const largePhotoStudents = students.filter(s => 
       s.photoUrl && 
       s.photoUrl.startsWith('data:image/') && 
-      s.photoUrl.length > 35000
+      s.photoUrl.length > 120000
     );
 
     if (largePhotoStudents.length === 0) return;
@@ -1236,9 +1236,10 @@ export default function App() {
     const compressAll = async () => {
       let updatedAny = false;
       const updatedStudents = await Promise.all(students.map(async (student) => {
-        if (student.photoUrl && student.photoUrl.startsWith('data:image/') && student.photoUrl.length > 35000) {
+        if (student.photoUrl && student.photoUrl.startsWith('data:image/') && student.photoUrl.length > 120000) {
           try {
-            const compressed = await resizeAndCompressImage(student.photoUrl);
+            // Compress to a sharp 400x500 high resolution photo
+            const compressed = await resizeAndCompressImage(student.photoUrl, 400, 500, 0.9);
             console.log(`[Self-Healing] Successfully compressed photo for NISN ${student.nisn} from ${student.photoUrl.length} to ${compressed.length} characters.`);
             updatedAny = true;
             return { ...student, photoUrl: compressed };

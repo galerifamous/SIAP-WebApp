@@ -141,6 +141,7 @@ export const INITIAL_SYSTEM: SystemSetting = {
   schoolAddress: 'Jl. Pendidikan No. 1, Kota Madya, Indonesia',
   adminEmail: 'admin.siap@madrasah.sch.id',
   headmasterName: 'Makhfud, S.Pd.',
+  headmasterNip: '197812052005011002',
   logoUrl: '', // Will be rendered dynamically using beautiful SVG icon if empty
   govLogoUrl: '', // Will be uploaded or empty by default
   adminUsername: 'admin',

@@ -86,6 +86,21 @@ export default function SettingsSec({
   const [sysGovLogo, setSysGovLogo] = useState(systemSetting.govLogoUrl || '');
   const [sysAdminUser, setSysAdminUser] = useState(systemSetting.adminUsername || 'admin');
   const [sysAdminPass, setSysAdminPass] = useState(systemSetting.adminPassword || 'admin');
+  const [sysHeadName, setSysHeadName] = useState(systemSetting.headmasterName || '');
+  const [sysHeadNip, setSysHeadNip] = useState(systemSetting.headmasterNip || '');
+
+  React.useEffect(() => {
+    setSysName(systemSetting.schoolName);
+    setSysAddress(systemSetting.schoolAddress);
+    setSysEmail(systemSetting.adminEmail);
+    setSysLogo(systemSetting.logoUrl);
+    setSysGovLogo(systemSetting.govLogoUrl || '');
+    setSysAdminUser(systemSetting.adminUsername || 'admin');
+    setSysAdminPass(systemSetting.adminPassword || 'admin');
+    setSysHeadName(systemSetting.headmasterName || '');
+    setSysHeadNip(systemSetting.headmasterNip || '');
+  }, [systemSetting]);
+
   const logoInputRef = useRef<HTMLInputElement>(null);
   const govLogoInputRef = useRef<HTMLInputElement>(null);
 
@@ -147,10 +162,7 @@ export default function SettingsSec({
       ...academicSetting,
       activeYear: acadYear,
       activeSemester: acadSemester as 'Ganjil' | 'Genap',
-      kkm: Number(acadKkm),
-      headmasterName: acadHeadName,
-      headmaster: acadHeadName,
-      headmasterNip: acadHeadNip
+      kkm: Number(acadKkm)
     });
     toast.success('Pengaturan parameter akademik berhasil diperbarui dan disinkronkan!');
   };
@@ -162,7 +174,8 @@ export default function SettingsSec({
       schoolName: sysName,
       schoolAddress: sysAddress,
       adminEmail: sysEmail,
-      headmasterName: acadHeadName, // keep in sync with unified headmaster setting
+      headmasterName: sysHeadName,
+      headmasterNip: sysHeadNip,
       logoUrl: sysLogo,
       govLogoUrl: sysGovLogo,
       adminUsername: sysAdminUser,
@@ -531,7 +544,7 @@ export default function SettingsSec({
             <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-emerald-400" /> Penyetelan Tahun Pelajaran, Semester & Kepala Madrasah
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-slate-400 font-semibold mb-1.5">Tahun Pelajaran Utama</label>
                 <select
@@ -566,28 +579,6 @@ export default function SettingsSec({
                   step="1"
                   value={acadKkm}
                   onChange={(e) => setAcadKkm(Number(e.target.value))}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1.5">Nama Kepala Madrasah</label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Makhfud, S.Pd."
-                  value={acadHeadName}
-                  onChange={(e) => setAcadHeadName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1.5">NIP Kepala Madrasah</label>
-                <input
-                  type="text"
-                  placeholder="Contoh: 197812052005011002"
-                  value={acadHeadNip}
-                  onChange={(e) => setAcadHeadNip(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-slate-200 font-bold focus:outline-none"
                 />
               </div>
@@ -974,6 +965,32 @@ export default function SettingsSec({
                 value={sysEmail}
                 onChange={(e) => setSysEmail(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 font-mono focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+
+            {/* Nama Kepala Madrasah */}
+            <div>
+              <label className="block text-slate-400 font-semibold mb-1">Nama Kepala Madrasah *</label>
+              <input
+                type="text"
+                required
+                value={sysHeadName}
+                onChange={(e) => setSysHeadName(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 font-bold focus:outline-none focus:border-emerald-500"
+                placeholder="Contoh: Makhfud, S.Pd."
+              />
+            </div>
+
+            {/* NIP Kepala Madrasah */}
+            <div>
+              <label className="block text-slate-400 font-semibold mb-1">NIP Kepala Madrasah *</label>
+              <input
+                type="text"
+                required
+                value={sysHeadNip}
+                onChange={(e) => setSysHeadNip(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-slate-200 font-bold focus:outline-none focus:border-emerald-500"
+                placeholder="Contoh: 197812052005011002"
               />
             </div>
 

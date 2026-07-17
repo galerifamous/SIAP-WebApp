@@ -43,28 +43,27 @@ export function convertToCSV<T extends Record<string, any>>(
   let headmasterNip = '197812052005011002';
   
   try {
-    const acadRaw = localStorage.getItem('siap_academic');
-    if (acadRaw) {
-      const acad = JSON.parse(acadRaw);
-      if (acad.headmasterName) headmasterName = acad.headmasterName;
-      else if (acad.headmaster) headmasterName = acad.headmaster;
-      if (acad.headmasterNip) headmasterNip = acad.headmasterNip;
-    }
-  } catch (e) {}
-
-  try {
     const sysRaw = localStorage.getItem('siap_system');
     if (sysRaw) {
       const sys = JSON.parse(sysRaw);
       if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
-      const hasAcadHead = localStorage.getItem('siap_academic') && (JSON.parse(localStorage.getItem('siap_academic') || '{}').headmasterName || JSON.parse(localStorage.getItem('siap_academic') || '{}').headmaster);
-      if (!hasAcadHead && sys.headmasterName) {
-        headmasterName = sys.headmasterName;
+      if (sys.headmasterName) headmasterName = sys.headmasterName;
+      if (sys.headmasterNip) headmasterNip = sys.headmasterNip;
+    }
+  } catch (e) {}
+
+  try {
+    const acadRaw = localStorage.getItem('siap_academic');
+    if (acadRaw) {
+      const acad = JSON.parse(acadRaw);
+      if (headmasterName === 'Makhfud, S.Pd.' && (acad.headmasterName || acad.headmaster)) {
+        headmasterName = acad.headmasterName || acad.headmaster;
+      }
+      if (headmasterNip === '197812052005011002' && acad.headmasterNip) {
+        headmasterNip = acad.headmasterNip;
       }
     }
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
 
   let resolvedWaliKelas = waliKelas;
   if (!resolvedWaliKelas) {
@@ -155,30 +154,29 @@ export function printToPDF(
   let headmasterNip = '197812052005011002';
   
   try {
-    const acadRaw = localStorage.getItem('siap_academic');
-    if (acadRaw) {
-      const acad = JSON.parse(acadRaw);
-      if (acad.headmasterName) headmasterName = acad.headmasterName;
-      else if (acad.headmaster) headmasterName = acad.headmaster;
-      if (acad.headmasterNip) headmasterNip = acad.headmasterNip;
-    }
-  } catch (e) {}
-
-  try {
     const sysRaw = localStorage.getItem('siap_system');
     if (sysRaw) {
       const sys = JSON.parse(sysRaw);
       if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
       if (sys.logoUrl) logoUrl = sys.logoUrl;
       if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
-      const hasAcadHead = localStorage.getItem('siap_academic') && (JSON.parse(localStorage.getItem('siap_academic') || '{}').headmasterName || JSON.parse(localStorage.getItem('siap_academic') || '{}').headmaster);
-      if (!hasAcadHead && sys.headmasterName) {
-        headmasterName = sys.headmasterName;
+      if (sys.headmasterName) headmasterName = sys.headmasterName;
+      if (sys.headmasterNip) headmasterNip = sys.headmasterNip;
+    }
+  } catch (e) {}
+
+  try {
+    const acadRaw = localStorage.getItem('siap_academic');
+    if (acadRaw) {
+      const acad = JSON.parse(acadRaw);
+      if (headmasterName === 'Makhfud, S.Pd.' && (acad.headmasterName || acad.headmaster)) {
+        headmasterName = acad.headmasterName || acad.headmaster;
+      }
+      if (headmasterNip === '197812052005011002' && acad.headmasterNip) {
+        headmasterNip = acad.headmasterNip;
       }
     }
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
 
   let cityName = 'Indonesia';
   if (schoolAddress) {
@@ -602,30 +600,29 @@ export function downloadToPDF(
   let govLogoUrl = '';
 
   try {
-    const acadRaw = localStorage.getItem('siap_academic');
-    if (acadRaw) {
-      const acad = JSON.parse(acadRaw);
-      if (acad.headmasterName) headmasterName = acad.headmasterName;
-      else if (acad.headmaster) headmasterName = acad.headmaster;
-      if (acad.headmasterNip) headmasterNip = acad.headmasterNip;
-    }
-  } catch (e) {}
-
-  try {
     const sysRaw = localStorage.getItem('siap_system');
     if (sysRaw) {
       const sys = JSON.parse(sysRaw);
       if (sys.schoolAddress) schoolAddress = sys.schoolAddress;
       if (sys.logoUrl) logoUrl = sys.logoUrl;
       if (sys.govLogoUrl) govLogoUrl = sys.govLogoUrl;
-      const hasAcadHead = localStorage.getItem('siap_academic') && (JSON.parse(localStorage.getItem('siap_academic') || '{}').headmasterName || JSON.parse(localStorage.getItem('siap_academic') || '{}').headmaster);
-      if (!hasAcadHead && sys.headmasterName) {
-        headmasterName = sys.headmasterName;
+      if (sys.headmasterName) headmasterName = sys.headmasterName;
+      if (sys.headmasterNip) headmasterNip = sys.headmasterNip;
+    }
+  } catch (e) {}
+
+  try {
+    const acadRaw = localStorage.getItem('siap_academic');
+    if (acadRaw) {
+      const acad = JSON.parse(acadRaw);
+      if (headmasterName === 'Makhfud, S.Pd.' && (acad.headmasterName || acad.headmaster)) {
+        headmasterName = acad.headmasterName || acad.headmaster;
+      }
+      if (headmasterNip === '197812052005011002' && acad.headmasterNip) {
+        headmasterNip = acad.headmasterNip;
       }
     }
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
 
   // Draw Ministry/Gov logo on the left
   if (govLogoUrl) {

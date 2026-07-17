@@ -133,6 +133,7 @@ export interface SystemSetting {
   schoolAddress: string;
   adminEmail: string;
   headmasterName: string;
+  headmasterNip?: string;
   logoUrl: string; // Base64 or custom logo URL
   govLogoUrl?: string; // Ministry logo Base64 or URL
   adminUsername?: string;
