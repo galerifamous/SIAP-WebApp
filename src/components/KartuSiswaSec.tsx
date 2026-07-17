@@ -372,15 +372,16 @@ export default function KartuSiswaSec({
             }
 
             .school-meta {
-              min-width: 0;
+              width: 41mm;
               display: flex;
               flex-direction: column;
               justify-content: center;
+              box-sizing: border-box;
             }
             .school-name {
-              font-size: 6.5px;
+              font-size: 6px;
               font-weight: 800;
-              letter-spacing: 0.2px;
+              letter-spacing: 0.1px;
               margin: 0;
               text-transform: uppercase;
               white-space: nowrap;
@@ -390,9 +391,9 @@ export default function KartuSiswaSec({
               color: #ffffff;
             }
             .school-addr {
-              font-size: 4px;
-              opacity: 0.85;
-              margin: 0.4mm 0 0 0;
+              font-size: 3.8px;
+              opacity: 0.9;
+              margin: 0.3mm 0 0 0;
               font-weight: 500;
               white-space: nowrap;
               overflow: hidden;
@@ -483,25 +484,26 @@ export default function KartuSiswaSec({
               white-space: normal;
               word-break: break-word;
               line-height: 1.1;
-              display: -webkit-box;
-              -webkit-line-clamp: 2;
-              -webkit-box-orient: vertical;
-              overflow: hidden;
               height: 18px;
               display: flex;
               align-items: center;
               justify-content: center;
+              overflow: hidden;
             }
             .student-class-badge {
-              display: inline-block;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
               font-size: 6px;
               font-weight: 700;
               color: ${themeColorHex};
               background-color: ${isCardDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'};
               border: 0.15mm solid ${isCardDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
-              padding: 0.4mm 1.5mm;
+              padding: 0 2mm;
+              height: 4mm;
+              box-sizing: border-box;
               border-radius: 3mm;
-              margin-top: 0.4mm;
+              margin-top: 0.6mm;
               text-transform: uppercase;
               line-height: 1;
             }
@@ -1257,15 +1259,16 @@ export default function KartuSiswaSec({
             }
 
             .school-meta {
-              min-width: 0;
+              width: 41mm;
               display: flex;
               flex-direction: column;
               justify-content: center;
+              box-sizing: border-box;
             }
             .school-name {
-              font-size: 6.5px;
+              font-size: 6px;
               font-weight: 800;
-              letter-spacing: 0.2px;
+              letter-spacing: 0.1px;
               margin: 0;
               text-transform: uppercase;
               white-space: nowrap;
@@ -1275,9 +1278,9 @@ export default function KartuSiswaSec({
               color: #ffffff;
             }
             .school-addr {
-              font-size: 4px;
-              opacity: 0.85;
-              margin: 0.4mm 0 0 0;
+              font-size: 3.8px;
+              opacity: 0.9;
+              margin: 0.3mm 0 0 0;
               font-weight: 500;
               white-space: nowrap;
               overflow: hidden;
@@ -1367,25 +1370,26 @@ export default function KartuSiswaSec({
               white-space: normal;
               word-break: break-word;
               line-height: 1.1;
-              display: -webkit-box;
-              -webkit-line-clamp: 2;
-              -webkit-box-orient: vertical;
-              overflow: hidden;
               height: 18px;
               display: flex;
               align-items: center;
               justify-content: center;
+              overflow: hidden;
             }
             .student-class-badge {
-              display: inline-block;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
               font-size: 6px;
               font-weight: 700;
               color: ${themeColorHex};
               background-color: ${isCardDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'};
               border: 0.15mm solid ${isCardDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'};
-              padding: 0.4mm 1.5mm;
+              padding: 0 2mm;
+              height: 4mm;
+              box-sizing: border-box;
               border-radius: 3mm;
-              margin-top: 0.4mm;
+              margin-top: 0.6mm;
               text-transform: uppercase;
               line-height: 1;
             }
@@ -2013,11 +2017,43 @@ export default function KartuSiswaSec({
                 </div>
               )}
             </div>
-            <div className="min-w-0 flex flex-col justify-center">
-              <h1 className="font-extrabold uppercase truncate leading-tight" style={{ fontSize: '6.5px', margin: 0, letterSpacing: '0.2px', color: '#ffffff' }}>
+            <div 
+              style={{
+                width: '42mm',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                boxSizing: 'border-box',
+                paddingLeft: '0.5mm'
+              }}
+            >
+              <h1 
+                className="font-extrabold uppercase" 
+                style={{ 
+                  fontSize: customSchoolName.length > 25 ? '5.2px' : '6px', 
+                  margin: 0, 
+                  letterSpacing: '0.1px', 
+                  color: '#ffffff',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  lineHeight: '1.2'
+                }}
+              >
                 {customSchoolName}
               </h1>
-              <p className="opacity-85 truncate leading-tight font-medium" style={{ fontSize: '4px', margin: '0.4mm 0 0 0', color: '#ffffff' }}>
+              <p 
+                className="opacity-90 font-medium" 
+                style={{ 
+                  fontSize: '3.8px', 
+                  margin: '0.3mm 0 0 0', 
+                  color: '#ffffff',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  lineHeight: '1.2'
+                }}
+              >
                 {customSchoolAddress}
               </p>
             </div>
@@ -2077,31 +2113,34 @@ export default function KartuSiswaSec({
             </div>
 
             {/* Student Name & Class */}
-            <div className="text-center w-full flex-shrink-0 mb-1">
+            <div className="text-center w-full flex-shrink-0 mb-1 flex flex-col items-center justify-center">
               <h3 
-                className="font-extrabold uppercase tracking-tight leading-tight m-0 flex items-center justify-center" 
+                className="font-extrabold uppercase tracking-tight leading-tight m-0 flex items-center justify-center text-center" 
                 style={{ 
                   fontSize: getDynamicFontSize(student.name), 
                   color: cardTextPrimaryHex,
                   whiteSpace: 'normal',
                   wordBreak: 'break-word',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  height: '18px'
+                  height: '18px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden'
                 }}
               >
                 {student.name}
               </h3>
               <span 
-                className="inline-block text-[6px] font-bold uppercase rounded-full leading-none"
+                className="inline-flex items-center justify-center text-[6px] font-bold uppercase rounded-full"
                 style={{
                   color: themeColorHex,
                   backgroundColor: isCardDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
                   border: `0.15mm solid ${isCardDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
-                  padding: '0.4mm 1.5mm',
-                  marginTop: '0.4mm'
+                  padding: '0 2mm',
+                  height: '4mm',
+                  boxSizing: 'border-box',
+                  marginTop: '0.6mm',
+                  lineHeight: '1'
                 }}
               >
                 KELAS {student.class}
