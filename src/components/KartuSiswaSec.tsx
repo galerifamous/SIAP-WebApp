@@ -18,8 +18,12 @@ import {
   Check,
   Settings,
   Sliders,
-  Type
+  Type,
+  Download,
+  RefreshCw
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import { Student, SystemSetting, Teacher, User as UserType, AcademicSetting } from '../types';
 
 interface KartuSiswaSecProps {
@@ -60,6 +64,8 @@ export default function KartuSiswaSec({
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(students[0] || null);
+  const [pdfStudents, setPdfStudents] = useState<Student[] | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   // Customization States (Allows the admin/teacher to customize EVERYTHING in real-time)
   const [theme, setTheme] = useState<CardTheme>('emerald');
@@ -1648,6 +1654,586 @@ export default function KartuSiswaSec({
     printWindow.document.close();
   };
 
+  const runWithOklchWorkaround = async <T,>(action: () => Promise<T>): Promise<T> => {
+    // 1. Handle existing <style> tags
+    const styleTags = Array.from(document.querySelectorAll('style'));
+    const originalStyleContents = styleTags.map(tag => tag.textContent || '');
+    
+    // 2. Handle <link rel="stylesheet"> tags
+    const linkTags = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
+    const originalLinksDisabled = linkTags.map(link => link.disabled);
+    
+    const tempStyleTags: HTMLStyleElement[] = [];
+
+    try {
+      // Patch existing <style> tags
+      styleTags.forEach(tag => {
+        if (tag.textContent) {
+          tag.textContent = tag.textContent.replace(/oklch\([^)]+\)/g, 'rgb(100, 116, 139)');
+        }
+      });
+      
+      // Fetch, patch and substitute <link> stylesheets with temporary <style> tags
+      for (const link of linkTags) {
+        if (!link.disabled && link.href) {
+          try {
+            // Only attempt to fetch if it's on the same origin (to avoid CORS issues)
+            const linkUrl = new URL(link.href, window.location.origin);
+            if (linkUrl.origin === window.location.origin) {
+              const response = await fetch(link.href);
+              if (response.ok) {
+                const cssText = await response.text();
+                const patchedCss = cssText.replace(/oklch\([^)]+\)/g, 'rgb(100, 116, 139)');
+                
+                const tempStyle = document.createElement('style');
+                tempStyle.setAttribute('data-temp-patched', 'true');
+                tempStyle.textContent = patchedCss;
+                document.head.appendChild(tempStyle);
+                tempStyleTags.push(tempStyle);
+                
+                // Disable the original link stylesheet so html2canvas doesn't crash on it
+                link.disabled = true;
+              }
+            }
+          } catch (fetchErr) {
+            console.warn("Failed to fetch/patch link stylesheet (might be CORS or external):", link.href, fetchErr);
+            // We do NOT disable the link tag if it fails or is external (like Google Fonts)
+            // since those rarely use oklch anyway and we want to keep them loaded.
+          }
+        }
+      }
+      
+      return await action();
+    } finally {
+      // Restore original <style> tags
+      styleTags.forEach((tag, idx) => {
+        tag.textContent = originalStyleContents[idx];
+      });
+      
+      // Re-enable original <link> tags
+      linkTags.forEach((link, idx) => {
+        link.disabled = originalLinksDisabled[idx];
+      });
+      
+      // Clean up temporary <style> tags
+      tempStyleTags.forEach(tag => {
+        if (tag.parentNode) {
+          tag.parentNode.removeChild(tag);
+        }
+      });
+    }
+  };
+
+  const downloadSinglePdf = async (student: Student) => {
+    setIsGeneratingPdf(true);
+    toast.info(`Sedang membuat PDF Kartu Siswa ${student.name}...`);
+    
+    try {
+      setPdfStudents([student]);
+      await new Promise((resolve) => setTimeout(resolve, 800));
+      
+      const container = document.getElementById('pdf-export-temp-container');
+      if (!container) throw new Error("Temp container not found");
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const frontEl = container.querySelector('.pdf-card-front') as HTMLElement;
+      const backEl = container.querySelector('.pdf-card-back') as HTMLElement;
+      
+      if (!frontEl || !backEl) {
+        throw new Error("Card elements not rendered in offscreen container");
+      }
+      
+      const { frontImg, backImg } = await runWithOklchWorkaround(async () => {
+        const frontCanvas = await html2canvas(frontEl, {
+          scale: 3,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: null
+        });
+        const backCanvas = await html2canvas(backEl, {
+          scale: 3,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: null
+        });
+        return {
+          frontImg: frontCanvas.toDataURL('image/png'),
+          backImg: backCanvas.toDataURL('image/png')
+        };
+      });
+      
+      const cardW = 55;
+      const cardH = 85;
+      const x = (210 - cardW) / 2;
+      const y1 = 40;
+      const y2 = 140;
+      
+      pdf.addImage(frontImg, 'PNG', x, y1, cardW, cardH);
+      pdf.addImage(backImg, 'PNG', x, y2, cardW, cardH);
+      
+      pdf.setDrawColor(200, 200, 200);
+      pdf.setLineDashPattern([2, 2], 0);
+      pdf.line(15, 132, 195, 132);
+      
+      pdf.save(`Kartu_Siswa_${student.name.replace(/\s+/g, '_')}.pdf`);
+      toast.success(`Berhasil mengunduh Kartu Siswa ${student.name}!`);
+    } catch (err) {
+      console.error("Failed to download individual PDF:", err);
+      toast.error("Gagal mengunduh PDF. Silakan coba lagi.");
+    } finally {
+      setPdfStudents(null);
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const downloadMassPdf = async () => {
+    const targetStudents = classFilter
+      ? students.filter(s => s.class === classFilter)
+      : students;
+
+    const sortedStudents = [...targetStudents].sort((a, b) => a.name.localeCompare(b.name));
+
+    if (sortedStudents.length === 0) {
+      toast.warning('Tidak ada siswa untuk diunduh pada filter kelas yang dipilih.');
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+    toast.info(`Sedang memproses PDF Massal (${sortedStudents.length} siswa)...`);
+    
+    try {
+      setPdfStudents(sortedStudents);
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      
+      const container = document.getElementById('pdf-export-temp-container');
+      if (!container) throw new Error("Temp container not found");
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const cardW = 55;
+      const cardH = 85;
+      const gap = 3;
+      const leftMargin = 19.5;
+      const topMargin = 18;
+      
+      const frontEls = Array.from(container.querySelectorAll('.pdf-card-front')) as HTMLElement[];
+      const backEls = Array.from(container.querySelectorAll('.pdf-card-back')) as HTMLElement[];
+      
+      const frontImages: string[] = [];
+      const backImages: string[] = [];
+      
+      await runWithOklchWorkaround(async () => {
+        for (let i = 0; i < sortedStudents.length; i++) {
+          const frontCanvas = await html2canvas(frontEls[i], {
+            scale: 2.5,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null
+          });
+          frontImages.push(frontCanvas.toDataURL('image/png'));
+          
+          const backCanvas = await html2canvas(backEls[i], {
+            scale: 2.5,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: null
+          });
+          backImages.push(backCanvas.toDataURL('image/png'));
+        }
+      });
+      
+      const totalStudents = sortedStudents.length;
+      let pageCount = 0;
+      
+      for (let chunkIndex = 0; chunkIndex < totalStudents; chunkIndex += 9) {
+        if (pageCount > 0) {
+          pdf.addPage();
+        }
+        
+        const chunkFronts = frontImages.slice(chunkIndex, chunkIndex + 9);
+        const chunkBacks = backImages.slice(chunkIndex, chunkIndex + 9);
+        
+        for (let i = 0; i < chunkFronts.length; i++) {
+          const row = Math.floor(i / 3);
+          const col = i % 3;
+          const x = leftMargin + col * (cardW + gap);
+          const y = topMargin + row * (cardH + gap);
+          pdf.addImage(chunkFronts[i], 'PNG', x, y, cardW, cardH);
+        }
+        
+        pdf.addPage();
+        for (let i = 0; i < chunkBacks.length; i++) {
+          const row = Math.floor(i / 3);
+          const col = i % 3;
+          const mirroredCol = 2 - col;
+          const x = leftMargin + mirroredCol * (cardW + gap);
+          const y = topMargin + row * (cardH + gap);
+          pdf.addImage(chunkBacks[i], 'PNG', x, y, cardW, cardH);
+        }
+        
+        pageCount += 2;
+      }
+      
+      const className = classFilter ? `_Kelas_${classFilter}` : '';
+      pdf.save(`Kartu_Siswa_Massal${className}.pdf`);
+      toast.success(`Berhasil mengunduh PDF Massal (${sortedStudents.length} siswa)!`);
+    } catch (err) {
+      console.error("Failed to generate bulk PDF:", err);
+      toast.error("Gagal mengunduh PDF Massal. Silakan coba lagi.");
+    } finally {
+      setPdfStudents(null);
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  const renderCardForPdf = (student: Student, isBack: boolean) => {
+    const rulesHtmlList = customNotes
+      .split('\n')
+      .map((line, idx) => <li key={idx} className="mb-0.5">{line.replace(/^\d+\.\s*/, '')}</li>);
+
+    const isCardDark = cardBgMode === 'dark';
+    const cardBgHex = isCardDark ? '#0f172a' : '#ffffff';
+    const cardInnerBgHex = isCardDark ? '#090d16' : '#ffffff';
+    const cardTextPrimaryHex = isCardDark ? '#f8fafc' : '#0f172a';
+    const cardTextSecondaryHex = isCardDark ? '#94a3b8' : '#475569';
+
+    const themeColorHex = {
+      emerald: '#059669',
+      blue: '#2563eb',
+      crimson: '#e11d48',
+      indigo: '#4f46e5',
+      dark: '#1e293b',
+      amber: '#d97706'
+    }[theme];
+
+    const themeColorHexDark = {
+      emerald: '#0f766e',
+      blue: '#1e40af',
+      crimson: '#9f1239',
+      indigo: '#3730a3',
+      dark: '#0f172a',
+      amber: '#78350f'
+    }[theme];
+
+    if (!isBack) {
+      // FRONT SIDE
+      return (
+        <div 
+          className="pdf-card-front flex flex-col overflow-hidden relative"
+          style={{
+            width: '55mm',
+            height: '85mm',
+            backgroundColor: cardBgHex,
+            border: `0.4mm solid ${isCardDark ? '#1e293b' : '#cbd5e1'}`,
+            borderRadius: '3mm',
+            fontFamily: "'Inter', sans-serif",
+            boxSizing: 'border-box'
+          }}
+        >
+          {/* Header Strip */}
+          <div 
+            className="flex items-center gap-1.5 p-1 text-white border-b-[0.8mm] border-amber-400 relative"
+            style={{
+              height: '12mm',
+              background: `linear-gradient(135deg, ${themeColorHex}, ${themeColorHexDark})`,
+              boxSizing: 'border-box'
+            }}
+          >
+            <div 
+              className="rounded-[1mm] flex items-center justify-center p-[0.2mm] flex-shrink-0"
+              style={{
+                width: '8mm',
+                height: '8mm',
+                backgroundColor: 'rgba(255,255,255,0.15)',
+                border: '0.2mm solid rgba(255,255,255,0.2)'
+              }}
+            >
+              {systemSetting.logoUrl ? (
+                <img src={systemSetting.logoUrl} className="w-full h-full object-contain" alt="Logo" crossOrigin="anonymous" />
+              ) : (
+                <div className="text-white flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '5mm', height: '5mm' }}><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"></path></svg>
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex flex-col justify-center">
+              <h1 className="font-extrabold uppercase truncate leading-tight" style={{ fontSize: '6.5px', margin: 0, letterSpacing: '0.2px', color: '#ffffff' }}>
+                {customSchoolName}
+              </h1>
+              <p className="opacity-85 truncate leading-tight font-medium" style={{ fontSize: '4px', margin: '0.4mm 0 0 0', color: '#ffffff' }}>
+                {customSchoolAddress}
+              </p>
+            </div>
+          </div>
+
+          {/* Card Title Bar */}
+          <div 
+            className="text-center flex items-center justify-center"
+            style={{
+              height: '4.5mm',
+              backgroundColor: isCardDark ? '#1e293b' : '#f8fafc',
+              borderBottom: `0.2mm solid ${isCardDark ? '#334155' : '#f1f5f9'}`,
+              boxSizing: 'border-box'
+            }}
+          >
+            <h2 className="font-extrabold uppercase tracking-widest text-[6px] m-0" style={{ color: isCardDark ? '#cbd5e1' : '#475569', letterSpacing: '1px' }}>
+              {cardTitle}
+            </h2>
+          </div>
+
+          {/* Content Area */}
+          <div 
+            className="flex-1 flex flex-col items-center"
+            style={{
+              padding: '2mm 3mm',
+              backgroundColor: cardInnerBgHex,
+              boxSizing: 'border-box',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Photo Frame */}
+            <div 
+              className="rounded-[1mm] shadow-sm flex items-center justify-center relative flex-shrink-0 mb-1.5"
+              style={{
+                width: '18mm',
+                height: '24mm',
+                border: `0.5mm solid ${themeColorHex}`,
+                backgroundColor: '#f8fafc',
+                overflow: 'hidden'
+              }}
+            >
+              {student.photoUrl ? (
+                <img src={student.photoUrl} className="w-full h-full object-cover" alt="Student" crossOrigin="anonymous" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-slate-100">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: '8mm', height: '8mm' }}>
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                </div>
+              )}
+            </div>
+
+            {/* Student Name & Class */}
+            <div className="text-center w-full flex-shrink-0 mb-1">
+              <h3 className="font-extrabold uppercase tracking-tight truncate leading-tight m-0" style={{ fontSize: '8px', color: cardTextPrimaryHex }}>
+                {student.name}
+              </h3>
+              <span 
+                className="inline-block text-[6px] font-bold uppercase rounded-full leading-none"
+                style={{
+                  color: themeColorHex,
+                  backgroundColor: isCardDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  border: `0.15mm solid ${isCardDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'}`,
+                  padding: '0.4mm 1.5mm',
+                  marginTop: '0.4mm'
+                }}
+              >
+                KELAS {student.class}
+              </span>
+            </div>
+
+            {/* Details Table */}
+            <table className="w-full flex-shrink-0" style={{ borderCollapse: 'collapse', fontSize: '6px' }}>
+              <tbody>
+                <tr>
+                  <td className="font-semibold" style={{ color: cardTextSecondaryHex, width: '15mm', padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2' }}>NISN / ID</td>
+                  <td style={{ color: isCardDark ? '#475569' : '#cbd5e1', width: '2mm', padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2' }}>:</td>
+                  <td className="font-bold" style={{ color: cardTextPrimaryHex, padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2' }}>{student.nisn}</td>
+                </tr>
+                {showTtl && (
+                  <tr>
+                    <td className="font-semibold" style={{ color: cardTextSecondaryHex, padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2' }}>TTL</td>
+                    <td style={{ color: isCardDark ? '#475569' : '#cbd5e1', padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2' }}>:</td>
+                    <td className="font-bold" style={{ color: cardTextPrimaryHex, padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2' }}>{student.pob || '-'}, {student.dob || '-'}</td>
+                  </tr>
+                )}
+                {showGender && (
+                  <tr>
+                    <td className="font-semibold" style={{ color: cardTextSecondaryHex, padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2' }}>Jenis Kelamin</td>
+                    <td style={{ color: isCardDark ? '#475569' : '#cbd5e1', padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2' }}>:</td>
+                    <td className="font-bold" style={{ color: cardTextPrimaryHex, padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2' }}>{student.gender}</td>
+                  </tr>
+                )}
+                {showAddress && (
+                  <tr>
+                    <td className="font-semibold" style={{ color: cardTextSecondaryHex, padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2' }}>Alamat</td>
+                    <td style={{ color: isCardDark ? '#475569' : '#cbd5e1', padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2' }}>:</td>
+                    <td className="font-bold" style={{ color: cardTextPrimaryHex, padding: '0.4mm 0', verticalAlign: 'top', lineHeight: '1.2', fontSize: '5px' }}>{student.address || '-'}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer solid bar */}
+          <div className="mt-auto flex-shrink-0" style={{ height: '2mm', backgroundColor: themeColorHex }} />
+        </div>
+      );
+    } else {
+      // BACK SIDE
+      return (
+        <div 
+          className="pdf-card-back flex flex-col overflow-hidden"
+          style={{
+            width: '55mm',
+            height: '85mm',
+            backgroundColor: cardBgHex,
+            border: `0.4mm solid ${isCardDark ? '#1e293b' : '#cbd5e1'}`,
+            borderRadius: '3mm',
+            fontFamily: "'Inter', sans-serif",
+            boxSizing: 'border-box'
+          }}
+        >
+          <div className="flex-shrink-0" style={{ height: '2mm', background: `linear-gradient(90deg, ${themeColorHex}, #cbd5e1, ${themeColorHexDark})` }} />
+
+          <div 
+            className="flex-1 flex flex-col items-center"
+            style={{
+              padding: '2.5mm 3mm',
+              backgroundColor: cardInnerBgHex,
+              boxSizing: 'border-box',
+              overflow: 'hidden'
+            }}
+          >
+            {showRules && (
+              <div className="w-full flex-shrink-0 mb-1">
+                <h4 
+                  className="font-extrabold uppercase tracking-wider m-0" 
+                  style={{
+                    fontSize: '6.5px',
+                    color: themeColorHex,
+                    borderBottom: `0.2mm solid ${isCardDark ? '#1e293b' : '#e2e8f0'}`,
+                    paddingBottom: '0.4mm'
+                  }}
+                >
+                  TATA TERTIB KARTU
+                </h4>
+                <ul className="list-decimal pl-3 m-0 font-medium leading-normal" style={{ fontSize: '5.5px', color: cardTextSecondaryHex, listStyleType: 'decimal' }}>
+                  {rulesHtmlList}
+                </ul>
+              </div>
+            )}
+
+            {/* QR Code Container */}
+            <div 
+              className="flex flex-col items-center justify-center flex-shrink-0 shadow-sm"
+              style={{
+                width: '32mm',
+                height: '32mm',
+                backgroundColor: isCardDark ? '#020617' : '#f8fafc',
+                border: `0.2mm solid ${isCardDark ? '#1e293b' : '#cbd5e1'}`,
+                borderRadius: '1.5mm',
+                padding: '1.2mm',
+                boxSizing: 'border-box',
+                margin: '1mm 0 1.5mm 0'
+              }}
+            >
+              <img 
+                src={getQrUrl(student.nisn)} 
+                className="object-contain bg-white rounded-[1.2mm] border-[0.15mm] border-slate-200"
+                style={{
+                  width: '25mm',
+                  height: '25mm',
+                  padding: '0.8mm',
+                  boxSizing: 'border-box',
+                  marginBottom: '1mm'
+                }}
+                alt="QR Code"
+                crossOrigin="anonymous"
+              />
+              <span className="font-mono font-bold" style={{ fontSize: '5.5px', color: cardTextSecondaryHex, letterSpacing: '0.3px' }}>
+                ID: {student.nisn}
+              </span>
+            </div>
+
+            {/* Signature / Stamp Row */}
+            <div className="w-full flex justify-end items-end flex-shrink-0 mt-auto">
+              <div className="relative flex justify-end" style={{ width: '100%' }}>
+                {showSignature && (
+                  <div className="relative flex flex-col items-center text-center" style={{ width: '28mm' }}>
+                    <div className="font-semibold uppercase tracking-wider mb-9" style={{ fontSize: '5.5px', color: cardTextSecondaryHex, letterSpacing: '0.2px', lineHeight: '1.1' }}>
+                      Kepala Madrasah,
+                    </div>
+
+                    {customHeadmasterSignatureImg && (
+                      <img 
+                        src={customHeadmasterSignatureImg} 
+                        className="absolute object-contain pointer-events-none" 
+                        style={{ top: '1mm', height: '11mm', width: 'auto', zIndex: 10 }}
+                        alt="Signature"
+                        crossOrigin="anonymous"
+                      />
+                    )}
+
+                    {customStampImg ? (
+                      <img 
+                        src={customStampImg} 
+                        className="absolute object-contain pointer-events-none opacity-80" 
+                        style={{ top: '1mm', left: '-3mm', width: '10mm', height: '10mm', zIndex: 5 }}
+                        alt="Stamp"
+                        crossOrigin="anonymous"
+                      />
+                    ) : (
+                      <div 
+                        className="absolute flex items-center justify-center rounded-full pointer-events-none" 
+                        style={{
+                          top: '1mm',
+                          left: '-3mm',
+                          width: '10mm',
+                          height: '10mm',
+                          border: '0.3mm dashed rgba(225, 29, 72, 0.4)',
+                          transform: 'rotate(-12deg)',
+                          zIndex: 5
+                        }}
+                      >
+                        <span className="font-extrabold uppercase text-center whitespace-pre-line" style={{ fontSize: '3px', color: 'rgba(225, 29, 72, 0.5)' }}>
+                          {customStampText}
+                        </span>
+                      </div>
+                    )}
+
+                    <h5 className="font-extrabold uppercase w-full truncate m-0" style={{ fontSize: '6px', color: cardTextPrimaryHex, borderBottom: `0.3mm solid ${isCardDark ? '#cbd5e1' : '#1e293b'}`, paddingBottom: '0.2mm', lineHeight: '1.2' }}>
+                      {customHeadmasterName}
+                    </h5>
+                    <span className="font-mono" style={{ fontSize: '5px', color: cardTextSecondaryHex, marginTop: '0.3mm', lineHeight: '1.1' }}>
+                      NIP. {customHeadmasterNip}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Card back footer */}
+          <div 
+            className="flex justify-between items-center px-3"
+            style={{
+              height: '4.5mm',
+              backgroundColor: isCardDark ? '#1e293b' : '#fafafa',
+              borderTop: `0.3mm solid ${isCardDark ? '#334155' : '#e2e8f0'}`,
+              fontSize: '5.5px',
+              color: cardTextSecondaryHex,
+              fontWeight: 600,
+              boxSizing: 'border-box'
+            }}
+          >
+            <span>Diterbit oleh {customSchoolName}</span>
+          </div>
+        </div>
+      );
+    }
+  };
+
   return (
     <div className={`border rounded-2xl p-6 selection:bg-emerald-500 selection:text-white font-sans text-xs transition-all duration-300 ${
       isDark 
@@ -1726,14 +2312,25 @@ export default function KartuSiswaSec({
                   </select>
                 )}
 
-                <button
-                  type="button"
-                  onClick={handlePrintMassCards}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold rounded-lg transition-all active:scale-95 text-[11px] cursor-pointer shadow-md shadow-amber-500/10"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Cetak Massal {classFilter ? `Kelas ${classFilter}` : 'Semua Kelas'}</span>
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePrintMassCards}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold rounded-lg transition-all active:scale-95 text-[10px] cursor-pointer shadow-md shadow-amber-500/10"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Cetak Massal</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={downloadMassPdf}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold rounded-lg transition-all active:scale-95 text-[10px] cursor-pointer shadow-md shadow-emerald-500/10"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Unduh PDF Massal</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -2032,13 +2629,23 @@ export default function KartuSiswaSec({
                   <p className={`text-[11px] mt-0.5 font-semibold ${isDark ? 'text-slate-500' : 'text-slate-600'}`}>Format potret standard dengan barcode absensi QR diletakkan di bagian belakang.</p>
                 </div>
                 
-                <button
-                  onClick={() => handlePrintCard(selectedStudent)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition shadow-lg shadow-emerald-500/10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                >
-                  <Printer className="w-4.5 h-4.5" />
-                  <span>Cetak / Unduh Kartu Siswa</span>
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handlePrintCard(selectedStudent)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl transition hover:scale-[1.02] active:scale-[0.98] cursor-pointer text-[11px]"
+                  >
+                    <Printer className="w-4 h-4" />
+                    <span>Cetak Kartu</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => downloadSinglePdf(selectedStudent)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition shadow-lg shadow-emerald-500/10 hover:scale-[1.02] active:scale-[0.98] cursor-pointer text-[11px]"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Unduh PDF Kartu</span>
+                  </button>
+                </div>
               </div>
 
               {/* Side by side Preview */}
@@ -2259,6 +2866,46 @@ export default function KartuSiswaSec({
         </div>
 
       </div>
+
+      {/* Hidden container for PDF rendering */}
+      {pdfStudents && pdfStudents.length > 0 && (
+        <div 
+          id="pdf-export-temp-container" 
+          style={{ 
+            position: 'absolute', 
+            left: '-9999px', 
+            top: '-9999px', 
+            width: '210mm',
+            backgroundColor: '#ffffff'
+          }}
+        >
+          {pdfStudents.map((student) => (
+            <div key={student.id} style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              {renderCardForPdf(student, false)}
+              {renderCardForPdf(student, true)}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Generating PDF Loader Overlay */}
+      {isGeneratingPdf && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center text-white">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col items-center gap-4 max-w-sm text-center shadow-2xl">
+            <RefreshCw className="w-10 h-10 text-emerald-400 animate-spin" />
+            <div>
+              <h3 className="font-extrabold text-sm">Menyiapkan PDF Kartu Siswa...</h3>
+              <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+                Mohon tunggu sebentar. Sistem sedang merender dan merakit desain kartu B1 beresolusi tinggi ke dalam dokumen PDF A4.
+              </p>
+            </div>
+            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-1">
+              <div className="bg-emerald-500 h-full w-2/3 animate-pulse rounded-full" />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
